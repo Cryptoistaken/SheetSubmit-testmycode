@@ -46,6 +46,7 @@ CORS: only origin === `FRONTEND_URL`, credentials allowed, preflight → 204. Se
 |---|---|---|
 | GET | `/api/files` | list my files |
 | GET | `/api/files/:id` | single file meta |
+| GET | `/api/files/:id/full` | file meta + rows + logs + undo + redo in one pipelined read |
 | POST | `/api/files` | create file |
 | PUT | `/api/files/:id` | update file fields (rename) |
 | DELETE | `/api/files/:id` | soft-delete → archive |
@@ -104,19 +105,21 @@ CORS: only origin === `FRONTEND_URL`, credentials allowed, preflight → 204. Se
 
 ## Frontend usage map
 
-- All browser calls go through `frontend/src/lib/api.ts` (`api.*` object, one `request<T>()` fetch wrapper with `credentials: "include"`), except one inline fetch (see issues).
-- `openFile` fires 4 parallel reads (`file`, `rows`, `logs`, `undo`) + `cross-dups` (5 round trips per open).
-- Autosave: 300 ms debounce → `flushPersist` sends the **entire** trimmed rows array each save.
-- Health poll: `Topbar` pings `/api/health` every 15 s (1.5× backoff to 120 s on failure).
+- All browser calls go through `frontend/src/lib/api.ts` (`api.*` object, one `request<T>()` fetch wrapper with `credentials: "include"`).
+- `openFile` = 2 round trips: `GET /files/:id/full` (file+rows+logs+undo+redo) + `cross-dups`.
+- Autosave: 300 ms debounce → `flushPersist` sends the **entire** trimmed rows array each save (guarded — no-op when `isDirty` is false).
+- Health poll: `Topbar` pings `/api/health` every 30 s (1.5× backoff to 120 s on failure), paused while the tab is hidden.
+- Cross-dup counts cached per user for 60 s (`crossdups:<userId>`, invalidated on persist).
+- API responses gzip-compressed (`compression` middleware).
 - WA checks: concurrency 3, cache prefill via `/wa/cache`, then live `pageCheck` per row.
 
-### Dead frontend wrappers (defined, never called)
+### Removed frontend wrappers (deleted, never called)
 
-`getSync`, `setSync`, `updateCell`, `appendLog`, `cancelPending`, `forkVersion`, `adminUpdateCell`, `adminAppendLog`, `waCheck` (9). Corresponding backend routes stay — the Android app may use them via `Config.BASE_URL`.
+`getSync`, `setSync`, `updateCell`, `appendLog`, `cancelPending`, `forkVersion`, `adminUpdateCell`, `adminAppendLog`, `waCheck` were removed from `api.ts`. Corresponding backend routes stay — the Android app may use them via `Config.BASE_URL`.
 
 ## Known issues
 
-1. **`frontend/src/features/filetypes/fbcookie.ts:91`** — `fetch("/api/fb/check", ...)` is hardcoded **relative**, bypasses the runtime-injected `apiBase`. Works in dev (Vite proxy), **breaks in production** (hits the static server → SPA fallback). Must route through `api.fbCheck()`.
+1. ~~`frontend/src/features/filetypes/fbcookie.ts:91` — hardcoded relative `fetch("/api/fb/check")`~~ **Fixed** — now routed through `api.fbCheck()` (runtime `apiBase`).
 2. `res.redirect` after Telegram login hits `FRONTEND_URL` — correct only when `FRONTEND_URL` is set on the api service.
 
 ## Method totals (backend, 63 routes)
