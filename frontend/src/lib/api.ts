@@ -118,6 +118,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ cookie }),
     }),
+  fbCheck: (uids: string[]) =>
+    request<{ valid: string[]; dead: string[]; uncertain: string[] }>("/fb/check", {
+      method: "POST",
+      body: JSON.stringify({ uids }),
+    }),
   getWaCache: (uids: string[]) =>
     request<{ cache: Record<string, unknown> }>(`/wa/cache?uids=${encodeURIComponent(uids.join(","))}`),
 

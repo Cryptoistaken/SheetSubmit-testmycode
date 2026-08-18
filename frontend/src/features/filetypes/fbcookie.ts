@@ -1,5 +1,6 @@
 import type { Row } from "@/lib/types";
 import { toast } from "@/lib/toast";
+import { api } from "@/lib/api";
 import { getCachedTOTP } from "./totp";
 import { validateCell } from "./validation";
 
@@ -16,12 +17,6 @@ interface FbCookieCtx {
   value: string;
   invalidCells: Set<string>;
   showToast: (msg: string) => void;
-}
-
-interface FbCheckResponse {
-  valid: string[];
-  dead: string[];
-  uncertain: string[];
 }
 
 export function createFbCookieBehavior() {
@@ -88,16 +83,7 @@ export function createFbCookieBehavior() {
       if (!uidRows.length) throw new Error("No UIDs found");
 
       const uids = uidRows.map((r) => r.uid);
-      const res = await fetch("/api/fb/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uids }),
-      });
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(err);
-      }
-      const data: FbCheckResponse = await res.json();
+      const data = await api.fbCheck(uids);
 
       uidRows.forEach((r) => {
         if (data.valid.indexOf(r.uid) !== -1) {
