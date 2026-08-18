@@ -71,17 +71,21 @@ export default function Topbar() {
     if (isFilePage) setPanelOpen(false);
   }, [isFilePage]);
 
-  // Health polling — port of app.js checkConn (15s interval, 1.5x backoff to 2min).
+  // Health polling — 30s interval, 1.5x backoff to 2min, paused while tab hidden.
   useEffect(() => {
     let cancelled = false;
-    let interval = 15000;
+    let interval = 30000;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     const check = () => {
+      if (document.visibilityState === "hidden") {
+        schedule();
+        return;
+      }
       api
         .health()
         .then((h) => {
-          interval = 15000;
+          interval = 30000;
           if (cancelled) return;
           const ok = h.status === "ok" || h.status === "ready";
           setConn(ok ? { cls: "ok", text: "Connected" } : { cls: "", text: "Reconnecting..." });
