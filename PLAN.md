@@ -29,13 +29,17 @@ the main repo remain protected.
 
 ## 1. Stack (locked)
 
-- **Monorepo:** npm workspaces (`frontend`, `backend`, `packages/*`; plus `android/` Gradle),
-  package manager `bun`.
+- **Monorepo → isolated folders:** `frontend/` (React+Vite web), `backend/` (Express API),
+  `android/` (Gradle). **No npm workspaces, no shared package** — each folder is
+  self-contained with its own `package.json`, `bun.lock`, `Dockerfile`, `.dockerignore`,
+  and Docker build context. Deploy either independently.
 - **Frontend:** React 19 + TS + Vite + Tailwind v4 + shadcn/ui. Built with `vite build` →
   `frontend/dist`.
-- **Backend:** TypeScript Express + ioredis (Redis). Serves the API only.
+- **Backend:** TypeScript Express + ioredis (Redis). Serves the API only. Shared types are
+  inlined at `backend/src/lib/shared.ts`.
 - **Deploy shape (target):** 3 Railway services —
-  1. **web** (nginx image serving `frontend/dist`, proxies `/api/*` + `/webhook/tg` to the API)
+  1. **web** (image from `frontend/Dockerfile`, nginx serving `frontend/dist`, proxies
+     `/api/*` + `/webhook/tg` to the API)
   2. **api** (Express image, port 3000)
   3. **database** (Redis)
 
@@ -55,11 +59,13 @@ the main repo remain protected.
 ## 3. Commands
 
 ```bash
-# From this repo root
-bun install                              # after any workspace change (no node_modules in this copy yet)
-bun run dev:web                          # Vite dev server (frontend)
-bun run dev:server                       # backend on :3000 (bun --watch backend/src/index.ts)
-bun run build                            # typecheck + build web → frontend/dist
+# Install/build per folder (each fully independent):
+bun install --cwd frontend        # frontend/bun.lock
+bun install --cwd backend         # backend/bun.lock
+bun run --cwd frontend dev        # Vite dev server
+bun run --cwd backend dev         # backend on :3000
+bun run --cwd frontend build      # typecheck + build web → frontend/dist
+bun run --cwd backend typecheck   # backend typecheck
 
 # Deploy (builds + pushes BOTH images → Railway auto-deploys)
 .\redeploy.bat
@@ -108,9 +114,11 @@ or to `WEBHOOK_URL` if set, else `FRONTEND_URL + /webhook/tg`.
 ## 5. Handoff — current state
 
 - **Layout:** 3 top-level folders — `frontend/` (React+Vite web), `backend/` (Express API),
-  `android/` (Gradle) — plus `packages/shared/`. Moved from old `apps/*` layout; all path
-  refs updated (workspaces, Dockerfiles, `.dockerignore`, `.gitignore`, `env.ts` root depth,
-  android CI). Backup of pre-restructure tree at `B:\Studio\Tools\SheetSubmit-testmycode-backup`.
+  `android/` (Gradle). **Fully isolated deploy:** no npm workspaces, no shared package; each
+  folder has own `package.json`/`bun.lock`/`Dockerfile`/`.dockerignore` and Docker build
+  context. Backend inlines shared types (`backend/src/lib/shared.ts`). Git initialized,
+  all committed (125 files, `.env*` ignored). Backups: `SheetSubmit-testmycode-backup`,
+  `SheetSubmit-testmycode-backup2`.
 - **Theme fix:** light-by-default (pre-paint script in `index.html`, `theme.ts`), no OS-pref
   fallback; saved dark choice respected.
 - **Env rename:** `APP_URL` → `FRONTEND_URL` (web URL, always for login links); `WEBHOOK_URL`
