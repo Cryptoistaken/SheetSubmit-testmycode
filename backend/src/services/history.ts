@@ -298,6 +298,12 @@ export async function pruneHistory(fileId: string): Promise<number> {
       const stableRows = await materializeVersion(fileId, kept[0].v);
       if (Array.isArray(stableRows)) {
         upgrade = { rec: kept[0], hash: hashRows(stableRows), rows: stableRows };
+      } else {
+        console.error(
+          "[Hist] prune ABORTED file=" + fileId +
+          " — oldest retained version is a delta and materialization failed; skipping prune to keep history chain intact",
+        );
+        return 0;
       }
     }
 
