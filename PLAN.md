@@ -179,4 +179,17 @@ Telegram can hit `/webhook/tg` — backend auto-registers the webhook to
   `compression` middleware; `e7fdc2d` perf: cross-dup counts cached 60s per user
   (`crossdups:<userId>`, invalidated in persist pipeline) + `flushPersist` no-op when not dirty.
   Both typechecks clean per task. Not deployed — run `redeploy.bat` only after user sign-off.
+- **Data-integrity hardening (just done, NOT deployed):** audit found data-loss bugs; fixed in
+  `0bc9cbb` (autosaves serialized via `saveChain`, dirty cleared only when rows unchanged,
+  `closeFile` commits draft + awaits final flush, `refreshSheet` skips when dirty, keepalive
+  flush on beforeunload/pagehide/visibilitychange), `4611e2e` (confirm before delete-selected /
+  compact-empty; versionCache no longer caches failed fetches), `232e0c6` (try/catch + toasts +
+  xlsx-import rollback on home/archive/admin views; ban/unban confirm),
+  `ea56835` (admin persist single pipeline + error check, admin DELETE /file now true archive —
+  data keys kept, restore aborts 500 if pre-snapshot fails), `b836fb0` (persist only replaces
+  logs when client list not stale, restore snapshot-check, `wa:` cache scoped per user
+  `wa:<userId>:<c_user>`, meta:dirty backup triggers on create/rename/delete/archive ops).
+  **Residual risk:** `files:<userId>` list RMW race (rename vs concurrent persist) not fully
+  eliminated (fresh-read not lock); undo/redo stacks still device-local last-write; admin
+  delete-user leaves `session:` keys alive; beforeunload keepalive capped at 64KB.
 - Resume: run Phase 3 smoke (login via test bot, CRUD, checks, bubble), updating this file.

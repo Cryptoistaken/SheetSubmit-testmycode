@@ -110,6 +110,8 @@ CORS: only origin === `FRONTEND_URL`, credentials allowed, preflight → 204. Se
 - Autosave: 300 ms debounce → `flushPersist` sends the **entire** trimmed rows array each save (guarded — no-op when `isDirty` is false).
 - Health poll: `Topbar` pings `/api/health` every 30 s (1.5× backoff to 120 s on failure), paused while the tab is hidden.
 - Cross-dup counts cached per user for 60 s (`crossdups:<userId>`, invalidated on persist).
+- WA eligibility cache keyed `wa:<userId>:<c_user>` (scoped to the acting user, written/read by the same user).
+- Autosaves serialized through a single promise chain (`saveChain`); `isDirty` cleared only when rows are unchanged since the save started. `closeFile` commits the open draft and awaits the final flush; `refreshSheet` skips while dirty; `beforeunload`/`pagehide`/`visibilitychange:hidden` flush with `keepalive`.
 - API responses gzip-compressed (`compression` middleware).
 - WA checks: concurrency 3, cache prefill via `/wa/cache`, then live `pageCheck` per row.
 
