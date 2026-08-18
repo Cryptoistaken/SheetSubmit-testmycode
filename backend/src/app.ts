@@ -1,5 +1,6 @@
 // Express app assembly — mirrors the old server's route order (API routes,
 // then static, then SPA fallback last).
+import compression from "compression";
 import express from "express";
 import fs from "node:fs";
 import path from "node:path";
@@ -19,6 +20,7 @@ import { redis } from "./services/redis";
 export function createApp(): express.Express {
   const app = express();
   app.use(express.json({ limit: "10mb" }));
+  app.use(compression());
 
   // Trust Railway's TLS-terminating proxy so req.secure reflects HTTPS (drives the
   // SameSite=None cookie decision in auth.ts).
