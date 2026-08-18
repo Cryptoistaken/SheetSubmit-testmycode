@@ -1,0 +1,157 @@
+import { Download, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useRef } from "react";
+
+import { FILE_TYPE_DEFS } from "@/lib/types";
+import type { SheetFile } from "@/lib/types";
+
+interface FileCardProps {
+  file: SheetFile;
+  crossDupCount?: number;
+  selected?: boolean;
+  selectionMode?: boolean;
+  onOpen: () => void;
+  onDownload: () => void;
+  onRename: () => void;
+  onDelete: () => void;
+  onToggleSelect: () => void;
+  onHoldSelect: () => void;
+}
+
+export default function FileCard({
+  file,
+  crossDupCount,
+  selected = false,
+  selectionMode = false,
+  onOpen,
+  onDownload,
+  onRename,
+  onDelete,
+  onToggleSelect,
+  onHoldSelect,
+}: FileCardProps) {
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const heldRef = useRef(false);
+  const movedRef = useRef(false);
+
+  const clearHold = () => {
+    if (holdTimer.current) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => clearHold();
+  }, []);
+
+  const onPointerDown = () => {
+    heldRef.current = false;
+    movedRef.current = false;
+    clearHold();
+    holdTimer.current = setTimeout(() => {
+      heldRef.current = true;
+      onHoldSelect();
+    }, 500);
+  };
+
+  const onPointerMove = () => {
+    movedRef.current = true;
+    clearHold();
+  };
+
+  const onPointerUp = () => {
+    const held = heldRef.current;
+    clearHold();
+    if (held || movedRef.current) return;
+    if (selectionMode) onToggleSelect();
+    else onOpen();
+  };
+
+  const count = file.dataCount ?? file.rowCount ?? 0;
+  const badge = FILE_TYPE_DEFS[file.type].badge;
+
+  return (
+    <div
+      className={`file-card${selected ? " selected" : ""}`}
+      role="button"
+      tabIndex={0}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={clearHold}
+      onPointerLeave={clearHold}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          if (selectionMode) onToggleSelect();
+          else onOpen();
+        }
+      }}
+    >
+      <div className="file-card-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5" />
+          <path d="M8.5 8.5v.01" />
+          <path d="M16 15.5v.01" />
+          <path d="M12 12v.01" />
+          <path d="M11 17v.01" />
+          <path d="M7 14v.01" />
+        </svg>
+      </div>
+      <div className="file-card-name">{file.name}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+        <span className="file-type-badge t-fb">{badge}</span>
+        <span className="file-card-meta">
+          {count} row{count !== 1 ? "s" : ""}
+          {crossDupCount ? (
+            <>
+              {" · "}
+              <span className="cd-badge">{crossDupCount} dup</span>
+            </>
+          ) : null}
+        </span>
+      </div>
+      <div className="file-card-actions">
+        <button
+          className="file-card-btn file-card-dl"
+          title="Download"
+          aria-label="Download"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDownload();
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+        >
+          <Download size={14} />
+        </button>
+        <button
+          className="file-card-btn file-card-rename"
+          title="Rename"
+          aria-label="Rename"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRename();
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+        >
+          <Pencil size={14} />
+        </button>
+        <button
+          className="file-card-btn file-card-del"
+          title="Delete"
+          aria-label="Delete"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
