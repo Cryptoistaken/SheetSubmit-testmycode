@@ -11,8 +11,8 @@ project's state, phases, commands, gotchas, and handoff. Keep it updated — nev
   package manager is **bun**. No `node_modules` or `.git` in this copy yet — `bun install` first.
 - Frontend: React 19 + TypeScript + Vite + Tailwind v4 + shadcn/ui (Nova preset, lucide, Geist).
 - Backend: TypeScript Express + ioredis.
-- Deploy: **2 Docker images** — `popyog/sheetsubmit-testmycode-api:latest` (Express API) and
-  `popyog/sheetsubmit-testmycode-web:latest` (nginx serving `frontend/dist`, proxying
+- Deploy: **2 Docker images** — `popyog/sheetsubmit-testmycode-backend:latest` (Express API) and
+  `popyog/sheetsubmit-testmycode-frontend:latest` (nginx serving `frontend/dist`, proxying
   `/api/*` + `/webhook/tg` to the API). `redeploy.bat` builds + pushes both; Railway
   auto-deploys from a **separate Railway project** (3 services: web, api, database/Redis).
 - Telegram bot: **TEST token** in `backend/.env` (gitignored). NEVER use the production bot token here.

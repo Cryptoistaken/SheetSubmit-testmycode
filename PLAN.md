@@ -17,7 +17,7 @@ Key differences vs the main repo:
 | | Main repo | This test project |
 |---|---|---|
 | Location | `B:\Studio\Tools\SheetSubmit-Shadcnui` | `B:\Studio\Tools\SheetSubmit-testmycode` |
-| Deploy target | Single image `popyog/sheetsubmit-shadcnui:latest` (Railway, production) | **2 images** — `popyog/sheetsubmit-testmycode-api:latest` + `popyog/sheetsubmit-testmycode-web:latest` (separate Railway project) |
+| Deploy target | Single image `popyog/sheetsubmit-shadcnui:latest` (Railway, production) | **2 images** — `popyog/sheetsubmit-testmycode-backend:latest` + `popyog/sheetsubmit-testmycode-frontend:latest` (separate Railway project) |
 | Telegram bot | Production token | **TEST bot** token (in `.env`, gitignored) — never register the production bot here |
 | Data / users | Real Redis | Fresh, empty Redis — no real users, no data migration concerns |
 
