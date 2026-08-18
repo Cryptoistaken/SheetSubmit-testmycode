@@ -1,7 +1,7 @@
 // Version history routes — ported from the old server (API contract unchanged).
 import { Router } from "express";
 import type { Row } from "../lib/shared";
-import { createForkFile } from "../services/files";
+import { createForkFile, updateUserFilesAtomic } from "../services/files";
 import {
   getHistoryMeta,
   histMetaKey,
@@ -67,9 +67,13 @@ historyRouter.post("/:id/history/:v/restore", requireAuth, requireFileAccess, as
       return;
     }
     await setJSON("rows:" + req.params.id, rows);
-    const file = req.files![req.fileIdx!];
-    file.updatedAt = Date.now();
-    await setJSON("files:" + req.userId, req.files!);
+    const bumped = await updateUserFilesAtomic(req.userId || "", (files) => {
+      const idx = files.findIndex((f) => f.id === req.params.id);
+      if (idx === -1) return null;
+      files[idx].updatedAt = Date.now();
+      return files[idx];
+    });
+    if (bumped === null) { res.status(500).json({ error: "Conflict saving files" }); return; }
     console.log("[Hist] restore file=" + req.params.id + " v" + v + " rows=" + rows.length);
     res.json({ ok: true, v, rows });
   } catch (e) {

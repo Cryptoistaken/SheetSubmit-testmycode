@@ -1,7 +1,7 @@
 // Files & data routes — ported from the old server (API contract unchanged).
 import { Router } from "express";
 import type { Row, StoredFile } from "../lib/shared";
-import { getDedupKey, getUserFiles } from "../services/files";
+import { getDedupKey, getUserFiles, updateUserFilesAtomic } from "../services/files";
 import { delHistoryKeys, pruneHistory, snapshotHistory } from "../services/history";
 import { delKey, getJSON, key, redis, setJSON, setJSONex } from "../services/redis";
 import { migrateLogKey, requireAuth, requireFileAccess } from "../middleware/auth";
@@ -21,35 +21,42 @@ filesRouter.get("/:id", requireAuth, requireFileAccess, async (req, res) => {
 });
 
 filesRouter.post("/", requireAuth, async (req, res) => {
-  const files = await getUserFiles(req.userId || "");
   const file = req.body as StoredFile;
   file.userId = req.userId;
   file.createdAt = Date.now();
   file.updatedAt = Date.now();
-  files.unshift(file);
-  await setJSON("files:" + req.userId, files);
+  await updateUserFilesAtomic(req.userId || "", (files) => {
+    files.unshift(file);
+    return files;
+  });
   await redis.set(key("meta:dirty"), String(Date.now()));
   res.json(file);
 });
 
 filesRouter.put("/:id", requireAuth, requireFileAccess, async (req, res) => {
-  const file = req.files![req.fileIdx!];
   const updates = req.body as Record<string, unknown>;
-  Object.keys(updates).forEach((k) => {
-    file[k] = updates[k];
+  const updated = await updateUserFilesAtomic(req.userId || "", (files) => {
+    const idx = files.findIndex((f) => f.id === req.params.id);
+    if (idx === -1) return null;
+    Object.keys(updates).forEach((k) => { files[idx][k] = updates[k]; });
+    files[idx].updatedAt = Date.now();
+    return files[idx];
   });
-  file.updatedAt = Date.now();
-  await setJSON("files:" + req.userId, req.files!);
+  if (updated === null) { res.status(404).json({ error: "file not found" }); return; }
   await redis.set(key("meta:dirty"), String(Date.now()));
-  res.json(file);
+  res.json(updated);
 });
 
 filesRouter.delete("/:id", requireAuth, requireFileAccess, async (req, res) => {
-  const file = req.files!.splice(req.fileIdx!, 1)[0];
-  file.deletedAt = Date.now();
+  const removed = await updateUserFilesAtomic(req.userId || "", (files) => {
+    const idx = files.findIndex((f) => f.id === req.params.id);
+    if (idx === -1) return null;
+    return files.splice(idx, 1)[0];
+  });
+  if (removed === null) { res.status(404).json({ error: "file not found" }); return; }
+  removed.deletedAt = Date.now();
   const archived = (await getJSON<StoredFile[]>("archive:" + req.userId)) || [];
-  archived.unshift(file);
-  await setJSON("files:" + req.userId, req.files!);
+  archived.unshift(removed);
   await setJSON("archive:" + req.userId, archived);
   await redis.set(key("meta:dirty"), String(Date.now()));
   res.json({ ok: true });
@@ -66,6 +73,7 @@ filesRouter.put("/:id/persist", requireAuth, requireFileAccess, async (req, res)
     dataCount?: number;
   };
   const fileId = req.params.id;
+  let persistedFile: StoredFile | null = null;
   const serverLogLen = body.logs !== undefined ? await redis.llen(key("logs:" + fileId)) : -1;
   const pipeline = redis.pipeline();
   if (body.rows !== undefined) {
@@ -92,12 +100,6 @@ filesRouter.put("/:id/persist", requireAuth, requireFileAccess, async (req, res)
   }
   if (body.undo !== undefined) pipeline.set(key("undo:" + fileId), JSON.stringify(body.undo));
   if (body.redo !== undefined) pipeline.set(key("redo:" + fileId), JSON.stringify(body.redo));
-  if (body.dataCount !== undefined) {
-    const file = req.files![req.fileIdx!];
-    file.dataCount = body.dataCount;
-    file.updatedAt = Date.now();
-    pipeline.set(key("files:" + req.userId), JSON.stringify(req.files));
-  }
   try {
     const results = await pipeline.exec(); if (!results) { console.error("[Persist] pipeline error: exec returned null"); res.status(500).json({ error: "Failed to persist data" }); return; }
     const failedCmd = results.find((r) => r[0] !== null);
@@ -111,7 +113,17 @@ filesRouter.put("/:id/persist", requireAuth, requireFileAccess, async (req, res)
     res.status(500).json({ error: "Failed to persist data" });
     return;
   }
-  res.json({ ok: true, file: req.file });
+  if (body.dataCount !== undefined) {
+    persistedFile = await updateUserFilesAtomic(req.userId || "", (files) => {
+      const idx = files.findIndex((f) => f.id === fileId);
+      if (idx === -1) return null;
+      files[idx].dataCount = body.dataCount;
+      files[idx].updatedAt = Date.now();
+      return files[idx];
+    });
+    if (persistedFile === null) { res.status(500).json({ error: "Failed to persist data" }); return; }
+  }
+  res.json({ ok: true, file: persistedFile || req.file });
 });
 
 // ── Rows / sync / undo / cell / logs ──
@@ -228,10 +240,11 @@ archiveRouter.post("/:id/restore", requireAuth, async (req, res) => {
   }
   const file = archived.splice(idx, 1)[0];
   delete file.deletedAt;
-  const files = await getUserFiles(req.userId || "");
-  files.unshift(file);
+  await updateUserFilesAtomic(req.userId || "", (files) => {
+    files.unshift(file);
+    return files;
+  });
   await setJSON("archive:" + req.userId, archived);
-  await setJSON("files:" + req.userId, files);
   await redis.set(key("meta:dirty"), String(Date.now()));
   res.json({ ok: true });
 });
@@ -243,19 +256,22 @@ archiveRouter.post("/batch-restore", requireAuth, async (req, res) => {
     return;
   }
   let archived = (await getJSON<StoredFile[]>("archive:" + req.userId)) || [];
-  const files = await getUserFiles(req.userId || "");
+  const restoredFiles: StoredFile[] = [];
   let restored = 0;
   archived = archived.filter((f) => {
     if (ids.indexOf(f.id) !== -1) {
       delete f.deletedAt;
-      files.unshift(f);
+      restoredFiles.unshift(f);
       restored++;
       return false;
     }
     return true;
   });
+  await updateUserFilesAtomic(req.userId || "", (files) => {
+    restoredFiles.forEach((f) => files.unshift(f));
+    return files;
+  });
   await setJSON("archive:" + req.userId, archived);
-  await setJSON("files:" + req.userId, files);
   await redis.set(key("meta:dirty"), String(Date.now()));
   res.json({ restored });
 });

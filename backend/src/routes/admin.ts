@@ -1,7 +1,7 @@
 // Admin routes — ported from the old server (API contract unchanged).
 import { Router } from "express";
 import type { Row, StoredFile } from "../lib/shared";
-import { createForkFile } from "../services/files";
+import { createForkFile, updateUserFilesAtomic } from "../services/files";
 import {
   delHistoryKeys,
   getHistoryMeta,
@@ -14,6 +14,7 @@ import { delKey, getJSON, key, redis, setJSON } from "../services/redis";
 import {
   findAllUserIds,
   findFileAcrossUsers,
+  invalidateSession,
   requireAdmin,
   requireAuth,
 } from "../middleware/auth";
@@ -197,10 +198,11 @@ adminRouter.post("/user/:userId/archive/:fileId/restore", requireAuth, requireAd
   }
   const file = archived.splice(idx, 1)[0];
   delete file.deletedAt;
-  const files = (await getJSON<StoredFile[]>("files:" + req.params.userId)) || [];
-  files.unshift(file);
+  await updateUserFilesAtomic(req.params.userId, (files) => {
+    files.unshift(file);
+    return files;
+  });
   await setJSON("archive:" + req.params.userId, archived);
-  await setJSON("files:" + req.params.userId, files);
   res.json({ ok: true });
 });
 
@@ -247,12 +249,15 @@ adminRouter.put("/file/:fileId", requireAuth, requireAdmin, async (req, res) => 
       return;
     }
     const updates = req.body as Record<string, unknown>;
-    Object.keys(updates).forEach((k) => {
-      found.files[found.idx][k] = updates[k];
+    const updated = await updateUserFilesAtomic(found.userId, (files) => {
+      const idx = files.findIndex((f) => f.id === req.params.fileId);
+      if (idx === -1) return null;
+      Object.keys(updates).forEach((k) => { files[idx][k] = updates[k]; });
+      files[idx].updatedAt = Date.now();
+      return files[idx];
     });
-    found.files[found.idx].updatedAt = Date.now();
-    await setJSON("files:" + found.userId, found.files);
-    res.json(found.files[found.idx]);
+    if (updated === null) { res.status(500).json({ error: "Conflict saving files" }); return; }
+    res.json(updated);
   } catch (e) {
     console.error("[Admin Update File] error:", (e as Error).message);
     res.status(500).json({ error: "Failed to update file" });
@@ -266,11 +271,18 @@ adminRouter.delete("/file/:fileId", requireAuth, requireAdmin, async (req, res) 
       res.status(404).json({ error: "file not found" });
       return;
     }
-    const file = found.files.splice(found.idx, 1)[0];
+    const file = await updateUserFilesAtomic(found.userId, (files) => {
+      const idx = files.findIndex((f) => f.id === req.params.fileId);
+      if (idx === -1) return null;
+      return files.splice(idx, 1)[0];
+    });
+    if (file === null) {
+      res.status(500).json({ error: "Conflict saving files" });
+      return;
+    }
     file.deletedAt = Date.now();
     const archived = (await getJSON<StoredFile[]>("archive:" + found.userId)) || [];
     archived.unshift(file);
-    await setJSON("files:" + found.userId, found.files);
     await setJSON("archive:" + found.userId, archived);
     res.json({ ok: true });
   } catch (e) {
@@ -363,14 +375,13 @@ adminRouter.post("/file/:fileId/history/:v/restore", requireAuth, requireAdmin, 
     }
     await setJSON("rows:" + req.params.fileId, rows);
     if (found.userId) {
-      const files = await getJSON<StoredFile[]>("files:" + found.userId);
-      if (files) {
+      const bumped = await updateUserFilesAtomic(found.userId, (files) => {
         const idx = files.findIndex((f) => f.id === req.params.fileId);
-        if (idx !== -1) {
-          files[idx].updatedAt = Date.now();
-          await setJSON("files:" + found.userId, files);
-        }
-      }
+        if (idx === -1) return null;
+        files[idx].updatedAt = Date.now();
+        return files[idx];
+      });
+      if (bumped === null) { res.status(500).json({ error: "Conflict saving files" }); return; }
     }
     console.log("[Hist] admin restore file=" + req.params.fileId + " v" + v + " rows=" + rows.length);
     res.json({ ok: true, v, rows });
@@ -472,17 +483,6 @@ adminRouter.put("/file/:fileId/persist", requireAuth, requireAdmin, async (req, 
   }
   if (body.undo !== undefined) pipeline.set(key("undo:" + req.params.fileId), JSON.stringify(body.undo));
   if (body.redo !== undefined) pipeline.set(key("redo:" + req.params.fileId), JSON.stringify(body.redo));
-  if (body.dataCount !== undefined && body.userId) {
-    const files = await getJSON<StoredFile[]>("files:" + body.userId);
-    if (files) {
-      const idx = files.findIndex((f) => f.id === req.params.fileId);
-      if (idx !== -1) {
-        files[idx].dataCount = body.dataCount;
-        files[idx].updatedAt = Date.now();
-        pipeline.set(key("files:" + body.userId), JSON.stringify(files));
-      }
-    }
-  }
   try {
     const results = await pipeline.exec();
     if (!results) {
@@ -500,6 +500,16 @@ adminRouter.put("/file/:fileId/persist", requireAuth, requireAdmin, async (req, 
     console.error("[Admin Persist] pipeline error:", (e as Error).message);
     res.status(500).json({ error: "Failed to persist" });
     return;
+  }
+  if (body.dataCount !== undefined && body.userId) {
+    const updated = await updateUserFilesAtomic(body.userId, (files) => {
+      const idx = files.findIndex((f) => f.id === req.params.fileId);
+      if (idx === -1) return null;
+      files[idx].dataCount = body.dataCount;
+      files[idx].updatedAt = Date.now();
+      return files[idx];
+    });
+    if (updated === null) { res.status(500).json({ error: "Conflict saving files" }); return; }
   }
   res.json({ ok: true });
 });
@@ -569,6 +579,12 @@ adminRouter.delete("/user/:userId", requireAuth, requireAdmin, async (req, res) 
   delPromises.push(delKey("archive:" + req.params.userId));
   delPromises.push(delKey("user:" + req.params.userId));
   delPromises.push(redis.srem("ss:userIds", String(req.params.userId)));
+  const sessIds = await redis.smembers(key("userSessions:" + req.params.userId));
+  sessIds.forEach((sid) => {
+    delPromises.push(delKey("session:" + sid));
+    invalidateSession(sid);
+  });
+  delPromises.push(delKey("userSessions:" + req.params.userId));
   await Promise.all(delPromises);
   res.json({ ok: true });
 });
