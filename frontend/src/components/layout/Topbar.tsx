@@ -148,14 +148,22 @@ export default function Topbar() {
     const name = renameName.trim();
     if (!name || !file) return;
     const st = useSheetStore.getState();
-    if (st.adminMode) await api.adminUpdateFile(file.id, { name });
-    else await api.updateFile(file.id, { name });
+    try {
+      if (st.adminMode) await api.adminUpdateFile(file.id, { name });
+      else await api.updateFile(file.id, { name });
+    } catch {
+      showToast("Rename failed");
+      return;
+    }
     useSheetStore.setState((s) => (s.file ? { file: { ...s.file, name } } : {}));
     closeRename();
   };
 
   const logout = () => {
-    api.logout().then(() => window.location.reload());
+    api
+      .logout()
+      .then(() => window.location.reload())
+      .catch(() => showToast("Logout failed"));
   };
 
   return (

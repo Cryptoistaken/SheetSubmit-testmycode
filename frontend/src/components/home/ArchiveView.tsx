@@ -38,7 +38,12 @@ export default function ArchiveView() {
   };
 
   const restoreOne = async (id: string) => {
-    await api.restoreFile(id);
+    try {
+      await api.restoreFile(id);
+    } catch {
+      showToast("Restore failed");
+      return;
+    }
     showToast("File restored");
     setSelected((prev) => {
       const next = new Set(prev);
@@ -51,7 +56,12 @@ export default function ArchiveView() {
   const deleteOne = async (id: string) => {
     const ok = await confirm("Permanently delete this file?", "Delete Forever");
     if (!ok) return;
-    await api.permanentDelete(id);
+    try {
+      await api.permanentDelete(id);
+    } catch {
+      showToast("Delete failed");
+      return;
+    }
     showToast("Permanently deleted");
     setSelected((prev) => {
       const next = new Set(prev);
@@ -74,7 +84,12 @@ export default function ArchiveView() {
       "Restore",
     );
     if (!ok) return;
-    await api.batchRestore(ids);
+    try {
+      await api.batchRestore(ids);
+    } catch {
+      showToast("Restore failed");
+      return;
+    }
     setSelected(new Set());
     load();
     showToast(ids.length + " file" + (ids.length > 1 ? "s" : "") + " restored");
@@ -87,7 +102,12 @@ export default function ArchiveView() {
       "Delete Forever",
     );
     if (!ok) return;
-    await api.batchDelete(ids);
+    try {
+      await api.batchDelete(ids);
+    } catch {
+      showToast("Delete failed");
+      return;
+    }
     setSelected(new Set());
     load();
     showToast(ids.length + " file" + (ids.length > 1 ? "s" : "") + " permanently deleted");

@@ -77,14 +77,26 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
     if (!detailUser) return;
     const ok = await confirm("Permanently delete this user and all their files?", "Delete User");
     if (!ok) return;
-    await api.adminDeleteUser(detailUser.id);
+    try {
+      await api.adminDeleteUser(detailUser.id);
+    } catch {
+      showToast("Delete failed");
+      return;
+    }
     showToast("User deleted");
     showList();
   };
 
   const banUser = async () => {
     if (!detailUser) return;
-    await api.adminBanUser(detailUser.id);
+    const ok = window.confirm("Ban this user?");
+    if (!ok) return;
+    try {
+      await api.adminBanUser(detailUser.id);
+    } catch {
+      showToast("Ban failed");
+      return;
+    }
     setDetailUser({ ...detailUser, banned: true });
     showToast("User banned");
     loadList();
@@ -92,7 +104,14 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
 
   const unbanUser = async () => {
     if (!detailUser) return;
-    await api.adminUnbanUser(detailUser.id);
+    const ok = window.confirm("Unban this user?");
+    if (!ok) return;
+    try {
+      await api.adminUnbanUser(detailUser.id);
+    } catch {
+      showToast("Unban failed");
+      return;
+    }
     setDetailUser({ ...detailUser, banned: false });
     showToast("User unbanned");
     loadList();
@@ -101,7 +120,12 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
   const removeFile = async (fileId: string) => {
     const ok = await confirm("Move this file to archive?", "Archive");
     if (!ok) return;
-    await api.adminDeleteFile(fileId);
+    try {
+      await api.adminDeleteFile(fileId);
+    } catch {
+      showToast("Failed to archive file");
+      return;
+    }
     showToast("File archived");
     if (detailUser) showDetail(detailUser.id);
   };
@@ -129,7 +153,12 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
       return;
     }
     if (!renameFileId) return;
-    await api.adminUpdateFile(renameFileId, { name });
+    try {
+      await api.adminUpdateFile(renameFileId, { name });
+    } catch {
+      showToast("Rename failed");
+      return;
+    }
     setRenameFileId(null);
     showToast("Renamed");
     if (detailUser) showDetail(detailUser.id);
@@ -137,7 +166,12 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
 
   const restoreArchived = async (fileId: string) => {
     if (!detailUser) return;
-    await api.adminRestoreArchived(detailUser.id, fileId);
+    try {
+      await api.adminRestoreArchived(detailUser.id, fileId);
+    } catch {
+      showToast("Restore failed");
+      return;
+    }
     showToast("File restored");
     showDetail(detailUser.id);
   };
@@ -146,7 +180,12 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
     if (!detailUser) return;
     const ok = await confirm("Permanently delete this file?", "Delete Forever");
     if (!ok) return;
-    await api.adminDeleteArchived(detailUser.id, fileId);
+    try {
+      await api.adminDeleteArchived(detailUser.id, fileId);
+    } catch {
+      showToast("Delete failed");
+      return;
+    }
     showToast("Permanently deleted");
     showDetail(detailUser.id);
   };

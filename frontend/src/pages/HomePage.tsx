@@ -114,7 +114,12 @@ export default function HomePage() {
         // bridge may be gone
       }
     }
-    await api.deleteFile(f.id);
+    try {
+      await api.deleteFile(f.id);
+    } catch {
+      showToast("Failed to archive file");
+      return;
+    }
     loadFiles();
     showToast("File archived");
   };
@@ -136,7 +141,12 @@ export default function HomePage() {
       return;
     }
     if (!renameFileId) return;
-    await api.updateFile(renameFileId, { name });
+    try {
+      await api.updateFile(renameFileId, { name });
+    } catch {
+      showToast("Rename failed");
+      return;
+    }
     closeRename();
     loadFiles();
     showToast("Renamed");
@@ -175,7 +185,12 @@ export default function HomePage() {
       "Archive",
     );
     if (!ok) return;
-    await Promise.all(ids.map((id) => api.deleteFile(id)));
+    try {
+      await Promise.all(ids.map((id) => api.deleteFile(id)));
+    } catch {
+      showToast("Failed to archive files");
+      return;
+    }
     setSelected(new Set());
     loadFiles();
     showToast(ids.length + " file" + (ids.length > 1 ? "s" : "") + " archived");
@@ -191,24 +206,43 @@ export default function HomePage() {
       finalName = name + " (" + suffix + ")";
     }
     const id = genId();
-    await api.createFile({ id, name: finalName, type });
+    try {
+      await api.createFile({ id, name: finalName, type });
+    } catch {
+      showToast("Failed to create file");
+      return;
+    }
     showToast(FILE_TYPE_DEFS[type].label + " file created");
     navigate("/file/" + id);
   };
 
   const uploadFile = async (file: File) => {
-    const buf = await file.arrayBuffer();
-    const current = files ?? (await api.getFiles());
-    const result = await importXlsx(buf, file.name, current);
-    await hydrateWaCache(result.rows);
-    await api.createFile({ id: result.id, name: result.name, type: result.type });
-    await api.persist(result.id, {
-      rows: result.rows,
-      dataCount: result.dataCount,
-      action: "import",
-    });
-    showToast("Imported " + result.dataCount + " rows");
-    navigate("/file/" + result.id);
+    try {
+      const buf = await file.arrayBuffer();
+      const current = files ?? (await api.getFiles());
+      const result = await importXlsx(buf, file.name, current);
+      await hydrateWaCache(result.rows);
+      await api.createFile({ id: result.id, name: result.name, type: result.type });
+      try {
+        await api.persist(result.id, {
+          rows: result.rows,
+          dataCount: result.dataCount,
+          action: "import",
+        });
+      } catch {
+        try {
+          await api.deleteFile(result.id);
+        } catch {
+          // rollback best-effort
+        }
+        showToast("Import failed — rolled back");
+        return;
+      }
+      showToast("Imported " + result.dataCount + " rows");
+      navigate("/file/" + result.id);
+    } catch {
+      showToast("Import failed");
+    }
   };
 
   return (
