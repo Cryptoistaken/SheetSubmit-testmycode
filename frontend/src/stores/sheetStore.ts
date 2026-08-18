@@ -273,17 +273,12 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     const seq = ++openSeq;
     set({ status: "loading", adminMode: false, adminOwnerId: null });
     try {
-      const [f, rowsRes, logsRes, undoData] = await Promise.all([
-        api.getFile(id),
-        api.getRows(id),
-        api.getLogs(id),
-        api.getUndo(id),
+      const [full, crossDups] = await Promise.all([
+        api.getFileFull(id),
+        api.getCrossDups(id).then((d) => d?.dups ?? {}).catch(() => ({})),
       ]);
+      const f = full.file;
       if (!f?.id) throw new Error("File not found");
-      const crossDups = await api
-        .getCrossDups(id)
-        .then((d) => d?.dups ?? {})
-        .catch(() => ({}));
       if (seq !== openSeq) return;
       const columns = FILE_TYPE_DEFS[f.type].columns;
       let visibleCols = new Set<string>(columns.map((c) => c.key));
@@ -293,11 +288,11 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       } catch {
         // ignore malformed saved columns
       }
-      const rows: Row[] = [...(rowsRes ?? [])];
+      const rows: Row[] = [...(full.rows ?? [])];
       while (rows.length < 100) rows.push(makeEmptyRow(columns));
-      const undoStack = (undoData?.undo ?? []) as UndoEntry[];
-      const redoStack = (undoData?.redo ?? []) as UndoEntry[];
-      const apiLogs = logsRes ?? [];
+      const undoStack = (full.undo ?? []) as UndoEntry[];
+      const redoStack = (full.redo ?? []) as UndoEntry[];
+      const apiLogs = full.logs ?? [];
       set({
         status: "ready",
         fileId: id,

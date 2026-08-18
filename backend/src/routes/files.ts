@@ -115,6 +115,39 @@ filesRouter.get("/:id/rows", requireAuth, requireFileAccess, async (req, res) =>
   res.json(rows || []);
 });
 
+// Single round-trip open: file meta + rows + logs + undo/redo in one pipelined read.
+filesRouter.get("/:id/full", requireAuth, requireFileAccess, async (req, res) => {
+  const id = req.params.id;
+  const logKey = key("logs:" + id);
+  const pipe = redis.pipeline();
+  pipe.get(key("rows:" + id));
+  pipe.lrange(logKey, 0, -1);
+  pipe.get(key("undo:" + id));
+  pipe.get(key("redo:" + id));
+  const results = await pipe.exec();
+  const val = (r: [Error | null, unknown] | null): unknown =>
+    r && r[0] === null ? r[1] : null;
+  let rows: Row[] = [];
+  let undo: unknown[] = [];
+  let redo: unknown[] = [];
+  let logs: unknown[] = [];
+  if (results) {
+    const rowsRaw = val(results[0]);
+    if (typeof rowsRaw === "string") rows = JSON.parse(rowsRaw);
+    const logRaw = val(results[1]);
+    if (Array.isArray(logRaw)) {
+      logs = logRaw.map((l) => {
+        try { return JSON.parse(String(l)); } catch { return l; }
+      });
+    }
+    const undoRaw = val(results[2]);
+    if (typeof undoRaw === "string") undo = JSON.parse(undoRaw);
+    const redoRaw = val(results[3]);
+    if (typeof redoRaw === "string") redo = JSON.parse(redoRaw);
+  }
+  res.json({ file: req.file, rows, logs, undo, redo });
+});
+
 filesRouter.get("/:id/sync", requireAuth, requireFileAccess, async (req, res) => {
   const sync = await getJSON("sync:" + req.params.id);
   res.json(sync || { enabled: false });

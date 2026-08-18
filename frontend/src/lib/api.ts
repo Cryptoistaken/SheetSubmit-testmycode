@@ -65,7 +65,10 @@ interface VersionResult {
 export const api = {
   // ── Files ──
   getFiles: () => request<SheetFile[]>("/files"),
-  getFile: (id: string) => request<SheetFile>(`/files/${id}`),
+  getFileFull: (id: string) =>
+    request<{ file: SheetFile; rows: Row[]; logs: unknown[]; undo: unknown[]; redo: unknown[] }>(
+      `/files/${id}/full`,
+    ),
   createFile: (data: { id: string; name: string; type: FileType }) =>
     request<SheetFile>("/files", { method: "POST", body: JSON.stringify(data) }),
   updateFile: (id: string, data: Record<string, unknown>) =>
@@ -85,8 +88,6 @@ export const api = {
     request<{ restored: number }>("/archive/batch-restore", { method: "POST", body: JSON.stringify({ ids }) }),
   batchDelete: (ids: string[]) =>
     request<{ deleted: number }>("/archive/batch-delete", { method: "POST", body: JSON.stringify({ ids }) }),
-  getLogs: (id: string) => request<unknown[]>(`/files/${id}/logs`),
-  getUndo: (fileId: string) => request<HistoryResult>(`/files/${fileId}/undo`),
   getCrossDups: (fileId?: string) =>
     request<CrossDupResult>(`/cross-dups${fileId ? `?fileId=${fileId}` : ""}`),
   pageCheck: (cookie: string) =>
