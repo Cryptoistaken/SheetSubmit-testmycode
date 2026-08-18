@@ -24,32 +24,25 @@ declare global {
 
 const BASE = RUNTIME_BASE + "/api";
 
-const pending = new Set<AbortController>();
-
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
-  pending.add(controller);
-  try {
-    const res = await fetch(BASE + path, {
-      ...init,
-      credentials: "include",
-      headers: { "Content-Type": "application/json", ...init?.headers },
-      signal: controller.signal,
-    });
-    if (!res.ok) {
-      let detail = "";
-      try {
-        const body = await res.json();
-        detail = body?.error ?? JSON.stringify(body);
-      } catch {
-        detail = await res.text().catch(() => "");
-      }
-      throw new Error(`${res.status} ${res.statusText}${detail ? ` — ${detail}` : ""}`);
+  const res = await fetch(BASE + path, {
+    ...init,
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...init?.headers },
+    signal: controller.signal,
+  });
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const body = await res.json();
+      detail = body?.error ?? JSON.stringify(body);
+    } catch {
+      detail = await res.text().catch(() => "");
     }
-    return res.json() as Promise<T>;
-  } finally {
-    pending.delete(controller);
+    throw new Error(`${res.status} ${res.statusText}${detail ? ` — ${detail}` : ""}`);
   }
+  return res.json() as Promise<T>;
 }
 
 interface PersistPayload {
@@ -70,11 +63,6 @@ interface VersionResult {
 }
 
 export const api = {
-  cancelPending: () => {
-    for (const c of pending) c.abort();
-    pending.clear();
-  },
-
   // ── Files ──
   getFiles: () => request<SheetFile[]>("/files"),
   getFile: (id: string) => request<SheetFile>(`/files/${id}`),
@@ -97,22 +85,10 @@ export const api = {
     request<{ restored: number }>("/archive/batch-restore", { method: "POST", body: JSON.stringify({ ids }) }),
   batchDelete: (ids: string[]) =>
     request<{ deleted: number }>("/archive/batch-delete", { method: "POST", body: JSON.stringify({ ids }) }),
-  getSync: (id: string) => request<Record<string, unknown>>(`/files/${id}/sync`),
-  setSync: (id: string, data: unknown) =>
-    request<{ ok: boolean }>(`/files/${id}/sync`, { method: "PUT", body: JSON.stringify(data) }),
-  updateCell: (id: string, data: { rowIdx: number; colKey: string; value?: string }) =>
-    request<{ ok: boolean }>(`/files/${id}/cell`, { method: "PUT", body: JSON.stringify(data) }),
-  appendLog: (id: string, data: { log?: unknown }) =>
-    request<{ ok: boolean }>(`/files/${id}/log`, { method: "POST", body: JSON.stringify(data) }),
   getLogs: (id: string) => request<unknown[]>(`/files/${id}/logs`),
   getUndo: (fileId: string) => request<HistoryResult>(`/files/${fileId}/undo`),
   getCrossDups: (fileId?: string) =>
     request<CrossDupResult>(`/cross-dups${fileId ? `?fileId=${fileId}` : ""}`),
-  waCheck: (cookie: string) =>
-    request<{ eligible?: boolean; error?: string | null; banReason?: string | null; linkedNumber?: string | null }>("/fb/wa-check", {
-      method: "POST",
-      body: JSON.stringify({ cookie }),
-    }),
   pageCheck: (cookie: string) =>
     request<{ eligible?: boolean; error?: string | null; banReason?: string | null; pageName?: string | null; linkedNumber?: string | null }>("/fb/page-check", {
       method: "POST",
@@ -143,10 +119,6 @@ export const api = {
   adminFileRows: (fileId: string) => request<Row[]>(`/admin/file/${fileId}/rows`),
   adminPersist: (fileId: string, data: PersistPayload) =>
     request<{ ok: boolean }>(`/admin/file/${fileId}/persist`, { method: "PUT", body: JSON.stringify(data) }),
-  adminUpdateCell: (fileId: string, data: { rowIdx: number; colKey: string; value?: string }) =>
-    request<{ ok: boolean }>(`/admin/file/${fileId}/cell`, { method: "PUT", body: JSON.stringify(data) }),
-  adminAppendLog: (fileId: string, data: { log?: unknown }) =>
-    request<{ ok: boolean }>(`/admin/file/${fileId}/log`, { method: "POST", body: JSON.stringify(data) }),
   adminFileLogs: (fileId: string) => request<unknown[]>(`/admin/file/${fileId}/logs`),
   adminUndo: (fileId: string) => request<HistoryResult>(`/admin/file/${fileId}/undo`),
 
@@ -166,10 +138,6 @@ export const api = {
     request<{ ok: boolean; meta: VersionMeta[] }>(`/files/${id}/history/${v}/name`, {
       method: "POST",
       body: JSON.stringify({ name }),
-    }),
-  forkVersion: (id: string, v: number) =>
-    request<{ ok: boolean; file: SheetFile; rows: Row[] }>(`/files/${id}/history/${v}/fork`, {
-      method: "POST",
     }),
   adminNameVersion: (fileId: string, v: number, name: string) =>
     request<{ ok: boolean; meta: VersionMeta[] }>(`/admin/file/${fileId}/history/${v}/name`, {
