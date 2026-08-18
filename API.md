@@ -112,6 +112,8 @@ CORS: only origin === `FRONTEND_URL`, credentials allowed, preflight → 204. Se
 - Cross-dup counts cached per user for 60 s (`crossdups:<userId>`, invalidated on persist).
 - WA eligibility cache keyed `wa:<userId>:<c_user>` (scoped to the acting user, written/read by the same user).
 - Autosaves serialized through a single promise chain (`saveChain`); `isDirty` cleared only when rows are unchanged since the save started. `closeFile` commits the open draft and awaits the final flush; `refreshSheet` skips while dirty; `beforeunload`/`pagehide`/`visibilitychange:hidden` flush with `keepalive`.
+- Every write to a user's file list goes through `updateUserFilesAtomic` (Redis WATCH/MULTI, 5 retries) — rename/persist/create/restore/archive can no longer clobber each other.
+- Sessions tracked in `ss:userSessions:<userId>` (added on login, removed on logout); admin user-delete kills all live sessions.
 - API responses gzip-compressed (`compression` middleware).
 - WA checks: concurrency 3, cache prefill via `/wa/cache`, then live `pageCheck` per row.
 

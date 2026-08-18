@@ -189,7 +189,13 @@ Telegram can hit `/webhook/tg` — backend auto-registers the webhook to
   data keys kept, restore aborts 500 if pre-snapshot fails), `b836fb0` (persist only replaces
   logs when client list not stale, restore snapshot-check, `wa:` cache scoped per user
   `wa:<userId>:<c_user>`, meta:dirty backup triggers on create/rename/delete/archive ops).
-  **Residual risk:** `files:<userId>` list RMW race (rename vs concurrent persist) not fully
-  eliminated (fresh-read not lock); undo/redo stacks still device-local last-write; admin
-  delete-user leaves `session:` keys alive; beforeunload keepalive capped at 64KB.
+  **Residual risk:** `files:<userId>` list RMW race eliminated via `updateUserFilesAtomic`
+  (WATCH/MULTI, 5 retries) on every files-list write (files.ts, admin.ts, history.ts,
+  createForkFile). pruneHistory now aborts if the oldest retained delta cannot be materialized
+  (`44663d9`). Sessions tracked in `ss:userSessions:<userId>`; admin user-delete kills every live
+  session + cache entry (`7d34a67`). **Still open:** undo/redo stacks remain device-local
+  last-write-wins across devices; beforeunload keepalive flush capped at 64KB (very large sheets
+  can still drop on hard tab-kill); `archive:` list itself still non-atomic (archive-vs-archive
+  races are user-initiated single-action, accepted); session index accumulates stale tokens until
+  next logout/user-delete (harmless).
 - Resume: run Phase 3 smoke (login via test bot, CRUD, checks, bubble), updating this file.
