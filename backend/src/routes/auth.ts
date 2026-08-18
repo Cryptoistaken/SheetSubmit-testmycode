@@ -1,7 +1,7 @@
 // Auth routes — ported from the old server (API contract unchanged).
 import { Router } from "express";
 import { BACKEND_PUBLIC_URL, FRONTEND_URL, TG_BOT_TOKEN as BOT_TOKEN } from "../config/env";
-import { delKey, getJSON } from "../services/redis";
+import { delKey, getJSON, key, redis } from "../services/redis";
 import { completeTelegramLogin, tg } from "../services/telegram";
 import { getSessionId, invalidateSession, isAdmin } from "../middleware/auth";
 
@@ -78,7 +78,9 @@ authRouter.get("/logout", async (req, res) => {
   const sessionId = getSessionId(req);
   console.log("[Auth] logout session=" + (sessionId ? sessionId.slice(0, 8) + "..." : "none"));
   if (sessionId) {
+    const session = await getJSON<{ userId: string | number }>("session:" + sessionId);
     await delKey("session:" + sessionId);
+    if (session) await redis.srem(key("userSessions:" + String(session.userId)), sessionId);
     invalidateSession(sessionId);
   }
   res.setHeader("Set-Cookie", sessionCookie("", req.secure));

@@ -1,7 +1,7 @@
 // Telegram bot — ported from the old server (webhook on public URL, long-poll fallback).
 import { BACKEND_PUBLIC_URL, LOGIN_BASE, TG_BOT_TOKEN, WEBHOOK_URL } from "../config/env";
 import { generateToken } from "../lib/ids";
-import { delKey, getJSON, redis, setJSON, setJSONex } from "./redis";
+import { delKey, getJSON, key, redis, setJSON, setJSONex } from "./redis";
 
 const TG_API = "https://api.telegram.org/bot" + TG_BOT_TOKEN;
 
@@ -102,6 +102,7 @@ export async function completeTelegramLogin(
 
   const sessionId = generateToken();
   await setJSONex("session:" + sessionId, { userId: userInfo.id }, 2592000000);
+  await redis.sadd(key("userSessions:" + userInfo.id), sessionId);
 
   if (did && /^[A-Za-z0-9-]{8,64}$/.test(did)) {
     await setJSONex("device:" + did, { sessionId }, 3600000);
