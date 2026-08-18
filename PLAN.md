@@ -58,6 +58,10 @@ the main repo remain protected.
 
 ## 3. Commands
 
+> **Docs:** full endpoint inventory in `API.md`; API-efficiency work plan in
+> `docs/superpowers/plans/2026-08-19-api-efficiency.md` (6 tasks, incl. one
+> production-breaking `fbcookie.ts` relative-fetch fix).
+
 ```bash
 # Install/build per folder (each fully independent):
 bun install --cwd frontend        # frontend/bun.lock
