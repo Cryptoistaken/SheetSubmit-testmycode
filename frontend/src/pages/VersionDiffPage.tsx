@@ -69,7 +69,9 @@ export default function VersionDiffPage() {
     if (!fileId) return;
     if (ownerId) void useSheetStore.getState().openFileAdmin(fileId, ownerId);
     else void useSheetStore.getState().openFile(fileId);
-    return () => useSheetStore.getState().closeFile();
+    return () => {
+      void useSheetStore.getState().closeFile();
+    };
   }, [fileId, ownerId]);
 
   useEffect(() => {

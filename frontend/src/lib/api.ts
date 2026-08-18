@@ -24,10 +24,11 @@ declare global {
 
 const BASE = RUNTIME_BASE + "/api";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(path: string, init?: RequestInit, opts?: { keepalive?: boolean }): Promise<T> {
   const controller = new AbortController();
   const res = await fetch(BASE + path, {
     ...init,
+    keepalive: opts?.keepalive,
     credentials: "include",
     headers: { "Content-Type": "application/json", ...init?.headers },
     signal: controller.signal,
@@ -75,11 +76,11 @@ export const api = {
     request<SheetFile>(`/files/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteFile: (id: string) => request<{ ok: boolean }>(`/files/${id}`, { method: "DELETE" }),
   getRows: (id: string) => request<Row[]>(`/files/${id}/rows`),
-  persist: (id: string, data: PersistPayload) =>
+  persist: (id: string, data: PersistPayload, opts?: { keepalive?: boolean }) =>
     request<{ ok: boolean; file?: SheetFile }>(`/files/${id}/persist`, {
       method: "PUT",
       body: JSON.stringify(data),
-    }),
+    }, opts),
   health: () => request<{ status: string }>("/health"),
   getArchive: () => request<ArchiveFile[]>("/archive"),
   restoreFile: (id: string) => request<{ ok: boolean }>(`/archive/${id}/restore`, { method: "POST" }),

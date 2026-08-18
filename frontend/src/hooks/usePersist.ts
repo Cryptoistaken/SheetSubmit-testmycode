@@ -3,10 +3,19 @@ import { useSheetStore } from "@/stores/sheetStore";
 
 export function usePersist(): void {
   useEffect(() => {
-    const handler = () => {
-      void useSheetStore.getState().flushPersist();
+    const flush = () => {
+      void useSheetStore.getState().flushPersist(undefined, true);
     };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
+    const onVis = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("beforeunload", flush);
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("beforeunload", flush);
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, []);
 }

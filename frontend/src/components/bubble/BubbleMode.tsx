@@ -56,7 +56,9 @@ export default function BubbleMode({ fileId }: { fileId: string }) {
 
   useEffect(() => {
     void useSheetStore.getState().openFile(fileId);
-    return () => useSheetStore.getState().closeFile();
+    return () => {
+      void useSheetStore.getState().closeFile();
+    };
   }, [fileId]);
 
   // Bubble default: only cookies + 2FA key columns visible (uid hidden) unless

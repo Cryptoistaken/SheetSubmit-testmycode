@@ -167,11 +167,11 @@ export interface SheetState {
 
   openFile: (id: string) => Promise<void>;
   openFileAdmin: (id: string, ownerId: string) => Promise<void>;
-  closeFile: () => void;
+  closeFile: () => Promise<void>;
   refreshSheet: () => Promise<void>;
   commitCell: (rowIdx: number, colKey: string, value: string) => void;
   persist: (action?: string) => void;
-  flushPersist: (action?: string) => Promise<void>;
+  flushPersist: (action?: string, viaUnload?: boolean) => Promise<void>;
   undo: () => void;
   redo: () => void;
   openQuickEdit: (rowIdx: number, colKey: string) => void;
@@ -236,6 +236,7 @@ export interface SheetState {
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 let openSeq = 0;
+let saveChain: Promise<void> = Promise.resolve();
 
 export const useSheetStore = create<SheetState>()((set, get) => ({
   status: "idle",
@@ -323,10 +324,15 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     }
   },
 
-  closeFile: () => {
+  closeFile: async () => {
     openSeq++;
-    const s = get();
-    if (s.isDirty) void get().flushPersist();
+    const st = get();
+    if (st.selectedCell && (st.qebOpen || st.inlineEdit)) {
+      const rows = st.rows.slice();
+      rows[st.selectedCell.rowIdx] = { ...rows[st.selectedCell.rowIdx], [st.selectedCell.colIdx]: st.draft };
+      set({ rows, isDirty: true });
+    }
+    if (get().isDirty) await get().flushPersist();
     set({
       status: "idle",
       fileId: null,
@@ -417,6 +423,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
   refreshSheet: async () => {
     const fileId = get().fileId;
     if (!fileId) return;
+    if (get().isDirty) return;
     try {
       const rowsRes = get().adminMode
         ? await api.adminFileRows(fileId)
@@ -503,49 +510,56 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     }, 300);
   },
 
-  flushPersist: async (action) => {
-    const s = get();
-    if (!s.fileId || !s.file || !s.isDirty) return;
-    const columns = FILE_TYPE_DEFS[s.file.type].columns;
-    let dataCount = 0;
-    let lastData = -1;
-    s.rows.forEach((row, idx) => {
-      const hasData = columns.some((c) => row[c.key]);
-      if (hasData) {
-        dataCount++;
-        lastData = idx;
+  flushPersist: async (action, viaUnload) => {
+    const run = async () => {
+      const s = get();
+      if (!s.fileId || !s.file || !s.isDirty) return;
+      const columns = FILE_TYPE_DEFS[s.file.type].columns;
+      let dataCount = 0;
+      let lastData = -1;
+      s.rows.forEach((row, idx) => {
+        const hasData = columns.some((c) => row[c.key]);
+        if (hasData) {
+          dataCount++;
+          lastData = idx;
+        }
+      });
+      const keepCount = Math.min(s.rows.length, Math.max(lastData + 51, 100));
+      const trimmed = s.rows.slice(0, keepCount);
+      const payload: {
+        rows: Row[];
+        logs: unknown[];
+        undo: UndoEntry[];
+        redo: UndoEntry[];
+        dataCount: number;
+        action?: string;
+        userId?: string;
+      } = {
+        rows: trimmed,
+        logs: s.apiLogs,
+        undo: s.undoStack,
+        redo: s.redoStack,
+        dataCount,
+      };
+      if (action) payload.action = action;
+      try {
+        if (s.adminMode) {
+          payload.userId = s.adminOwnerId ?? undefined;
+          await api.adminPersist(s.fileId, payload);
+        } else {
+          await api.persist(s.fileId, payload, { keepalive: !!viaUnload });
+        }
+      } catch {
+        // swallow — old app is fire-and-forget
       }
-    });
-    const keepCount = Math.min(s.rows.length, Math.max(lastData + 51, 100));
-    const trimmed = s.rows.slice(0, keepCount);
-    const payload: {
-      rows: Row[];
-      logs: unknown[];
-      undo: UndoEntry[];
-      redo: UndoEntry[];
-      dataCount: number;
-      action?: string;
-      userId?: string;
-    } = {
-      rows: trimmed,
-      logs: s.apiLogs,
-      undo: s.undoStack,
-      redo: s.redoStack,
-      dataCount,
+      const cur = get();
+      if (cur.fileId === s.fileId && cur.rows === s.rows) {
+        set({ isDirty: false });
+        trimMemoryRows();
+      }
     };
-    if (action) payload.action = action;
-    try {
-      if (s.adminMode) {
-        payload.userId = s.adminOwnerId ?? undefined;
-        await api.adminPersist(s.fileId, payload);
-      } else {
-        await api.persist(s.fileId, payload);
-      }
-      set({ isDirty: false });
-      trimMemoryRows();
-    } catch {
-      // swallow — old app is fire-and-forget
-    }
+    saveChain = saveChain.then(run).catch(() => {});
+    await saveChain;
   },
 
   undo: () => {
