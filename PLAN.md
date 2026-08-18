@@ -67,8 +67,8 @@ bun run --cwd backend dev         # backend on :3000
 bun run --cwd frontend build      # typecheck + build web → frontend/dist
 bun run --cwd backend typecheck   # backend typecheck
 
-# Deploy (builds + pushes BOTH images → Railway auto-deploys)
-.\redeploy.bat
+# Deploy (builds + pushes BOTH images, then calls each service's /__redeploy to redeploy)
+.\redeploy.bat   # needs deploy.env (gitignored): RAILWAY_TOKEN + FRONTEND_URL + BACKEND_URL
 ```
 
 ### Env files (3, inside their own folders)
@@ -76,7 +76,7 @@ bun run --cwd backend typecheck   # backend typecheck
 |---|---|---|
 | `backend/.env` | Local dev | Full local var set — test token + all defaults |
 | `backend/.env.api` | Railway **api** service → Variables | `TG_BOT_TOKEN`, `ADMIN_IDS`, `FRONTEND_URL` (= **web** URL), `REDIS_URL` (private), optional `WEBHOOK_URL`, history/backup knobs |
-| `frontend/.env.web` | Build arg → web image | `VITE_API_BASE` (api service public URL, baked into the bundle at build — `redeploy.bat` passes it via `--build-arg`) |
+| `frontend/.env.web` | Railway **web** service → Variables | `VITE_API_BASE` (api service public URL — read at container start, injected into the page via `/config.js`; not baked at build, not in code) |
 
 **No nginx proxy.** The api has its own public domain, so the SPA calls the api directly
 (cross-origin, `credentials: "include"`). The backend:
@@ -98,9 +98,17 @@ Telegram can hit `/webhook/tg` — backend auto-registers the webhook to
   project at the production bot — registering its webhook here would hijack the live app.
 - **`.env` is gitignored** — the token stays local.
 - **No nginx / no same-origin proxy.** The SPA calls the api directly at
-  `VITE_API_BASE` (baked at build). Cookies are cross-site-safe: `SameSite=None; Secure`
+  `VITE_API_BASE` (runtime-injected via `/config.js`). Cookies are cross-site-safe: `SameSite=None; Secure`
   behind HTTPS (`auth.ts`), CORS allow-lists exactly `FRONTEND_URL` (`app.ts`).
-- **`VITE_API_BASE` build arg** = the api service public URL; `redeploy.bat` passes it.
+- **Self-redeploy endpoints:** Railway does **not** auto-deploy on image push. Each service
+  exposes `POST /__redeploy` (frontend in `server.js`, backend in `routes/deploy.ts`) which
+  calls the Railway GraphQL `serviceInstanceRedeploy` mutation for ITSELF using
+  `RAILWAY_TOKEN` (env var on the service) + Railway-injected `RAILWAY_SERVICE_ID` /
+  `RAILWAY_ENVIRONMENT_ID`. Requires `Authorization: Bearer <RAILWAY_TOKEN>` (else 401).
+  `redeploy.bat` builds+pushes both images, then hits both endpoints.
+- **`RAILWAY_TOKEN`** (account/workspace token, `Authorization: Bearer`) must be set as a
+  variable on **both** services, and in local `deploy.env` (gitignored; see
+  `deploy.env.example`) for redeploy.bat.
   Frontend image is a tiny bun static server (`frontend/server.js`) — no env, no crash risk.
 - **`FRONTEND_URL` env var** on the Railway api service = the **web** service's public URL
   (`https://<web>.up.railway.app`) — CORS origin + post-login redirect target. **The api
@@ -135,7 +143,7 @@ Telegram can hit `/webhook/tg` — backend auto-registers the webhook to
     `proxy_pass ;` → nginx `[emerg] invalid URL prefix` crash-loop. Fixed by setting the
     scheme; then removed nginx entirely per decision.
   - Frontend: nginx removed → `frontend/server.js` (bun static, SPA fallback); `api.ts`
-    now uses `VITE_API_BASE` (baked at build) + `credentials: "include"`.
+    now uses `VITE_API_BASE` (runtime-injected via `/config.js`) + `credentials: "include"`.
   - Backend: CORS middleware (allow `FRONTEND_URL` only, credentials) + `trust proxy` in
     `app.ts`; session cookie `SameSite=None; Secure` when HTTPS else `SameSite=Lax`
     (`auth.ts`); login links use `LOGIN_BASE` (= `WEBHOOK_URL` → api public URL →
@@ -147,6 +155,13 @@ Telegram can hit `/webhook/tg` — backend auto-registers the webhook to
     `credentials:include` → 200 from `seal.up.railway.app` → `sealbackend.up.railway.app`;
     webhook registered to api direct URL.
 - Phase 0 + 1 done; both Docker images build clean + pushed.
+- **Runtime config + self-redeploy (just done):** no URLs hardcoded anywhere. Frontend
+  reads `VITE_API_BASE` at container start (`server.js` → `/config.js` → `window.APP_CONFIG`).
+  Both services expose `POST /__redeploy` (self-redeploy via `RAILWAY_TOKEN` +
+  `RAILWAY_SERVICE_ID`/`RAILWAY_ENVIRONMENT_ID`). `redeploy.bat` builds+pushes then calls
+  both endpoints. `RAILWAY_TOKEN` set on both services + in local `deploy.env`.
+  **Verified live:** `/config.js` serves the api base; cross-origin API 200; both
+  `/__redeploy` endpoints return `{"ok":true,...}` and 401 without the token.
 - **Not yet done:** end-to-end login smoke (click the test bot's login link → land on web,
   cookie flows). That's the final Phase 3 item.
 - Resume: run Phase 3 smoke (login via test bot, CRUD, checks, bubble), updating this file.

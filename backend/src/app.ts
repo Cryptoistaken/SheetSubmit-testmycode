@@ -9,6 +9,7 @@ import { requestLogger } from "./middleware/logging";
 import { adminRouter } from "./routes/admin";
 import { authRouter } from "./routes/auth";
 import { createBotRouter, createWebhookRouter } from "./routes/bot";
+import { deployRouter } from "./routes/deploy";
 import { archiveRouter, crossDupsRouter, filesRouter } from "./routes/files";
 import { historyRouter } from "./routes/history";
 import { waRouter } from "./routes/wa";
@@ -43,6 +44,9 @@ export function createApp(): express.Express {
 
   // Request logger
   app.use(requestLogger);
+
+  // Self-redeploy hook (redeploy.bat → POST /__redeploy). Before API routes.
+  app.use(deployRouter);
 
   // API routes
   app.use("/api/auth", authRouter);

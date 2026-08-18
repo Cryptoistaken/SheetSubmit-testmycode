@@ -9,6 +9,7 @@ build/
 # Env (never commit secrets — token lives in backend/.env)
 .env
 .env.*
+deploy.env
 
 # Logs
 *.log

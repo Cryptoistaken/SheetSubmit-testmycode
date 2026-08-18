@@ -10,10 +10,19 @@ import type {
   VersionMeta,
 } from "./types";
 
-// Base URL of the backend API. Baked at build time from VITE_API_BASE (the api's
-// public URL) since the frontend no longer proxies /api through nginx. Empty in
-// local dev, where vite's dev proxy forwards /api → localhost:3000.
-const BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/+$/, "") + "/api";
+// Base URL of the backend API. The static server injects it at container start via
+// /config.js (window.APP_CONFIG.apiBase ← VITE_API_BASE env var on the web service),
+// so no URL is baked into the build. Falls back to a build-time VITE_API_BASE (for
+// anyone building manually), then to relative /api (local dev → vite proxy).
+const RUNTIME_BASE = (window.APP_CONFIG?.apiBase ?? import.meta.env.VITE_API_BASE ?? "").replace(/\/+$/, "");
+// Runtime config injected by the static server via /config.js (see server.js).
+declare global {
+  interface Window {
+    APP_CONFIG?: { apiBase?: string };
+  }
+}
+
+const BASE = RUNTIME_BASE + "/api";
 
 const pending = new Set<AbortController>();
 

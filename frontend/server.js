@@ -1,10 +1,53 @@
 // Minimal static file server for the built SPA (no nginx, no proxy — all API
-// calls go straight to the backend public URL baked in at build time).
+// calls go straight to the backend public URL injected at container start).
 import { readFileSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 
 const ROOT = join(import.meta.dir, "dist");
 const PORT = Number(process.env.PORT || 80);
+const RAILWAY_API = "https://backboard.railway.com/graphql/v2";
+
+// Base URL of the backend API — read at container start (Railway web service
+// Variables), never hardcoded. Normalized: scheme-less values get https://.
+let apiBase = (process.env.VITE_API_BASE || "").replace(/\/+$/, "");
+if (apiBase && !/^https?:\/\//i.test(apiBase)) apiBase = "https://" + apiBase;
+
+const CONFIG_JS = "window.APP_CONFIG=" + JSON.stringify({ apiBase }) + ";\n";
+
+function json(status, payload) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+// POST /__redeploy — redeploy THIS service on Railway (used by redeploy.bat after
+// pushing the image). Self-redeploys via RAILWAY_TOKEN (env var on the service) +
+// Railway's own injected RAILWAY_SERVICE_ID / RAILWAY_ENVIRONMENT_ID — no IDs or
+// URLs hardcoded anywhere.
+async function handleRedeploy(req) {
+  const token = process.env.RAILWAY_TOKEN;
+  const serviceId = process.env.RAILWAY_SERVICE_ID;
+  const environmentId = process.env.RAILWAY_ENVIRONMENT_ID;
+  if (!token || !serviceId || !environmentId) {
+    return json(503, { ok: false, error: "RAILWAY_TOKEN / RAILWAY_SERVICE_ID / RAILWAY_ENVIRONMENT_ID not set" });
+  }
+  if (req.headers.get("authorization") !== "Bearer " + token) {
+    return json(401, { ok: false, error: "unauthorized" });
+  }
+  const res = await fetch(RAILWAY_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+    body: JSON.stringify({
+      query:
+        "mutation Redeploy($serviceId: String!, $environmentId: String!) { serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId) }",
+      variables: { serviceId, environmentId },
+    }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || body.errors) return json(502, { ok: false, errors: body.errors });
+  return json(200, { ok: body.data?.serviceInstanceRedeploy === true, data: body.data });
+}
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -26,7 +69,7 @@ const MIME = {
 
 Bun.serve({
   port: PORT,
-  fetch(req) {
+  async fetch(req) {
     const url = new URL(req.url);
     let pathname = url.pathname;
     try {
@@ -35,6 +78,12 @@ Bun.serve({
       /* keep as-is */
     }
     const clean = normalize(pathname).replace(/[\\/]+\.\.[\\/]/g, "/");
+    if (req.method === "POST" && clean === "/__redeploy") {
+      return handleRedeploy(req);
+    }
+    if (clean === "/config.js") {
+      return new Response(CONFIG_JS, { headers: { "Content-Type": "text/javascript" } });
+    }
     let file = join(ROOT, clean);
     if (!file.startsWith(ROOT)) file = join(ROOT, "index.html");
     if (extname(file) === "") file = join(ROOT, "index.html"); // SPA fallback
