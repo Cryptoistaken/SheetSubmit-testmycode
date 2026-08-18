@@ -179,7 +179,8 @@ Telegram can hit `/webhook/tg` — backend auto-registers the webhook to
   `compression` middleware; `e7fdc2d` perf: cross-dup counts cached 60s per user
   (`crossdups:<userId>`, invalidated in persist pipeline) + `flushPersist` no-op when not dirty.
   Both typechecks clean per task. Not deployed — run `redeploy.bat` only after user sign-off.
-- **Data-integrity hardening (just done, NOT deployed):** audit found data-loss bugs; fixed in
+- **Delta persistence (shipped):** cell edits autosave as ops (`/append`, seq-versioned), structural saves fall back to full `/persist`. Both return `seq`; 409 → client refetches + re-applies journal.
+- **Data-integrity hardening (deployed):** audit found data-loss bugs; fixed in
   `0bc9cbb` (autosaves serialized via `saveChain`, dirty cleared only when rows unchanged,
   `closeFile` commits draft + awaits final flush, `refreshSheet` skips when dirty, keepalive
   flush on beforeunload/pagehide/visibilitychange), `4611e2e` (confirm before delete-selected /

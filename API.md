@@ -46,11 +46,12 @@ CORS: only origin === `FRONTEND_URL`, credentials allowed, preflight → 204. Se
 |---|---|---|
 | GET | `/api/files` | list my files |
 | GET | `/api/files/:id` | single file meta |
-| GET | `/api/files/:id/full` | file meta + rows + logs + undo + redo in one pipelined read |
+| GET | `/api/files/:id/full` | file meta + rows + logs + undo + redo + `seq` in one pipelined read |
 | POST | `/api/files` | create file |
 | PUT | `/api/files/:id` | update file fields (rename) |
 | DELETE | `/api/files/:id` | soft-delete → archive |
-| PUT | `/api/files/:id/persist` | batch save rows/logs/undo/redo/dataCount |
+| PUT | `/api/files/:id/persist` | full save rows/logs/undo/redo/dataCount; returns `seq` |
+| PUT | `/api/files/:id/append` | delta save: `{base, ops[]}` seq-versioned cell changes; 409 on stale base |
 | GET | `/api/files/:id/rows` | read rows |
 | GET | `/api/files/:id/logs` | read logs |
 | GET | `/api/files/:id/undo` | undo/redo stacks |
@@ -107,7 +108,7 @@ CORS: only origin === `FRONTEND_URL`, credentials allowed, preflight → 204. Se
 
 - All browser calls go through `frontend/src/lib/api.ts` (`api.*` object, one `request<T>()` fetch wrapper with `credentials: "include"`).
 - `openFile` = 2 round trips: `GET /files/:id/full` (file+rows+logs+undo+redo) + `cross-dups`.
-- Autosave: 300 ms debounce → `flushPersist` sends the **entire** trimmed rows array each save (guarded — no-op when `isDirty` is false).
+- Autosave: 300 ms debounce. **Cell edits are sent as delta ops** via `PUT /files/:id/append` — `{ base: lastSeq, ops: [{rowIdx, cols}] }` — not the whole file. Every file has a `seq` counter (returned by `/full`, `/persist`, `/append`). Structural/action saves (merge/replace/append/clean/bubble, undo/redo, paste, removeEmptyRows, admin) still use the full `/persist` path. On append `409 version conflict` the client refetches `/full`, re-applies its unsent ops onto the server rows (local edits survive), bumps `lastSeq`, and re-appends.
 - Health poll: `Topbar` pings `/api/health` every 30 s (1.5× backoff to 120 s on failure), paused while the tab is hidden.
 - Cross-dup counts cached per user for 60 s (`crossdups:<userId>`, invalidated on persist).
 - WA eligibility cache keyed `wa:<userId>:<c_user>` (scoped to the acting user, written/read by the same user).

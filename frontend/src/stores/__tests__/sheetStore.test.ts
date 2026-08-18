@@ -12,14 +12,17 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 interface Deferred<T> {
   promise: Promise<T>;
   resolve: (value: T) => void;
+  reject: (reason?: unknown) => void;
 }
 
 function deferred<T>(): Deferred<T> {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((r) => {
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((r, j) => {
     resolve = r;
+    reject = j;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 
 interface PersistPayloadLike {
@@ -33,16 +36,41 @@ interface PersistCall {
   admin?: boolean;
 }
 
+interface AppendOpLike {
+  rowIdx: number;
+  cols: Record<string, string>;
+}
+
+interface AppendPayloadLike {
+  base: number;
+  ops: AppendOpLike[];
+}
+
+interface AppendCall {
+  id: string;
+  payload: AppendPayloadLike;
+}
+
 interface Harness {
   getRowsCalls: number;
+  getFileFullCalls: number;
   persistCalls: PersistCall[];
   nextPersist: Deferred<{ ok: boolean }> | null;
+  appendCalls: AppendCall[];
+  nextAppend: Deferred<{ ok: boolean; seq: number }> | null;
+  fullRows: Array<Record<string, string>>;
+  fullSeq: number;
 }
 
 const harness: Harness = {
   getRowsCalls: 0,
+  getFileFullCalls: 0,
   persistCalls: [],
   nextPersist: null,
+  appendCalls: [],
+  nextAppend: null,
+  fullRows: [{ cookies: "", uid: "", twofakey: "" }],
+  fullSeq: 0,
 };
 
 // Fake the entire `@/lib/api` module BEFORE importing the store. sheetStore only
@@ -50,13 +78,17 @@ const harness: Harness = {
 // module graph (fbcookie behavior etc.) imports cleanly.
 mock.module("@/lib/api", () => ({
   api: {
-    getFileFull: async (id: string) => ({
-      file: { id, name: "Test", type: "fb_cookie" },
-      rows: [{ cookies: "", uid: "", twofakey: "" }],
-      logs: [],
-      undo: [],
-      redo: [],
-    }),
+    getFileFull: async (id: string) => {
+      harness.getFileFullCalls++;
+      return {
+        file: { id, name: "Test", type: "fb_cookie" },
+        rows: harness.fullRows,
+        logs: [],
+        undo: [],
+        redo: [],
+        seq: harness.fullSeq,
+      };
+    },
     getCrossDups: async () => ({ counts: {}, dups: {} }),
     getRows: async () => {
       harness.getRowsCalls++;
@@ -66,6 +98,11 @@ mock.module("@/lib/api", () => ({
       harness.persistCalls.push({ id, payload: payload as PersistPayloadLike });
       if (harness.nextPersist) return harness.nextPersist.promise;
       return { ok: true };
+    },
+    append: async (id: string, payload: unknown) => {
+      harness.appendCalls.push({ id, payload: payload as AppendPayloadLike });
+      if (harness.nextAppend) return harness.nextAppend.promise;
+      return { ok: true, seq: harness.fullSeq };
     },
     adminPersist: async (id: string, payload: unknown) => {
       harness.persistCalls.push({
@@ -104,6 +141,9 @@ function resetStore(): void {
     redoStack: [],
     apiLogs: [],
     isDirty: false,
+    changeJournal: [],
+    lastSeq: 0,
+    dirtyStructural: false,
     selectedCell: null,
     draft: "",
     qebOpen: false,
@@ -124,8 +164,13 @@ function resetStore(): void {
     adminOwnerId: null,
   });
   harness.getRowsCalls = 0;
+  harness.getFileFullCalls = 0;
   harness.persistCalls = [];
   harness.nextPersist = null;
+  harness.appendCalls = [];
+  harness.nextAppend = null;
+  harness.fullRows = [{ cookies: "", uid: "", twofakey: "" }];
+  harness.fullSeq = 0;
 }
 
 beforeEach(resetStore);
@@ -136,61 +181,80 @@ async function openTestFile(): Promise<void> {
   expect(s.fileId).toBe("f1");
   expect(s.status).toBe("ready");
   expect(s.isDirty).toBe(false);
+  expect(s.lastSeq).toBe(0);
 }
 
 describe("sheetStore data-integrity", () => {
-  it("flushPersist serializes concurrent saves", async () => {
+  it("flushPersist serializes concurrent appends", async () => {
     await openTestFile();
     useSheetStore.getState().commitCell(0, "uid", "111");
     expect(useSheetStore.getState().isDirty).toBe(true);
+    expect(useSheetStore.getState().changeJournal).toEqual([
+      { rowIdx: 0, cols: { uid: "111" } },
+    ]);
 
-    harness.nextPersist = deferred();
+    harness.nextAppend = deferred<{ ok: boolean; seq: number }>();
     const p1 = useSheetStore.getState().flushPersist();
     const p2 = useSheetStore.getState().flushPersist();
     await Promise.resolve(); // let the first chained run start
 
-    // Only one persist may be in-flight; the second flush waits on the chain.
-    expect(harness.persistCalls.length).toBe(1);
+    // Only one append may be in-flight; the second flush waits on the chain.
+    expect(harness.appendCalls.length).toBe(1);
+    expect(harness.appendCalls[0].payload.base).toBe(0);
+    expect(harness.appendCalls[0].payload.ops).toEqual([
+      { rowIdx: 0, cols: { uid: "111" } },
+    ]);
 
-    harness.nextPersist.resolve({ ok: true });
+    harness.nextAppend.resolve({ ok: true, seq: 5 });
     await Promise.all([p1, p2]);
 
     // The second concurrent flush ran AFTER the first cleared isDirty, so it was
     // a serialized no-op — exactly one payload is sent (real store behavior).
-    expect(harness.persistCalls.length).toBe(1);
+    expect(harness.appendCalls.length).toBe(1);
     expect(useSheetStore.getState().isDirty).toBe(false);
+    expect(useSheetStore.getState().lastSeq).toBe(5);
+    expect(useSheetStore.getState().changeJournal).toEqual([]);
 
     // A subsequent edit still flushes through the same chain, in order.
     useSheetStore.getState().commitCell(0, "uid", "444");
-    harness.nextPersist = deferred();
+    harness.nextAppend = deferred<{ ok: boolean; seq: number }>();
     const p3 = useSheetStore.getState().flushPersist();
     await Promise.resolve();
-    expect(harness.persistCalls.length).toBe(2);
-    expect(harness.persistCalls[1].payload.rows[0].uid).toBe("444");
-    harness.nextPersist.resolve({ ok: true });
+    expect(harness.appendCalls.length).toBe(2);
+    expect(harness.appendCalls[1].payload.base).toBe(5);
+    expect(harness.appendCalls[1].payload.ops).toEqual([
+      { rowIdx: 0, cols: { uid: "444" } },
+    ]);
+    harness.nextAppend.resolve({ ok: true, seq: 6 });
     await p3;
     expect(useSheetStore.getState().isDirty).toBe(false);
+    expect(useSheetStore.getState().lastSeq).toBe(6);
   });
 
   it("dirty-clear guard preserves newer edits made while a save is pending", async () => {
     await openTestFile();
     useSheetStore.getState().commitCell(0, "uid", "111");
 
-    harness.nextPersist = deferred();
+    harness.nextAppend = deferred<{ ok: boolean; seq: number }>();
     const p = useSheetStore.getState().flushPersist();
     await Promise.resolve();
-    expect(harness.persistCalls.length).toBe(1);
+    expect(harness.appendCalls.length).toBe(1);
 
     // Newer edit while the save is still pending → rows reference changes.
     useSheetStore.getState().commitCell(0, "uid", "222");
     expect(useSheetStore.getState().rows[0].uid).toBe("222");
 
-    harness.nextPersist.resolve({ ok: true });
+    harness.nextAppend.resolve({ ok: true, seq: 5 });
     await p;
 
-    // The resolved save must NOT clear the newer dirty state.
+    // The resolved append must NOT clear the newer dirty state, journal or seq.
     expect(useSheetStore.getState().isDirty).toBe(true);
     expect(useSheetStore.getState().rows[0].uid).toBe("222");
+    expect(useSheetStore.getState().changeJournal).toEqual([
+      { rowIdx: 0, cols: { uid: "111" } },
+      { rowIdx: 0, cols: { uid: "222" } },
+    ]);
+    expect(useSheetStore.getState().lastSeq).toBe(0);
   });
 
   it("closeFile commits the open draft, awaits the final flush, then resets", async () => {
@@ -199,7 +263,7 @@ describe("sheetStore data-integrity", () => {
     useSheetStore.getState().setDraft("777");
     expect(useSheetStore.getState().inlineEdit).toBe(true);
 
-    harness.nextPersist = deferred();
+    harness.nextPersist = deferred<{ ok: boolean }>();
     const p = useSheetStore.getState().closeFile();
     await Promise.resolve();
 
@@ -217,6 +281,9 @@ describe("sheetStore data-integrity", () => {
     expect(s.isDirty).toBe(false);
     expect(s.selectedCell).toBeNull();
     expect(s.rows).toEqual([]);
+    expect(s.changeJournal).toEqual([]);
+    expect(s.lastSeq).toBe(0);
+    expect(s.dirtyStructural).toBe(false);
   });
 
   it("closeFile with a clean file does not persist", async () => {
@@ -224,6 +291,7 @@ describe("sheetStore data-integrity", () => {
     await useSheetStore.getState().closeFile();
 
     expect(harness.persistCalls.length).toBe(0);
+    expect(harness.appendCalls.length).toBe(0);
     const s = useSheetStore.getState();
     expect(s.fileId).toBeNull();
     expect(s.status).toBe("idle");
@@ -245,5 +313,70 @@ describe("sheetStore data-integrity", () => {
     await useSheetStore.getState().refreshSheet();
     expect(harness.getRowsCalls).toBe(1);
     expect(useSheetStore.getState().rows[0].uid).toBe("202");
+  });
+
+  it("409 conflict refetches and re-applies the local journal onto server rows", async () => {
+    await openTestFile();
+    useSheetStore.getState().commitCell(0, "uid", "111");
+    expect(useSheetStore.getState().changeJournal).toEqual([
+      { rowIdx: 0, cols: { uid: "111" } },
+    ]);
+
+    harness.nextAppend = deferred<{ ok: boolean; seq: number }>();
+    const p = useSheetStore.getState().flushPersist();
+    await Promise.resolve();
+    expect(harness.appendCalls.length).toBe(1);
+
+    // Server meanwhile moved on (someone else edited in parallel).
+    harness.fullRows = [{ cookies: "c_user=999;", uid: "999", twofakey: "" }];
+    harness.fullSeq = 7;
+    harness.nextAppend.reject(new Error("409 Conflict — version conflict"));
+    await p;
+
+    const s = useSheetStore.getState();
+    expect(s.rows[0].uid).toBe("111"); // local edit survived the re-apply
+    expect(s.rows[0].cookies).toBe("c_user=999;"); // server row content kept
+    expect(s.lastSeq).toBe(7); // advanced to the server seq
+    expect(s.changeJournal).toEqual([{ rowIdx: 0, cols: { uid: "111" } }]); // still unsent
+    expect(s.isDirty).toBe(true);
+
+    // Next flush re-appends with base = the fresh server seq.
+    harness.nextAppend = deferred<{ ok: boolean; seq: number }>();
+    const p2 = useSheetStore.getState().flushPersist();
+    await Promise.resolve();
+    expect(harness.appendCalls.length).toBe(2);
+    expect(harness.appendCalls[1].payload.base).toBe(7);
+    expect(harness.appendCalls[1].payload.ops).toEqual([
+      { rowIdx: 0, cols: { uid: "111" } },
+    ]);
+    harness.nextAppend.resolve({ ok: true, seq: 8 });
+    await p2;
+    expect(useSheetStore.getState().lastSeq).toBe(8);
+    expect(useSheetStore.getState().changeJournal).toEqual([]);
+    expect(useSheetStore.getState().isDirty).toBe(false);
+  });
+
+  it("structural changes fall back to a full persist and clear the journal", async () => {
+    await openTestFile();
+    useSheetStore.getState().commitCell(0, "uid", "111");
+    await useSheetStore.getState().flushPersist();
+    expect(harness.appendCalls.length).toBe(1);
+    expect(useSheetStore.getState().isDirty).toBe(false);
+
+    // Structural mutation (deleteSelected) → full persist, not append.
+    useSheetStore.getState().enterSelectionMode("cell", 0, "uid");
+    useSheetStore.getState().deleteSelected();
+    const s = useSheetStore.getState();
+    expect(s.dirtyStructural).toBe(true);
+    expect(s.isDirty).toBe(true);
+    expect(s.rows[0].uid).toBe("");
+
+    await useSheetStore.getState().flushPersist();
+
+    expect(harness.appendCalls.length).toBe(1); // append not used for structural
+    expect(harness.persistCalls.length).toBe(1); // full persist used instead
+    expect(useSheetStore.getState().isDirty).toBe(false);
+    expect(useSheetStore.getState().changeJournal).toEqual([]);
+    expect(useSheetStore.getState().dirtyStructural).toBe(false);
   });
 });

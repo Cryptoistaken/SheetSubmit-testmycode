@@ -56,6 +56,21 @@ interface PersistPayload {
   userId?: string;
 }
 
+export interface AppendOp {
+  rowIdx: number;
+  cols: Record<string, string>;
+}
+
+export interface AppendPayload {
+  base: number;
+  ops: AppendOp[];
+  logs?: unknown[];
+  undo?: unknown[];
+  redo?: unknown[];
+  dataCount?: number;
+  action?: string;
+}
+
 interface VersionResult {
   v: number;
   rows: Row[];
@@ -67,7 +82,7 @@ export const api = {
   // ── Files ──
   getFiles: () => request<SheetFile[]>("/files"),
   getFileFull: (id: string) =>
-    request<{ file: SheetFile; rows: Row[]; logs: unknown[]; undo: unknown[]; redo: unknown[] }>(
+    request<{ file: SheetFile; rows: Row[]; logs: unknown[]; undo: unknown[]; redo: unknown[]; seq?: number }>(
       `/files/${id}/full`,
     ),
   createFile: (data: { id: string; name: string; type: FileType }) =>
@@ -77,7 +92,12 @@ export const api = {
   deleteFile: (id: string) => request<{ ok: boolean }>(`/files/${id}`, { method: "DELETE" }),
   getRows: (id: string) => request<Row[]>(`/files/${id}/rows`),
   persist: (id: string, data: PersistPayload, opts?: { keepalive?: boolean }) =>
-    request<{ ok: boolean; file?: SheetFile }>(`/files/${id}/persist`, {
+    request<{ ok: boolean; seq?: number; file?: SheetFile }>(`/files/${id}/persist`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }, opts),
+  append: (id: string, data: AppendPayload, opts?: { keepalive?: boolean }) =>
+    request<{ ok: boolean; seq: number; file?: SheetFile }>(`/files/${id}/append`, {
       method: "PUT",
       body: JSON.stringify(data),
     }, opts),

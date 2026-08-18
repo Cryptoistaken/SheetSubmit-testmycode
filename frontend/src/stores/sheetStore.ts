@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api } from "@/lib/api";
+import { api, type AppendOp, type AppendPayload } from "@/lib/api";
 import {
   FILE_TYPE_DEFS,
   type ColumnDef,
@@ -145,6 +145,9 @@ export interface SheetState {
   redoStack: UndoEntry[];
   apiLogs: unknown[];
   isDirty: boolean;
+  changeJournal: AppendOp[];
+  lastSeq: number;
+  dirtyStructural: boolean;
   selectedCell: SelectedCell | null;
   draft: string;
   qebOpen: boolean;
@@ -249,6 +252,9 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
   redoStack: [],
   apiLogs: [],
   isDirty: false,
+  changeJournal: [],
+  lastSeq: 0,
+  dirtyStructural: false,
   selectedCell: null,
   draft: "",
   qebOpen: false,
@@ -305,6 +311,9 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         redoStack,
         apiLogs,
         isDirty: false,
+        changeJournal: [],
+        lastSeq: full.seq ?? 0,
+        dirtyStructural: false,
         selectedCell: null,
         draft: "",
         qebOpen: false,
@@ -330,7 +339,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     if (st.selectedCell && (st.qebOpen || st.inlineEdit)) {
       const rows = st.rows.slice();
       rows[st.selectedCell.rowIdx] = { ...rows[st.selectedCell.rowIdx], [st.selectedCell.colIdx]: st.draft };
-      set({ rows, isDirty: true });
+      set({ rows, isDirty: true, dirtyStructural: true });
     }
     if (get().isDirty) await get().flushPersist();
     set({
@@ -344,6 +353,9 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       redoStack: [],
       apiLogs: [],
       isDirty: false,
+      changeJournal: [],
+      lastSeq: 0,
+      dirtyStructural: false,
       selectedCell: null,
       draft: "",
       qebOpen: false,
@@ -401,6 +413,9 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         redoStack,
         apiLogs,
         isDirty: false,
+        changeJournal: [],
+        lastSeq: 0,
+        dirtyStructural: false,
         selectedCell: null,
         draft: "",
         qebOpen: false,
@@ -475,11 +490,20 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     if (deltas.length > 1) undoStack.push({ type: "cells", deltas });
     else undoStack.push(deltas[0]);
     if (undoStack.length > 100) undoStack.shift();
+    const journalCols: Record<string, string> = {};
+    deltas.forEach((d) => {
+      journalCols[d.colKey] = newRows[rowIdx][d.colKey] ?? "";
+    });
+    const changeJournal: AppendOp[] = [
+      ...s.changeJournal,
+      { rowIdx, cols: journalCols },
+    ];
     set({
       rows: newRows,
       undoStack,
       redoStack: [],
       isDirty: true,
+      changeJournal,
       invalidCells: newInvalid,
       ...recomputeMarks(newRows, s.crossDups, s.columns),
     });
@@ -513,7 +537,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
   flushPersist: async (action, viaUnload) => {
     const run = async () => {
       const s = get();
-      if (!s.fileId || !s.file || !s.isDirty) return;
+      if (!s.fileId || !s.file) return;
       const columns = FILE_TYPE_DEFS[s.file.type].columns;
       let dataCount = 0;
       let lastData = -1;
@@ -524,38 +548,98 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
           lastData = idx;
         }
       });
-      const keepCount = Math.min(s.rows.length, Math.max(lastData + 51, 100));
-      const trimmed = s.rows.slice(0, keepCount);
-      const payload: {
-        rows: Row[];
-        logs: unknown[];
-        undo: UndoEntry[];
-        redo: UndoEntry[];
-        dataCount: number;
-        action?: string;
-        userId?: string;
-      } = {
-        rows: trimmed,
-        logs: s.apiLogs,
-        undo: s.undoStack,
-        redo: s.redoStack,
-        dataCount,
-      };
-      if (action) payload.action = action;
-      try {
-        if (s.adminMode) {
-          payload.userId = s.adminOwnerId ?? undefined;
-          await api.adminPersist(s.fileId, payload);
-        } else {
-          await api.persist(s.fileId, payload, { keepalive: !!viaUnload });
+      if (action || s.dirtyStructural || s.adminMode) {
+        if (!s.isDirty) return;
+        const keepCount = Math.min(s.rows.length, Math.max(lastData + 51, 100));
+        const trimmed = s.rows.slice(0, keepCount);
+        const payload: {
+          rows: Row[];
+          logs: unknown[];
+          undo: UndoEntry[];
+          redo: UndoEntry[];
+          dataCount: number;
+          action?: string;
+          userId?: string;
+        } = {
+          rows: trimmed,
+          logs: s.apiLogs,
+          undo: s.undoStack,
+          redo: s.redoStack,
+          dataCount,
+        };
+        if (action) payload.action = action;
+        let resp: { ok: boolean; seq?: number } | undefined;
+        try {
+          if (s.adminMode) {
+            payload.userId = s.adminOwnerId ?? undefined;
+            resp = await api.adminPersist(s.fileId, payload);
+          } else {
+            resp = await api.persist(s.fileId, payload, { keepalive: !!viaUnload });
+          }
+        } catch {
+          // swallow — old app is fire-and-forget
         }
-      } catch {
-        // swallow — old app is fire-and-forget
-      }
-      const cur = get();
-      if (cur.fileId === s.fileId && cur.rows === s.rows) {
-        set({ isDirty: false });
-        trimMemoryRows();
+        const cur = get();
+        if (cur.fileId === s.fileId && cur.rows === s.rows) {
+          set({
+            isDirty: false,
+            changeJournal: [],
+            lastSeq: resp?.seq ?? s.lastSeq,
+            dirtyStructural: false,
+          });
+          trimMemoryRows();
+        }
+      } else {
+        if (s.changeJournal.length === 0 && !s.isDirty) return;
+        const payload: AppendPayload = {
+          base: s.lastSeq,
+          ops: s.changeJournal,
+          logs: s.apiLogs,
+          undo: s.undoStack,
+          redo: s.redoStack,
+          dataCount,
+        };
+        try {
+          const resp = await api.append(s.fileId, payload, { keepalive: !!viaUnload });
+          const cur = get();
+          if (cur.fileId === s.fileId && cur.rows === s.rows) {
+            set({ changeJournal: [], lastSeq: resp.seq, isDirty: false });
+            trimMemoryRows();
+          }
+        } catch (e) {
+          const errMsg = e instanceof Error ? e.message : String(e);
+          if (errMsg.startsWith("409")) {
+            // Version conflict: the append base is stale. Refetch the server's
+            // latest state and re-apply our unsent journal onto it so local
+            // edits survive; the next flush re-appends with the new base.
+            try {
+              const fresh = await api.getFileFull(s.fileId);
+              const f = fresh.file;
+              const cur = get();
+              if (!f?.id || cur.fileId !== s.fileId) return;
+              const freshCols = FILE_TYPE_DEFS[f.type].columns;
+              const rows: Row[] = [...(fresh.rows ?? [])];
+              while (rows.length < 100) rows.push(makeEmptyRow(freshCols));
+              s.changeJournal.forEach((op) => {
+                const row = rows[op.rowIdx];
+                if (!row) return;
+                rows[op.rowIdx] = { ...row, ...op.cols };
+              });
+              set({
+                rows,
+                changeJournal: s.changeJournal,
+                lastSeq: fresh.seq ?? s.lastSeq,
+                undoStack: (fresh.undo ?? []) as UndoEntry[],
+                redoStack: (fresh.redo ?? []) as UndoEntry[],
+                apiLogs: fresh.logs ?? [],
+                isDirty: true,
+                ...recomputeMarks(rows, cur.crossDups, cur.columns),
+              });
+            } catch {
+              // swallow — keep journal for the next flush attempt
+            }
+          }
+        }
       }
     };
     saveChain = saveChain.then(run).catch(() => {});
@@ -605,6 +689,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       undoStack,
       redoStack,
       isDirty: true,
+      dirtyStructural: true,
       ...recomputeMarks(rows, s.crossDups, s.columns),
     });
     get().persist();
@@ -654,6 +739,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       undoStack,
       redoStack,
       isDirty: true,
+      dirtyStructural: true,
       ...recomputeMarks(rows, s.crossDups, s.columns),
     });
     get().persist();
@@ -952,6 +1038,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       undoStack,
       redoStack: [],
       isDirty: true,
+      dirtyStructural: true,
       invalidCells: newInvalid,
       ...recomputeMarks(rows, s.crossDups, s.columns),
     });
@@ -1008,7 +1095,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     const rows = s.rows.concat(
       Array.from({ length: 100 }, () => makeEmptyRow(s.columns)),
     );
-    set({ rows, isDirty: true });
+    set({ rows, isDirty: true, dirtyStructural: true });
     get().persist();
     toast("100 rows added");
   },
@@ -1223,6 +1310,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         rows: finalRows,
         apiLogs,
         isDirty: true,
+        dirtyStructural: true,
         checkRunning: false,
         ...recomputeMarks(finalRows, s.crossDups, s.columns),
       });
@@ -1351,6 +1439,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         set({
           rows: finalRows,
           isDirty: true,
+          dirtyStructural: true,
           ...recomputeMarks(finalRows, cur.crossDups, cur.columns),
         });
         get().persist();
@@ -1381,6 +1470,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
             set({
               rows: finalRows,
               isDirty: true,
+              dirtyStructural: true,
               ...recomputeMarks(finalRows, cur.crossDups, cur.columns),
             });
           };
@@ -1415,6 +1505,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     set({
       rows: finalRows,
       isDirty: true,
+      dirtyStructural: true,
       ...recomputeMarks(finalRows, cur.crossDups, cur.columns),
     });
     get().persist();
@@ -1443,6 +1534,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         undoStack,
         redoStack: [],
         isDirty: true,
+        dirtyStructural: true,
         selectedCell: null,
         qebOpen: false,
       inlineEdit: false,
@@ -1489,6 +1581,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       undoStack,
       redoStack: [],
       isDirty: true,
+      dirtyStructural: true,
       ...recomputeMarks(rows, s.crossDups, s.columns),
     });
     get().persist("merge");
@@ -1518,6 +1611,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         undoStack,
         redoStack: [],
         isDirty: true,
+        dirtyStructural: true,
         selectedCell: null,
         qebOpen: false,
       inlineEdit: false,
@@ -1533,6 +1627,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         undoStack,
         redoStack: [],
         isDirty: true,
+        dirtyStructural: true,
         ...recomputeMarks(rows, s.crossDups, s.columns),
       });
       get().persist("append");
@@ -1573,6 +1668,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       undoStack,
       redoStack: [],
       isDirty: true,
+      dirtyStructural: true,
       ...recomputeMarks(rows, s.crossDups, s.columns),
       selectedCell: null,
       qebOpen: false,
@@ -1608,6 +1704,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       undoStack,
       redoStack: [],
       isDirty: true,
+      dirtyStructural: true,
       ...recomputeMarks(rows, s.crossDups, s.columns),
       selectedCell: null,
       qebOpen: false,
@@ -1692,6 +1789,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     set({
       rows,
       isDirty: true,
+      dirtyStructural: true,
       invalidCells: newInvalid,
       ...recomputeMarks(rows, s.crossDups, s.columns),
     });
@@ -1735,6 +1833,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     set({
       rows,
       isDirty: true,
+      dirtyStructural: true,
       invalidCells: newInvalid,
       ...recomputeMarks(rows, s.crossDups, s.columns),
     });
@@ -1846,6 +1945,7 @@ function applyCells(
     undoStack,
     redoStack: [],
     isDirty: true,
+    dirtyStructural: true,
     invalidCells: newInvalid,
     ...recomputeMarks(rows, s.crossDups, s.columns),
   });

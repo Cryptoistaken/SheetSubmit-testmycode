@@ -75,6 +75,10 @@ filesRouter.put("/:id/persist", requireAuth, requireFileAccess, async (req, res)
   const fileId = req.params.id;
   let persistedFile: StoredFile | null = null;
   const serverLogLen = body.logs !== undefined ? await redis.llen(key("logs:" + fileId)) : -1;
+  const seqRaw = await redis.get(key("seq:" + fileId));
+  let curSeq = seqRaw ? parseInt(seqRaw, 10) : 0;
+  if (isNaN(curSeq)) curSeq = 0;
+  const newSeq = curSeq + 1;
   const pipeline = redis.pipeline();
   if (body.rows !== undefined) {
     // Snapshot the *current* rows before overwriting, only when a discrete
@@ -91,6 +95,7 @@ filesRouter.put("/:id/persist", requireAuth, requireFileAccess, async (req, res)
     }
     pipeline.set(key("rows:" + fileId), JSON.stringify(body.rows));
   }
+  pipeline.set(key("seq:" + fileId), String(newSeq));
   pipeline.set(key("meta:dirty"), String(Date.now()));
   pipeline.del(key("crossdups:" + req.userId));
   if (body.logs !== undefined && body.logs.length >= serverLogLen) {
@@ -123,7 +128,109 @@ filesRouter.put("/:id/persist", requireAuth, requireFileAccess, async (req, res)
     });
     if (persistedFile === null) { res.status(500).json({ error: "Failed to persist data" }); return; }
   }
-  res.json({ ok: true, file: persistedFile || req.file });
+  res.json({ ok: true, seq: newSeq, file: persistedFile || req.file });
+});
+
+// ── Delta append (seq-versioned cell changes) ──
+filesRouter.put("/:id/append", requireAuth, requireFileAccess, async (req, res) => {
+  const body = req.body as {
+    base: number;
+    ops: { rowIdx: number; cols: Record<string, string> }[];
+    logs?: unknown[];
+    undo?: unknown[];
+    redo?: unknown[];
+    dataCount?: number;
+    action?: string;
+  };
+  if (
+    typeof body.base !== "number" ||
+    !Array.isArray(body.ops) ||
+    body.ops.some(
+      (op) =>
+        !Number.isInteger(op.rowIdx) ||
+        op.rowIdx < 0 ||
+        !op.cols ||
+        typeof op.cols !== "object" ||
+        Array.isArray(op.cols),
+    )
+  ) {
+    res.status(400).json({ error: "invalid append payload" });
+    return;
+  }
+  const fileId = req.params.id;
+  let updatedFile: StoredFile | null = null;
+  const serverLogLen = body.logs !== undefined ? await redis.llen(key("logs:" + fileId)) : -1;
+  let curSeq = 0;
+  let committed = false;
+  for (let attempt = 0; attempt < 5 && !committed; attempt++) {
+    await redis.watch(key("seq:" + fileId));
+    const seqRaw = await redis.get(key("seq:" + fileId));
+    curSeq = seqRaw ? parseInt(seqRaw, 10) : 0;
+    if (isNaN(curSeq)) curSeq = 0;
+    if (curSeq !== body.base) {
+      await redis.unwatch();
+      res.status(409).json({ error: "version conflict", serverSeq: curSeq });
+      return;
+    }
+    let curRows = await getJSON<Row[]>("rows:" + fileId);
+    if (!Array.isArray(curRows)) curRows = [];
+    const rows = curRows.slice();
+    for (const op of body.ops) {
+      while (rows.length <= op.rowIdx) rows.push({});
+      rows[op.rowIdx] = { ...(rows[op.rowIdx] || {}), ...op.cols };
+    }
+    if (body.action) {
+      if (curRows.length === 0) {
+        await snapshotHistory(fileId, body.action, rows);
+      } else {
+        await snapshotHistory(fileId, body.action, curRows);
+      }
+      void pruneHistory(fileId);
+    }
+    const p = redis.pipeline();
+    p.set(key("rows:" + fileId), JSON.stringify(rows));
+    p.set(key("seq:" + fileId), String(curSeq + 1));
+    p.set(key("meta:dirty"), String(Date.now()));
+    p.del(key("crossdups:" + req.userId));
+    if (body.logs !== undefined && body.logs.length >= serverLogLen) {
+      const logKey = key("logs:" + fileId);
+      p.del(logKey);
+      body.logs.forEach((l) => p.rpush(logKey, JSON.stringify(l)));
+    }
+    if (body.undo !== undefined) p.set(key("undo:" + fileId), JSON.stringify(body.undo));
+    if (body.redo !== undefined) p.set(key("redo:" + fileId), JSON.stringify(body.redo));
+    try {
+      const results = await p.exec();
+      if (results !== null) committed = true;
+    } catch (e) {
+      console.error("[Append] pipeline error:", (e as Error).message);
+      res.status(500).json({ error: "Failed to append" });
+      return;
+    }
+  }
+  if (!committed) {
+    try {
+      await redis.unwatch();
+    } catch {
+      // ignore
+    }
+    res.status(500).json({ error: "Failed to append" });
+    return;
+  }
+  if (body.dataCount !== undefined) {
+    updatedFile = await updateUserFilesAtomic(req.userId || "", (files) => {
+      const idx = files.findIndex((f) => f.id === fileId);
+      if (idx === -1) return null;
+      files[idx].dataCount = body.dataCount;
+      files[idx].updatedAt = Date.now();
+      return files[idx];
+    });
+    if (updatedFile === null) {
+      res.status(500).json({ error: "Failed to append" });
+      return;
+    }
+  }
+  res.json({ ok: true, seq: curSeq + 1, file: updatedFile || req.file });
 });
 
 // ── Rows / sync / undo / cell / logs ──
@@ -141,6 +248,7 @@ filesRouter.get("/:id/full", requireAuth, requireFileAccess, async (req, res) =>
   pipe.lrange(logKey, 0, -1);
   pipe.get(key("undo:" + id));
   pipe.get(key("redo:" + id));
+  pipe.get(key("seq:" + id));
   const results = await pipe.exec();
   const val = (r: [Error | null, unknown] | null): unknown =>
     r && r[0] === null ? r[1] : null;
@@ -148,6 +256,7 @@ filesRouter.get("/:id/full", requireAuth, requireFileAccess, async (req, res) =>
   let undo: unknown[] = [];
   let redo: unknown[] = [];
   let logs: unknown[] = [];
+  let seq = 0;
   if (results) {
     const rowsRaw = val(results[0]);
     if (typeof rowsRaw === "string") rows = JSON.parse(rowsRaw);
@@ -161,8 +270,13 @@ filesRouter.get("/:id/full", requireAuth, requireFileAccess, async (req, res) =>
     if (typeof undoRaw === "string") undo = JSON.parse(undoRaw);
     const redoRaw = val(results[3]);
     if (typeof redoRaw === "string") redo = JSON.parse(redoRaw);
+    const seqRaw = val(results[4]);
+    if (typeof seqRaw === "string") {
+      seq = parseInt(seqRaw, 10);
+      if (isNaN(seq)) seq = 0;
+    }
   }
-  res.json({ file: req.file, rows, logs, undo, redo });
+  res.json({ file: req.file, rows, logs, undo, redo, seq });
 });
 
 filesRouter.get("/:id/sync", requireAuth, requireFileAccess, async (req, res) => {
