@@ -272,14 +272,6 @@ adminRouter.delete("/file/:fileId", requireAuth, requireAdmin, async (req, res) 
     archived.unshift(file);
     await setJSON("files:" + found.userId, found.files);
     await setJSON("archive:" + found.userId, archived);
-    const delPromises: Promise<unknown>[] = [];
-    delPromises.push(delKey("rows:" + file.id));
-    delPromises.push(delKey("undo:" + file.id));
-    delPromises.push(delKey("redo:" + file.id));
-    delPromises.push(delKey("sync:" + file.id));
-    delPromises.push(delKey("logs:" + file.id));
-    delPromises.push(delHistoryKeys(file.id));
-    await Promise.all(delPromises);
     res.json({ ok: true });
   } catch (e) {
     console.error("[Admin Delete File] error:", (e as Error).message);
@@ -364,7 +356,11 @@ adminRouter.post("/file/:fileId/history/:v/restore", requireAuth, requireAdmin, 
       return;
     }
     const curRows = await getJSON<Row[]>("rows:" + req.params.fileId);
-    await snapshotHistory(req.params.fileId, "restore", curRows || []);
+    const snapV = await snapshotHistory(req.params.fileId, "restore", curRows || []);
+    if (snapV === null) {
+      res.status(500).json({ error: "Failed to snapshot current state before restore" });
+      return;
+    }
     await setJSON("rows:" + req.params.fileId, rows);
     if (found.userId) {
       const files = await getJSON<StoredFile[]>("files:" + found.userId);
@@ -454,7 +450,7 @@ adminRouter.put("/file/:fileId/persist", requireAuth, requireAdmin, async (req, 
     dataCount?: number;
     userId?: string;
   };
-  const promises: Promise<unknown>[] = [];
+  const pipeline = redis.pipeline();
   if (body.rows !== undefined) {
     if (body.action) {
       const curRows = await getJSON<Row[]>("rows:" + req.params.fileId);
@@ -465,18 +461,17 @@ adminRouter.put("/file/:fileId/persist", requireAuth, requireAdmin, async (req, 
       }
       void pruneHistory(req.params.fileId);
     }
-    promises.push(setJSON("rows:" + req.params.fileId, body.rows));
+    pipeline.set(key("rows:" + req.params.fileId), JSON.stringify(body.rows));
   }
-  promises.push(redis.set(key("meta:dirty"), String(Date.now())));
+  pipeline.set(key("meta:dirty"), String(Date.now()));
+  if (body.userId) pipeline.del(key("crossdups:" + body.userId));
   if (body.logs !== undefined) {
     const logKey = key("logs:" + req.params.fileId);
-    const p = redis.pipeline();
-    p.del(logKey);
-    body.logs.forEach((l) => p.rpush(logKey, JSON.stringify(l)));
-    promises.push(p.exec());
+    pipeline.del(logKey);
+    body.logs.forEach((l) => pipeline.rpush(logKey, JSON.stringify(l)));
   }
-  if (body.undo !== undefined) promises.push(setJSON("undo:" + req.params.fileId, body.undo));
-  if (body.redo !== undefined) promises.push(setJSON("redo:" + req.params.fileId, body.redo));
+  if (body.undo !== undefined) pipeline.set(key("undo:" + req.params.fileId), JSON.stringify(body.undo));
+  if (body.redo !== undefined) pipeline.set(key("redo:" + req.params.fileId), JSON.stringify(body.redo));
   if (body.dataCount !== undefined && body.userId) {
     const files = await getJSON<StoredFile[]>("files:" + body.userId);
     if (files) {
@@ -484,14 +479,25 @@ adminRouter.put("/file/:fileId/persist", requireAuth, requireAdmin, async (req, 
       if (idx !== -1) {
         files[idx].dataCount = body.dataCount;
         files[idx].updatedAt = Date.now();
-        promises.push(setJSON("files:" + body.userId, files));
+        pipeline.set(key("files:" + body.userId), JSON.stringify(files));
       }
     }
   }
   try {
-    await Promise.all(promises);
+    const results = await pipeline.exec();
+    if (!results) {
+      console.error("[Admin Persist] pipeline error: exec returned null");
+      res.status(500).json({ error: "Failed to persist" });
+      return;
+    }
+    const failedCmd = results.find((r) => r[0] !== null);
+    if (failedCmd) {
+      console.error("[Admin Persist] pipeline command error:", failedCmd[0]);
+      res.status(500).json({ error: "Failed to persist" });
+      return;
+    }
   } catch (e) {
-    console.error("[Admin Persist] error:", (e as Error).message);
+    console.error("[Admin Persist] pipeline error:", (e as Error).message);
     res.status(500).json({ error: "Failed to persist" });
     return;
   }
