@@ -13,7 +13,10 @@ export default function SelectionBar() {
       <div className="sel-bar-actions">
         <button
           className="sel-btn danger"
-          onClick={() => useSheetStore.getState().deleteSelected()}
+          onClick={() => {
+            if (!window.confirm("Delete selected cells? This can be undone.")) return;
+            useSheetStore.getState().deleteSelected();
+          }}
         >
           Delete
         </button>

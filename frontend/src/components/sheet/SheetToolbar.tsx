@@ -373,6 +373,7 @@ export default function SheetToolbar() {
           aria-label="Compact rows"
           onClick={() => {
             close();
+            if (!window.confirm("Remove empty rows between used rows?")) return;
             useSheetStore.getState().removeEmptyRows();
           }}
         >

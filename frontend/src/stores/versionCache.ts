@@ -58,13 +58,6 @@ export async function getVersionRows(
     return rec;
   } catch (e) {
     console.error("[Versions] load v" + v + " error:", e);
-    const rec: VersionRows = { rows: [], keys: new Set(), ok: false };
-    byFile.set(v, rec);
-    if (byFile.size > MAX_VERSIONS_PER_FILE) {
-      const oldestVersion = byFile.keys().next().value as number | undefined;
-      if (oldestVersion !== undefined) byFile.delete(oldestVersion);
-    }
-    trimCache();
-    return rec;
+    return { rows: [], keys: new Set(), ok: false };
   }
 }

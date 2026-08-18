@@ -64,7 +64,9 @@ export default function SheetPage() {
     if (!fileId) return;
     if (ownerId) void useSheetStore.getState().openFileAdmin(fileId, ownerId);
     else void useSheetStore.getState().openFile(fileId);
-    return () => useSheetStore.getState().closeFile();
+    return () => {
+      void useSheetStore.getState().closeFile();
+    };
   }, [fileId, ownerId]);
 
   useEffect(() => {
@@ -83,6 +85,7 @@ export default function SheetPage() {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (store.selectionMode) {
           e.preventDefault();
+          if (!window.confirm("Delete selected cells? This can be undone.")) return;
           store.deleteSelected();
         }
         return;
