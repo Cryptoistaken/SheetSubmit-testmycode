@@ -1,7 +1,8 @@
 // Auth routes — ported from the old server (API contract unchanged).
 import { Router } from "express";
 import { BACKEND_PUBLIC_URL, FRONTEND_URL, TG_BOT_TOKEN as BOT_TOKEN } from "../config/env";
-import { delKey, getJSON, key, redis } from "../services/redis";
+import { asyncRoute } from "../middleware/asyncRoute";
+import { delKey, getJSON, key, redis, setJSONex } from "../services/redis";
 import { completeTelegramLogin, tg } from "../services/telegram";
 import { getSessionId, invalidateSession, isAdmin } from "../middleware/auth";
 
@@ -17,7 +18,7 @@ function sessionCookie(value: string, secure: boolean): string {
 }
 
 // Telegram login callback (device/login link → session cookie)
-authRouter.get("/telegram", async (req, res) => {
+authRouter.get("/telegram", asyncRoute(async (req, res) => {
   const token = String(req.query.token || "");
   if (!token) {
     res.status(400).send("Missing token");
@@ -34,6 +35,7 @@ authRouter.get("/telegram", async (req, res) => {
 
   console.log("[Auth] login for chatId=" + loginData.chatId);
   const result = await completeTelegramLogin(loginData.chatId, loginData.did);
+  await delKey("login:" + token);
   if (!result.ok) {
     if (result.reason === "banned") {
       console.log("[Auth] blocked login for banned user id=" + loginData.chatId);
@@ -45,36 +47,56 @@ authRouter.get("/telegram", async (req, res) => {
     return;
   }
 
-  await delKey("login:" + token);
-
   res.setHeader("Set-Cookie", sessionCookie(result.sessionId, req.secure));
   console.log("[Auth] session created, redirecting");
 
   // Login now happens on the api origin (link goes straight to the api's public
   // URL), so bounce the user back to the frontend.
   res.redirect(FRONTEND_URL + "/");
-});
+}));
 
-// Serve the Telegram profile photo for a user
-authRouter.get("/photo/:userId", async (req, res) => {
-  const user = await getJSON<{ fileId?: string }>("user:" + req.params.userId);
+// Serve the Telegram profile photo for a user (results cached to avoid
+// hammering the Telegram API on every hit — /photo/:userId is unauthenticated).
+authRouter.get("/photo/:userId", asyncRoute(async (req, res) => {
+  const userId = req.params.userId;
+  const photoUrl = (path: string) => "https://api.telegram.org/file/bot" + BOT_TOKEN + "/" + path;
+
+  const cached = await getJSON<{ path?: string }>("photo:" + userId);
+  if (cached && cached.path) {
+    res.redirect(photoUrl(cached.path));
+    return;
+  }
+
+  const user = await getJSON<{ fileId?: string }>("user:" + userId);
   if (!user || !user.fileId) {
     res.status(404).end();
     return;
   }
+
+  let path: string | null = null;
   try {
     const fileRes = await tg("getFile", { file_id: user.fileId });
-    if (fileRes.ok && fileRes.result) {
-      res.redirect("https://api.telegram.org/file/bot" + BOT_TOKEN + "/" + fileRes.result.file_path);
-    } else {
-      res.status(404).end();
+    if (fileRes.ok && fileRes.result && fileRes.result.file_path) {
+      path = fileRes.result.file_path;
+      await setJSONex("photo:" + userId, { path, ts: Date.now() }, 86400);
     }
   } catch {
-    res.status(500).end();
+    // fall through to cache fallback below
   }
-});
 
-authRouter.get("/logout", async (req, res) => {
+  if (path) {
+    res.redirect(photoUrl(path));
+    return;
+  }
+  const fallback = await getJSON<{ path?: string }>("photo:" + userId);
+  if (fallback && fallback.path) {
+    res.redirect(photoUrl(fallback.path));
+    return;
+  }
+  res.status(404).end();
+}));
+
+authRouter.get("/logout", asyncRoute(async (req, res) => {
   const sessionId = getSessionId(req);
   console.log("[Auth] logout session=" + (sessionId ? sessionId.slice(0, 8) + "..." : "none"));
   if (sessionId) {
@@ -85,9 +107,9 @@ authRouter.get("/logout", async (req, res) => {
   }
   res.setHeader("Set-Cookie", sessionCookie("", req.secure));
   res.json({ ok: true });
-});
+}));
 
-authRouter.get("/me", async (req, res) => {
+authRouter.get("/me", asyncRoute(async (req, res) => {
   const sessionId = getSessionId(req);
   if (!sessionId) {
     res.json(null);
@@ -116,10 +138,10 @@ authRouter.get("/me", async (req, res) => {
     " admin=" + (user ? user.isAdmin : false),
   );
   res.json(user || null);
-});
+}));
 
 // Device login poll (used by the Android WebView app)
-authRouter.get("/device", async (req, res) => {
+authRouter.get("/device", asyncRoute(async (req, res) => {
   const did = String(req.query.token || "").trim();
   if (!/^[A-Za-z0-9-]{8,64}$/.test(did)) {
     res.json({ ok: false });
@@ -133,4 +155,4 @@ authRouter.get("/device", async (req, res) => {
   await delKey("device:" + did);
   console.log("[Auth] device " + did.slice(0, 8) + "... picked up session");
   res.json({ ok: true, sessionId: info.sessionId });
-});
+}));

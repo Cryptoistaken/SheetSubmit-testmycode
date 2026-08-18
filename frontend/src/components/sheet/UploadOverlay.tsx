@@ -1,3 +1,4 @@
+import { useModalA11y } from "@/hooks/useModalA11y";
 import { useSheetStore } from "@/stores/sheetStore";
 import { useConfirm } from "@/lib/confirm";
 import type { Row } from "@/lib/types";
@@ -15,13 +16,18 @@ export default function UploadOverlay({
     (s) => s.rows.filter((r) => columns.some((c) => r[c.key])).length,
   );
   const confirm = useConfirm();
+  const modalRef = useModalA11y(!!rows, onClose);
 
   if (!rows) return null;
   const n = rows.length;
 
   return (
     <div
+      ref={modalRef}
       className="modal-overlay open"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Upload xlsx"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

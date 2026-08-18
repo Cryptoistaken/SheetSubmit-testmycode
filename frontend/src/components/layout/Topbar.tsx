@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router";
 
 import SheetToolbar from "@/components/sheet/SheetToolbar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useModalA11y } from "@/hooks/useModalA11y";
 import { api } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
 import { useToast } from "@/lib/toast";
@@ -43,6 +44,7 @@ export default function Topbar() {
   const btnRef = useRef<HTMLButtonElement>(null);
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameName, setRenameName] = useState("");
+  const renameRef = useModalA11y(renameOpen && !!file, () => setRenameOpen(false));
   const [isAndroid, setIsAndroid] = useState(() => !!getAndroid());
   const bubbleOn = useBubbleStore((s) => s.on);
   const showToast = useToast();
@@ -353,7 +355,11 @@ export default function Topbar() {
 
       {isFilePage && renameOpen && file && (
         <div
+          ref={renameRef}
           className="modal-overlay open"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Rename file"
           onClick={(e) => {
             if (e.target === e.currentTarget) closeRename();
           }}

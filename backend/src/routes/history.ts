@@ -10,10 +10,11 @@ import {
 } from "../services/history";
 import { getJSON, setJSON } from "../services/redis";
 import { requireAuth, requireFileAccess } from "../middleware/auth";
+import { asyncRoute } from "../middleware/asyncRoute";
 
 export const historyRouter = Router();
 
-historyRouter.get("/:id/history", requireAuth, requireFileAccess, async (req, res) => {
+historyRouter.get("/:id/history", requireAuth, requireFileAccess, asyncRoute(async (req, res) => {
   try {
     const meta = await getHistoryMeta(req.params.id);
     console.log("[Hist] list file=" + req.params.id + " versions=" + meta.length);
@@ -22,9 +23,9 @@ historyRouter.get("/:id/history", requireAuth, requireFileAccess, async (req, re
     console.error("[Hist] list error file=" + req.params.id + ":", (e as Error).message);
     res.status(500).json({ error: "Failed to read history" });
   }
-});
+}));
 
-historyRouter.get("/:id/history/:v", requireAuth, requireFileAccess, async (req, res) => {
+historyRouter.get("/:id/history/:v", requireAuth, requireFileAccess, asyncRoute(async (req, res) => {
   try {
     const v = parseInt(req.params.v, 10);
     if (isNaN(v)) {
@@ -44,9 +45,9 @@ historyRouter.get("/:id/history/:v", requireAuth, requireFileAccess, async (req,
     console.error("[Hist] materialize error file=" + req.params.id + ":", (e as Error).message);
     res.status(500).json({ error: "Failed to read version" });
   }
-});
+}));
 
-historyRouter.post("/:id/history/:v/restore", requireAuth, requireFileAccess, async (req, res) => {
+historyRouter.post("/:id/history/:v/restore", requireAuth, requireFileAccess, asyncRoute(async (req, res) => {
   try {
     const v = parseInt(req.params.v, 10);
     if (isNaN(v)) {
@@ -80,9 +81,9 @@ historyRouter.post("/:id/history/:v/restore", requireAuth, requireFileAccess, as
     console.error("[Hist] restore error file=" + req.params.id + ":", (e as Error).message);
     res.status(500).json({ error: "Failed to restore version" });
   }
-});
+}));
 
-historyRouter.post("/:id/history/:v/name", requireAuth, requireFileAccess, async (req, res) => {
+historyRouter.post("/:id/history/:v/name", requireAuth, requireFileAccess, asyncRoute(async (req, res) => {
   try {
     const v = parseInt(req.params.v, 10);
     if (isNaN(v)) {
@@ -109,9 +110,9 @@ historyRouter.post("/:id/history/:v/name", requireAuth, requireFileAccess, async
     console.error("[Hist] name error file=" + req.params.id + ":", (e as Error).message);
     res.status(500).json({ error: "Failed to name version" });
   }
-});
+}));
 
-historyRouter.post("/:id/history/:v/fork", requireAuth, requireFileAccess, async (req, res) => {
+historyRouter.post("/:id/history/:v/fork", requireAuth, requireFileAccess, asyncRoute(async (req, res) => {
   try {
     const v = parseInt(req.params.v, 10);
     if (isNaN(v)) {
@@ -130,4 +131,4 @@ historyRouter.post("/:id/history/:v/fork", requireAuth, requireFileAccess, async
     console.error("[Hist] fork error file=" + req.params.id + ":", (e as Error).message);
     res.status(500).json({ error: "Failed to fork version" });
   }
-});
+}));

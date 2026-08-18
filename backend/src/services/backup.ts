@@ -30,54 +30,164 @@ async function copyKeys(source: Redis, dest: Redis): Promise<{ count: number; er
   do {
     const result = await source.scan(cursor, "MATCH", "ss:*", "COUNT", "500");
     cursor = result[0];
-    for (const key of result[1]) {
-      try {
-        const type = await source.type(key);
-        const ttl = await source.ttl(key);
-        if (type === "string") {
-          const val = await source.get(key);
-          if (val !== null) {
-            if (ttl > 0) await dest.set(key, val, "PX", ttl * 1000);
-            else await dest.set(key, val);
-            count++;
-          }
-        } else if (type === "list") {
-          const items = await source.lrange(key, 0, -1);
-          if (items.length > 0) {
-            await dest.del(key);
-            await dest.rpush(key, ...items);
-            if (ttl > 0) await dest.pexpire(key, ttl * 1000);
-            count++;
-          }
-        } else if (type === "set") {
-          const members = await source.smembers(key);
-          if (members.length > 0) {
-            await dest.del(key);
-            await dest.sadd(key, ...members);
-            if (ttl > 0) await dest.pexpire(key, ttl * 1000);
-            count++;
-          }
-        } else if (type === "hash") {
-          const obj = await source.hgetall(key);
-          const keys = Object.keys(obj);
-          if (keys.length > 0) {
-            await dest.del(key);
-            const bulk: string[] = [];
-            for (const hk of keys) bulk.push(hk, obj[hk]);
-            await dest.hset(key, bulk);
-            if (ttl > 0) await dest.pexpire(key, ttl * 1000);
-            count++;
-          }
-        } else {
-          const data = await source.dump(key);
-          if (data) {
-            await dest.restore(key, ttl > 0 ? ttl * 1000 : 0, data, "REPLACE");
-            count++;
-          }
-        }
-      } catch (e) {
+    const keys = result[1];
+    if (keys.length === 0) continue;
+
+    // Phase (a): type + ttl for every key in this batch — one round trip.
+    const metaP = source.pipeline();
+    for (const key of keys) {
+      metaP.type(key);
+      metaP.ttl(key);
+    }
+    const metaRes = await metaP.exec();
+    const meta: { type: string; ttl: number }[] = [];
+    for (let i = 0; i < keys.length; i++) {
+      const t = metaRes ? metaRes[i * 2] : null;
+      const ttl = metaRes ? metaRes[i * 2 + 1] : null;
+      if (!t || t[0] || !ttl || ttl[0]) {
         errors++;
-        if (errors <= 3) console.error("[Backup] copy failed for " + key + ": " + (e as Error).message);
+        if (errors <= 3) console.error("[Backup] type/ttl failed for " + keys[i]);
+        meta.push({ type: "none", ttl: 0 });
+        continue;
+      }
+      meta.push({ type: String(t[1]), ttl: Number(ttl[1]) });
+    }
+
+    // Phase (b): one pipeline per value-type group — one round trip per group.
+    const groups: { list: string[]; set: string[]; hash: string[]; string: string[]; other: string[] } = {
+      list: [],
+      set: [],
+      hash: [],
+      string: [],
+      other: [],
+    };
+    for (let i = 0; i < keys.length; i++) {
+      const t = meta[i].type;
+      if (t === "list") groups.list.push(keys[i]);
+      else if (t === "set") groups.set.push(keys[i]);
+      else if (t === "hash") groups.hash.push(keys[i]);
+      else if (t === "string") groups.string.push(keys[i]);
+      else if (t !== "none") groups.other.push(keys[i]);
+    }
+
+    const values = new Map<string, unknown>();
+    if (groups.string.length > 0) {
+      const p = source.pipeline();
+      groups.string.forEach((k) => p.get(k));
+      const r = await p.exec();
+      (r || []).forEach((slot, i) => {
+        if (slot[0]) {
+          errors++;
+          if (errors <= 3) console.error("[Backup] get failed for " + groups.string[i] + ": " + (slot[0] as Error).message);
+        } else {
+          values.set(groups.string[i], slot[1]);
+        }
+      });
+    }
+    if (groups.list.length > 0) {
+      const p = source.pipeline();
+      groups.list.forEach((k) => p.lrange(k, 0, -1));
+      const r = await p.exec();
+      (r || []).forEach((slot, i) => {
+        if (slot[0]) {
+          errors++;
+          if (errors <= 3) console.error("[Backup] lrange failed for " + groups.list[i] + ": " + (slot[0] as Error).message);
+        } else {
+          values.set(groups.list[i], slot[1]);
+        }
+      });
+    }
+    if (groups.set.length > 0) {
+      const p = source.pipeline();
+      groups.set.forEach((k) => p.smembers(k));
+      const r = await p.exec();
+      (r || []).forEach((slot, i) => {
+        if (slot[0]) {
+          errors++;
+          if (errors <= 3) console.error("[Backup] smembers failed for " + groups.set[i] + ": " + (slot[0] as Error).message);
+        } else {
+          values.set(groups.set[i], slot[1]);
+        }
+      });
+    }
+    if (groups.hash.length > 0) {
+      const p = source.pipeline();
+      groups.hash.forEach((k) => p.hgetall(k));
+      const r = await p.exec();
+      (r || []).forEach((slot, i) => {
+        if (slot[0]) {
+          errors++;
+          if (errors <= 3) console.error("[Backup] hgetall failed for " + groups.hash[i] + ": " + (slot[0] as Error).message);
+        } else {
+          values.set(groups.hash[i], slot[1]);
+        }
+      });
+    }
+    if (groups.other.length > 0) {
+      const p = source.pipeline();
+      groups.other.forEach((k) => p.dump(k));
+      const r = await p.exec();
+      (r || []).forEach((slot, i) => {
+        if (slot[0]) {
+          errors++;
+          if (errors <= 3) console.error("[Backup] dump failed for " + groups.other[i] + ": " + (slot[0] as Error).message);
+        } else {
+          values.set(groups.other[i], slot[1]);
+        }
+      });
+    }
+
+    // Phase (c): one pipeline writing everything to the destination.
+    const writeP = dest.pipeline();
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const t = meta[i].type;
+      if (t === "none") continue;
+      const val = values.get(key);
+      if (val === undefined) continue;
+      const ttlMs = meta[i].ttl > 0 ? meta[i].ttl * 1000 : 0;
+      if (t === "string") {
+        if (val === null) continue;
+        if (ttlMs > 0) writeP.set(key, val as string, "PX", ttlMs);
+        else writeP.set(key, val as string);
+        count++;
+      } else if (t === "list") {
+        const items = val as string[];
+        if (items.length === 0) continue;
+        writeP.del(key);
+        writeP.rpush(key, ...items);
+        if (ttlMs > 0) writeP.pexpire(key, ttlMs);
+        count++;
+      } else if (t === "set") {
+        const members = val as string[];
+        if (members.length === 0) continue;
+        writeP.del(key);
+        writeP.sadd(key, ...members);
+        if (ttlMs > 0) writeP.pexpire(key, ttlMs);
+        count++;
+      } else if (t === "hash") {
+        const obj = val as Record<string, string>;
+        const hkeys = Object.keys(obj);
+        if (hkeys.length === 0) continue;
+        writeP.del(key);
+        const bulk: string[] = [];
+        for (const hk of hkeys) bulk.push(hk, obj[hk]);
+        writeP.hset(key, bulk);
+        if (ttlMs > 0) writeP.pexpire(key, ttlMs);
+        count++;
+      } else {
+        if (!val) continue;
+        writeP.restore(key, ttlMs, val as Buffer, "REPLACE");
+        count++;
+      }
+    }
+    const writeRes = await writeP.exec();
+    if (writeRes) {
+      for (const slot of writeRes) {
+        if (slot[0]) {
+          errors++;
+          count--;
+        }
       }
     }
   } while (cursor !== "0");
@@ -85,7 +195,11 @@ async function copyKeys(source: Redis, dest: Redis): Promise<{ count: number; er
   return { count, errors };
 }
 
+let _backupRunning = false;
+
 export async function createBackup(source: Redis): Promise<number> {
+  if (_backupRunning) return -2;
+  _backupRunning = true;
   try {
     const dest = getBackupRedis();
     if (!dest) return -1;
@@ -130,6 +244,8 @@ export async function createBackup(source: Redis): Promise<number> {
   } catch (e) {
     console.error("[Backup] createBackup error: " + (e as Error).message);
     return -1;
+  } finally {
+    _backupRunning = false;
   }
 }
 

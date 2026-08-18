@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 
-import AdminView from "@/components/home/AdminView";
-import ArchiveView from "@/components/home/ArchiveView";
+const AdminView = lazy(() => import("@/components/home/AdminView"));
+const ArchiveView = lazy(() => import("@/components/home/ArchiveView"));
 import Fab from "@/components/home/Fab";
 import FileGrid from "@/components/home/FileGrid";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,10 +54,23 @@ export default function HomePage() {
   const selectionMode = selected.size > 0;
 
   const loadFiles = useCallback(async () => {
-    const [fs, cd] = await Promise.all([api.getFiles(), api.getCrossDups()]);
-    setFiles(fs);
-    setDupCounts(cd.counts ?? {});
-  }, []);
+    try {
+      const [fs, cd] = await Promise.all([api.getFiles(), api.getCrossDups()]);
+      setFiles(fs);
+      setDupCounts(cd.counts ?? {});
+    } catch {
+      setFiles([]);
+      showToast("Could not load files");
+    }
+  }, [showToast]);
+
+  const refreshFiles = useCallback(async () => {
+    try {
+      setFiles(await api.getFiles());
+    } catch {
+      showToast("Could not load files");
+    }
+  }, [showToast]);
 
   useEffect(() => {
     if (tab === "admin" && !user?.isAdmin) {
@@ -95,8 +108,12 @@ export default function HomePage() {
       showToast("No data");
       return;
     }
-    downloadXlsx(rows, FILE_TYPE_DEFS[f.type].columns, f.name);
-    showToast("Downloaded");
+    try {
+      await downloadXlsx(rows, FILE_TYPE_DEFS[f.type].columns, f.name);
+      showToast("Downloaded");
+    } catch {
+      showToast("Download failed");
+    }
   };
 
   const deleteFile = async (f: SheetFile) => {
@@ -148,7 +165,7 @@ export default function HomePage() {
       return;
     }
     closeRename();
-    loadFiles();
+    refreshFiles();
     showToast("Renamed");
   };
 
@@ -307,13 +324,17 @@ export default function HomePage() {
 
       {tab === "archive" ? (
         <div className="home-pane" id="homePaneArchive">
-          <ArchiveView />
+          <Suspense fallback={null}>
+            <ArchiveView />
+          </Suspense>
         </div>
       ) : null}
 
       {tab === "admin" && user?.isAdmin ? (
         <div className="home-pane" id="homePaneAdmin">
-          <AdminView initialUserId={userId} />
+          <Suspense fallback={null}>
+            <AdminView initialUserId={userId} />
+          </Suspense>
         </div>
       ) : null}
 
@@ -340,7 +361,7 @@ export default function HomePage() {
           if (e.target === e.currentTarget) closeRename();
         }}
       >
-        <div className="modal-box">
+        <div className="modal-box" role="dialog" aria-modal="true" aria-label="Rename file">
           <div className="modal-title">Rename file</div>
           <input
             className="modal-input"

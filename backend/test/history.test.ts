@@ -3,13 +3,13 @@
 // corruption-abort paths. The real redis module is replaced by the in-memory fake.
 import { describe, expect, test, beforeEach } from "bun:test";
 import crypto from "node:crypto";
-import { installRedisMock, resetStore, store, fakeSet } from "./redis-mock";
+import { installRedisMock, resetStore, store, fakeSet, setBeforeExec } from "./redis-mock";
 import { HISTORY_RETENTION_DAYS } from "../src/config/env";
 import type { Row } from "../src/lib/shared";
 
 installRedisMock();
 
-const { pruneHistory, histMetaKey, histBlobKey, versionRef } = await import("../src/services/history");
+const { pruneHistory, snapshotHistory, histMetaKey, histBlobKey, versionRef } = await import("../src/services/history");
 const { key, getJSON } = await import("../src/services/redis");
 
 const DAY = 86400000;
@@ -176,5 +176,84 @@ describe("pruneHistory", () => {
     expect(deltaBlob.type).toBe("delta");
     const meta = await getJSON<Rec[]>("hist:" + f);
     expect(meta!.map((r) => r.v)).toEqual([1, 2, 3, 4]);
+  });
+});
+
+describe("snapshotHistory", () => {
+  beforeEach(() => {
+    resetStore();
+  });
+
+  test("retries on WATCH conflict and allocates a non-colliding v", async () => {
+    const f = "f4";
+    const r1 = rec(1, now, "full", null, 1, null);
+    seedFull(f, r1, [{ u: "1" }]);
+    seedMeta(f, [r1]);
+
+    // Simulate a concurrent snapshot committing v2 between our read and exec on
+    // the first attempt. The retry must observe it and pick v3 instead of
+    // colliding on v2 (the WATCH/MULTI conflict detection aborts the first exec).
+    let fired = false;
+    setBeforeExec(() => {
+      if (fired) return;
+      fired = true;
+      const conc = rec(2, Date.now(), "full", sha1([{ u: "1" }, { u: "2" }]), 2, 1);
+      const meta = JSON.parse(store[key(histMetaKey(f))] as string) as Rec[];
+      fakeSet(key(histMetaKey(f)), JSON.stringify(meta.concat([conc])));
+      fakeSet(key(histBlobKey(f, 2)), JSON.stringify({ type: "full", hash: conc.hash, rows: [{ u: "1" }, { u: "2" }] }));
+    });
+
+    const v = await snapshotHistory(f, "edit", [{ u: "1" }, { u: "2" }, { u: "3" }]);
+
+    expect(fired).toBe(true);
+    expect(v).toBe(3);
+    const meta = await getJSON<Rec[]>("hist:" + f);
+    expect(meta!.map((r) => r.v)).toEqual([1, 2, 3]);
+    expect(store[key(histBlobKey(f, 2))]).toBeDefined();
+    expect(store[key(histBlobKey(f, 3))]).toBeDefined();
+  });
+
+  test("prune after snapshot does not lose the newest record", async () => {
+    const f = "f5";
+    const r1 = rec(1, oldTs, "full", null, 1, null);
+    const r2 = rec(2, oldTs, "full", null, 2, 1);
+    const r3 = rec(3, oldTs, "full", null, 3, 2);
+    seedFull(f, r1, [{ u: "1" }]);
+    seedFull(f, r2, [{ u: "1" }, { u: "2" }]);
+    seedFull(f, r3, [{ u: "1" }, { u: "2" }, { u: "3" }]);
+    seedMeta(f, [r1, r2, r3]);
+
+    const rows = [{ u: "1" }, { u: "2" }, { u: "3" }, { u: "4" }];
+    const v = await snapshotHistory(f, "edit", rows);
+    expect(v).toBe(4);
+
+    const pruned = await pruneHistory(f);
+    expect(pruned).toBe(3);
+
+    const meta = await getJSON<Rec[]>("hist:" + f);
+    expect(meta!.map((r) => r.v)).toEqual([4]);
+  });
+
+  test("concurrent snapshot + prune serialize; newest record survives", async () => {
+    const f = "f6";
+    const r1 = rec(1, oldTs, "full", null, 1, null);
+    const r2 = rec(2, oldTs, "full", null, 2, 1);
+    const r3 = rec(3, oldTs, "full", null, 3, 2);
+    seedFull(f, r1, [{ u: "1" }]);
+    seedFull(f, r2, [{ u: "1" }, { u: "2" }]);
+    seedFull(f, r3, [{ u: "1" }, { u: "2" }, { u: "3" }]);
+    seedMeta(f, [r1, r2, r3]);
+
+    const rows = [{ u: "1" }, { u: "2" }, { u: "3" }, { u: "4" }];
+    const [snapV, pruned] = await Promise.all([
+      snapshotHistory(f, "edit", rows),
+      pruneHistory(f),
+    ]);
+
+    const meta = await getJSON<Rec[]>("hist:" + f);
+    expect(pruned).toBe(3);
+    expect(meta!.length).toBe(1);
+    expect(meta![0].v).toBe(snapV);
+    expect(meta![0].ts).toBeGreaterThan(oldTs);
   });
 });

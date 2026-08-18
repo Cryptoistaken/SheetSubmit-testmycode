@@ -22,6 +22,7 @@ export async function tg(method: string, body?: unknown): Promise<TgJson> {
     headers: { "Content-Type": "application/json" },
   };
   if (body !== undefined) opts.body = JSON.stringify(body);
+  opts.signal = AbortSignal.timeout(method === "getUpdates" ? 60000 : 20000);
   const res = await fetch(TG_API + "/" + method, opts);
   const json = (await res.json()) as TgJson;
   if (json.ok) {
@@ -115,7 +116,7 @@ export async function completeTelegramLogin(
       "<b>Login Successful</b>\n\nHey @" + (userInfo.username || userInfo.firstName) +
       ", you are signed in to SheetSubmit.\n\nIf this was not you, contact the admin immediately.",
     parse_mode: "HTML",
-  });
+  }).catch(console.error);
 
   return { ok: true, sessionId };
 }

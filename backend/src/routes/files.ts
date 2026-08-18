@@ -1,53 +1,59 @@
 // Files & data routes — ported from the old server (API contract unchanged).
 import { Router } from "express";
 import type { Row, StoredFile } from "../lib/shared";
+import { MUTABLE_FILE_FIELDS } from "../lib/shared";
+import { genFileId } from "../lib/ids";
 import { getDedupKey, getUserFiles, updateUserFilesAtomic } from "../services/files";
 import { delHistoryKeys, pruneHistory, snapshotHistory } from "../services/history";
-import { delKey, getJSON, key, redis, setJSON, setJSONex } from "../services/redis";
-import { migrateListKey, migrateLogKey, requireAuth, requireFileAccess } from "../middleware/auth";
+import { getJSON, key, redis, setJSON, setJSONex } from "../services/redis";
+import { migrateListKey, requireAuth, requireFileAccess } from "../middleware/auth";
+import { asyncRoute } from "../middleware/asyncRoute";
+
+const MAX_ROW_IDX = 100_000;
+const MAX_OPS = 10_000;
 
 export const filesRouter = Router();
 export const archiveRouter = Router();
 export const crossDupsRouter = Router();
 
 // ── Files CRUD ──
-filesRouter.get("/", requireAuth, async (req, res) => {
+filesRouter.get("/", requireAuth, asyncRoute(async (req, res) => {
   const files = await getUserFiles(req.userId || "");
   res.json(files);
-});
+}));
 
-filesRouter.get("/:id", requireAuth, requireFileAccess, async (req, res) => {
-  res.json(req.file);
-});
-
-filesRouter.post("/", requireAuth, async (req, res) => {
+filesRouter.post("/", requireAuth, asyncRoute(async (req, res) => {
   const file = req.body as StoredFile;
+  file.id = genFileId();
   file.userId = req.userId;
   file.createdAt = Date.now();
   file.updatedAt = Date.now();
-  await updateUserFilesAtomic(req.userId || "", (files) => {
+  const created = await updateUserFilesAtomic(req.userId || "", (files) => {
     files.unshift(file);
     return files;
   });
+  if (created === null) { res.status(500).json({ error: "Failed to create file" }); return; }
   await redis.set(key("meta:dirty"), String(Date.now()));
   res.json(file);
-});
+}));
 
-filesRouter.put("/:id", requireAuth, requireFileAccess, async (req, res) => {
+filesRouter.put("/:id", requireAuth, requireFileAccess, asyncRoute(async (req, res) => {
   const updates = req.body as Record<string, unknown>;
   const updated = await updateUserFilesAtomic(req.userId || "", (files) => {
     const idx = files.findIndex((f) => f.id === req.params.id);
     if (idx === -1) return null;
-    Object.keys(updates).forEach((k) => { files[idx][k] = updates[k]; });
+    MUTABLE_FILE_FIELDS.forEach((k) => {
+      if (k in updates) (files[idx] as Record<string, unknown>)[k] = updates[k];
+    });
     files[idx].updatedAt = Date.now();
     return files[idx];
   });
   if (updated === null) { res.status(404).json({ error: "file not found" }); return; }
   await redis.set(key("meta:dirty"), String(Date.now()));
   res.json(updated);
-});
+}));
 
-filesRouter.delete("/:id", requireAuth, requireFileAccess, async (req, res) => {
+filesRouter.delete("/:id", requireAuth, requireFileAccess, asyncRoute(async (req, res) => {
   const removed = await updateUserFilesAtomic(req.userId || "", (files) => {
     const idx = files.findIndex((f) => f.id === req.params.id);
     if (idx === -1) return null;
@@ -60,10 +66,10 @@ filesRouter.delete("/:id", requireAuth, requireFileAccess, async (req, res) => {
   await setJSON("archive:" + req.userId, archived);
   await redis.set(key("meta:dirty"), String(Date.now()));
   res.json({ ok: true });
-});
+}));
 
 // ── Batch persist ──
-filesRouter.put("/:id/persist", requireAuth, requireFileAccess, async (req, res) => {
+filesRouter.put("/:id/persist", requireAuth, requireFileAccess, asyncRoute(async (req, res) => {
   const body = req.body as {
     rows?: Row[];
     action?: string;
@@ -141,10 +147,10 @@ filesRouter.put("/:id/persist", requireAuth, requireFileAccess, async (req, res)
     if (persistedFile === null) { res.status(500).json({ error: "Failed to persist data" }); return; }
   }
   res.json({ ok: true, seq: newSeq, file: persistedFile || req.file });
-});
+}));
 
 // ── Delta append (seq-versioned cell changes) ──
-filesRouter.put("/:id/append", requireAuth, requireFileAccess, async (req, res) => {
+filesRouter.put("/:id/append", requireAuth, requireFileAccess, asyncRoute(async (req, res) => {
   const body = req.body as {
     base: number;
     ops: { rowIdx: number; cols: Record<string, string> }[];
@@ -157,10 +163,12 @@ filesRouter.put("/:id/append", requireAuth, requireFileAccess, async (req, res) 
   if (
     typeof body.base !== "number" ||
     !Array.isArray(body.ops) ||
+    body.ops.length > MAX_OPS ||
     body.ops.some(
       (op) =>
         !Number.isInteger(op.rowIdx) ||
         op.rowIdx < 0 ||
+        op.rowIdx > MAX_ROW_IDX ||
         !op.cols ||
         typeof op.cols !== "object" ||
         Array.isArray(op.cols),
@@ -179,6 +187,7 @@ filesRouter.put("/:id/append", requireAuth, requireFileAccess, async (req, res) 
   await migrateListKey(redoKey);
   let curSeq = 0;
   let committed = false;
+  let snapshotted = false;
   for (let attempt = 0; attempt < 5 && !committed; attempt++) {
     await redis.watch(key("seq:" + fileId));
     const seqRaw = await redis.get(key("seq:" + fileId));
@@ -196,13 +205,19 @@ filesRouter.put("/:id/append", requireAuth, requireFileAccess, async (req, res) 
       while (rows.length <= op.rowIdx) rows.push({});
       rows[op.rowIdx] = { ...(rows[op.rowIdx] || {}), ...op.cols };
     }
-    if (body.action) {
+    if (rows.length > MAX_ROW_IDX) {
+      await redis.unwatch();
+      res.status(400).json({ error: "invalid append payload" });
+      return;
+    }
+    if (body.action && !snapshotted) {
       if (curRows.length === 0) {
         await snapshotHistory(fileId, body.action, rows);
       } else {
         await snapshotHistory(fileId, body.action, curRows);
       }
       void pruneHistory(fileId);
+      snapshotted = true;
     }
     const p = redis.pipeline();
     p.set(key("rows:" + fileId), JSON.stringify(rows));
@@ -253,16 +268,16 @@ filesRouter.put("/:id/append", requireAuth, requireFileAccess, async (req, res) 
     }
   }
   res.json({ ok: true, seq: curSeq + 1, file: updatedFile || req.file });
-});
+}));
 
 // ── Rows / sync / undo / cell / logs ──
-filesRouter.get("/:id/rows", requireAuth, requireFileAccess, async (req, res) => {
+filesRouter.get("/:id/rows", requireAuth, requireFileAccess, asyncRoute(async (req, res) => {
   const rows = await getJSON<Row[]>("rows:" + req.params.id);
   res.json(rows || []);
-});
+}));
 
 // Single round-trip open: file meta + rows + logs + undo/redo in one pipelined read.
-filesRouter.get("/:id/full", requireAuth, requireFileAccess, async (req, res) => {
+filesRouter.get("/:id/full", requireAuth, requireFileAccess, asyncRoute(async (req, res) => {
   const id = req.params.id;
   const logKey = key("logs:" + id);
   const undoKey = key("undo:" + id);
@@ -311,108 +326,46 @@ filesRouter.get("/:id/full", requireAuth, requireFileAccess, async (req, res) =>
     }
   }
   res.json({ file: req.file, rows, logs, undo, redo, seq });
-});
-
-filesRouter.get("/:id/sync", requireAuth, requireFileAccess, async (req, res) => {
-  const sync = await getJSON("sync:" + req.params.id);
-  res.json(sync || { enabled: false });
-});
-
-filesRouter.get("/:id/undo", requireAuth, requireFileAccess, async (req, res) => {
-  const undoKey = key("undo:" + req.params.id);
-  const redoKey = key("redo:" + req.params.id);
-  await migrateListKey(undoKey);
-  await migrateListKey(redoKey);
-  const parseList = (arr: string[]): unknown[] =>
-    arr.map((l) => {
-      try { return JSON.parse(l); } catch { return l; }
-    });
-  res.json({
-    undo: parseList(await redis.lrange(undoKey, 0, -1)),
-    redo: parseList(await redis.lrange(redoKey, 0, -1)),
-  });
-});
-
-filesRouter.put("/:id/sync", requireAuth, requireFileAccess, async (req, res) => {
-  await setJSON("sync:" + req.params.id, req.body);
-  res.json({ ok: true });
-});
-
-filesRouter.put("/:id/cell", requireAuth, requireFileAccess, async (req, res) => {
-  const rows = (await getJSON<Row[]>("rows:" + req.params.id)) || [];
-  const r = req.body as { rowIdx?: number; colKey?: string; value?: string };
-  if (r.rowIdx !== undefined && r.colKey !== undefined) {
-    while (rows.length <= r.rowIdx) rows.push({});
-    rows[r.rowIdx][r.colKey] = r.value;
-    await setJSON("rows:" + req.params.id, rows);
-  }
-  res.json({ ok: true });
-});
-
-filesRouter.post("/:id/log", requireAuth, requireFileAccess, async (req, res) => {
-  try {
-    const logKey = key("logs:" + req.params.id);
-    await migrateLogKey(logKey);
-    await redis.rpush(logKey, JSON.stringify((req.body as { log?: unknown }).log));
-    await redis.ltrim(logKey, -500, -1);
-    res.json({ ok: true });
-  } catch (e) {
-    console.error("[Log] Error:", (e as Error).message);
-    res.status(500).json({ error: "Failed to append log" });
-  }
-});
-
-filesRouter.get("/:id/logs", requireAuth, requireFileAccess, async (req, res) => {
-  try {
-    const logKey = key("logs:" + req.params.id);
-    await migrateLogKey(logKey);
-    const logs = await redis.lrange(logKey, 0, -1);
-    const parsed: unknown[] = [];
-    logs.forEach((l) => {
-      try {
-        parsed.push(JSON.parse(l));
-      } catch {
-        // skip malformed entries
-      }
-    });
-    res.json(parsed);
-  } catch (e) {
-    console.error("[Logs] Error:", (e as Error).message);
-    res.status(500).json({ error: "Failed to read logs" });
-  }
-});
+}));
 
 // ── Archive ──
-archiveRouter.get("/", requireAuth, async (req, res) => {
+archiveRouter.get("/", requireAuth, asyncRoute(async (req, res) => {
   const archived = (await getJSON<StoredFile[]>("archive:" + req.userId)) || [];
   res.json(archived);
-});
+}));
 
-archiveRouter.post("/:id/restore", requireAuth, async (req, res) => {
+archiveRouter.post("/:id/restore", requireAuth, asyncRoute(async (req, res) => {
   const archived = (await getJSON<StoredFile[]>("archive:" + req.userId)) || [];
   const idx = archived.findIndex((f) => f.id === req.params.id);
   if (idx === -1) {
     res.status(404).json({ error: "not found" });
     return;
   }
+  const archivedBefore = JSON.stringify(archived);
   const file = archived.splice(idx, 1)[0];
   delete file.deletedAt;
-  await updateUserFilesAtomic(req.userId || "", (files) => {
+  const restored = await updateUserFilesAtomic(req.userId || "", (files) => {
     files.unshift(file);
     return files;
   });
+  if (restored === null) {
+    await setJSON("archive:" + req.userId, JSON.parse(archivedBefore));
+    res.status(409).json({ error: "Conflict restoring file" });
+    return;
+  }
   await setJSON("archive:" + req.userId, archived);
   await redis.set(key("meta:dirty"), String(Date.now()));
   res.json({ ok: true });
-});
+}));
 
-archiveRouter.post("/batch-restore", requireAuth, async (req, res) => {
+archiveRouter.post("/batch-restore", requireAuth, asyncRoute(async (req, res) => {
   const ids = (req.body as { ids?: string[] }).ids;
   if (!ids || !ids.length) {
     res.status(400).json({ error: "no ids" });
     return;
   }
   let archived = (await getJSON<StoredFile[]>("archive:" + req.userId)) || [];
+  const archivedBefore = JSON.stringify(archived);
   const restoredFiles: StoredFile[] = [];
   let restored = 0;
   archived = archived.filter((f) => {
@@ -424,16 +377,21 @@ archiveRouter.post("/batch-restore", requireAuth, async (req, res) => {
     }
     return true;
   });
-  await updateUserFilesAtomic(req.userId || "", (files) => {
+  const updated = await updateUserFilesAtomic(req.userId || "", (files) => {
     restoredFiles.forEach((f) => files.unshift(f));
     return files;
   });
+  if (updated === null) {
+    await setJSON("archive:" + req.userId, JSON.parse(archivedBefore));
+    res.status(409).json({ error: "Conflict restoring file" });
+    return;
+  }
   await setJSON("archive:" + req.userId, archived);
   await redis.set(key("meta:dirty"), String(Date.now()));
   res.json({ restored });
-});
+}));
 
-archiveRouter.delete("/:id", requireAuth, async (req, res) => {
+archiveRouter.delete("/:id", requireAuth, asyncRoute(async (req, res) => {
   let archived = (await getJSON<StoredFile[]>("archive:" + req.userId)) || [];
   const existed = archived.some((f) => f.id === req.params.id);
   if (!existed) {
@@ -443,18 +401,18 @@ archiveRouter.delete("/:id", requireAuth, async (req, res) => {
   archived = archived.filter((f) => f.id !== req.params.id);
   await setJSON("archive:" + req.userId, archived);
   await redis.set(key("meta:dirty"), String(Date.now()));
-  const delPromises: Promise<unknown>[] = [];
-  delPromises.push(delKey("rows:" + req.params.id));
-  delPromises.push(delKey("undo:" + req.params.id));
-  delPromises.push(delKey("redo:" + req.params.id));
-  delPromises.push(delKey("sync:" + req.params.id));
-  delPromises.push(delKey("logs:" + req.params.id));
-  delPromises.push(delHistoryKeys(req.params.id));
-  await Promise.all(delPromises);
+  const delPipeline = redis.pipeline();
+  delPipeline.del(key("rows:" + req.params.id));
+  delPipeline.del(key("undo:" + req.params.id));
+  delPipeline.del(key("redo:" + req.params.id));
+  delPipeline.del(key("sync:" + req.params.id));
+  delPipeline.del(key("logs:" + req.params.id));
+  await delPipeline.exec();
+  await delHistoryKeys(req.params.id);
   res.json({ ok: true });
-});
+}));
 
-archiveRouter.post("/batch-delete", requireAuth, async (req, res) => {
+archiveRouter.post("/batch-delete", requireAuth, asyncRoute(async (req, res) => {
   const ids = (req.body as { ids?: string[] }).ids;
   if (!ids || !ids.length) {
     res.status(400).json({ error: "no ids" });
@@ -471,21 +429,23 @@ archiveRouter.post("/batch-delete", requireAuth, async (req, res) => {
   archived = archived.filter((f) => !idSet[f.id]);
   await setJSON("archive:" + req.userId, archived);
   await redis.set(key("meta:dirty"), String(Date.now()));
-  const delPromises: Promise<unknown>[] = [];
+  const delPipeline = redis.pipeline();
   ownedIds.forEach((id) => {
-    delPromises.push(delKey("rows:" + id));
-    delPromises.push(delKey("undo:" + id));
-    delPromises.push(delKey("redo:" + id));
-    delPromises.push(delKey("sync:" + id));
-    delPromises.push(delKey("logs:" + id));
-    delPromises.push(delHistoryKeys(id));
+    delPipeline.del(key("rows:" + id));
+    delPipeline.del(key("undo:" + id));
+    delPipeline.del(key("redo:" + id));
+    delPipeline.del(key("sync:" + id));
+    delPipeline.del(key("logs:" + id));
   });
-  await Promise.all(delPromises);
+  await delPipeline.exec();
+  for (const id of ownedIds) {
+    await delHistoryKeys(id);
+  }
   res.json({ deleted: ownedIds.length });
-});
+}));
 
 // ── Cross-file duplicates ──
-crossDupsRouter.get("/", requireAuth, async (req, res) => {
+crossDupsRouter.get("/", requireAuth, asyncRoute(async (req, res) => {
   try {
     const fileId = req.query.fileId ? String(req.query.fileId) : null;
     const cacheKey = "crossdups:" + req.userId;
@@ -494,6 +454,15 @@ crossDupsRouter.get("/", requireAuth, async (req, res) => {
       if (cached) { res.json(cached); return; }
     }
     const files = await getUserFiles(req.userId || "");
+    let targetType: string | null = null;
+    if (fileId) {
+      const target = files.find((f) => f.id === fileId);
+      if (!target) {
+        res.json({ counts: {}, dups: {} });
+        return;
+      }
+      targetType = target.type;
+    }
     const typeFiles: Record<string, StoredFile[]> = {};
     files.forEach((f) => {
       if (!typeFiles[f.type]) typeFiles[f.type] = [];
@@ -506,6 +475,7 @@ crossDupsRouter.get("/", requireAuth, async (req, res) => {
     });
 
     for (const typeKey in typeFiles) {
+      if (targetType && typeKey !== targetType) continue;
       const tf = typeFiles[typeKey];
       if (tf.length < 2) continue;
       const p = redis.pipeline();
@@ -555,4 +525,4 @@ crossDupsRouter.get("/", requireAuth, async (req, res) => {
     console.error("[CrossDups] error:", (e as Error).message);
     res.status(500).json({ error: "Failed to check cross-file duplicates" });
   }
-});
+}));

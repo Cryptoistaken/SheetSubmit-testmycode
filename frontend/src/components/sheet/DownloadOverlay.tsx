@@ -123,9 +123,13 @@ export default function DownloadOverlay({
           <button
             key={o.key}
             className={"download-opt-btn " + o.className}
-            onClick={() => {
-              const ok = downloadSheetRows(rows, columns, fileName, o.filter, o.suffix);
-              showToast(ok ? "Downloaded" : "No data to download");
+            onClick={async () => {
+              try {
+                const ok = await downloadSheetRows(rows, columns, fileName, o.filter, o.suffix);
+                showToast(ok ? "Downloaded" : "No data to download");
+              } catch {
+                showToast("Download failed");
+              }
               onClose();
             }}
           >

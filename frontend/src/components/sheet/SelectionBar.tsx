@@ -1,9 +1,11 @@
+import { useConfirm } from "@/lib/confirm";
 import { useSheetStore } from "@/stores/sheetStore";
 
 export default function SelectionBar() {
   const selectionMode = useSheetStore((s) => s.selectionMode);
   const selectedItems = useSheetStore((s) => s.selectedItems);
   const size = selectedItems.size;
+  const confirm = useConfirm();
 
   if (!selectionMode || size === 0) return null;
 
@@ -13,8 +15,9 @@ export default function SelectionBar() {
       <div className="sel-bar-actions">
         <button
           className="sel-btn danger"
-          onClick={() => {
-            if (!window.confirm("Delete selected cells? This can be undone.")) return;
+          onClick={async () => {
+            const ok = await confirm("Delete selected cells? This can be undone.");
+            if (!ok) return;
             useSheetStore.getState().deleteSelected();
           }}
         >

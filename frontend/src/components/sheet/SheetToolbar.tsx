@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 
 import { useUndoRedo } from "@/hooks/useUndoRedo";
@@ -7,9 +7,10 @@ import { useToast } from "@/lib/toast";
 import { parseSheetRows } from "@/lib/xlsx";
 import { useSheetStore } from "@/stores/sheetStore";
 import type { Row } from "@/lib/types";
-import DownloadOverlay from "./DownloadOverlay";
-import UploadOverlay from "./UploadOverlay";
-import VersionHistory from "./VersionHistory";
+
+const VersionHistory = lazy(() => import("./VersionHistory"));
+const DownloadOverlay = lazy(() => import("./DownloadOverlay"));
+const UploadOverlay = lazy(() => import("./UploadOverlay"));
 
 interface MenuPos {
   top: number;
@@ -74,7 +75,7 @@ export default function SheetToolbar() {
     const s = useSheetStore.getState();
     try {
       const buf = await file.arrayBuffer();
-      const rows = parseSheetRows(buf, s.columns);
+      const rows = await parseSheetRows(buf, s.columns);
       if (s.file?.type === "fb_cookie") {
         rows.forEach((r) => {
           if (r.cookies) {
@@ -371,9 +372,10 @@ export default function SheetToolbar() {
           className="sheet-more-item"
           title="Compact - remove empty rows between used rows"
           aria-label="Compact rows"
-          onClick={() => {
+          onClick={async () => {
             close();
-            if (!window.confirm("Remove empty rows between used rows?")) return;
+            const ok = await confirm("Remove empty rows between used rows?", "Compact");
+            if (!ok) return;
             useSheetStore.getState().removeEmptyRows();
           }}
         >
@@ -443,9 +445,21 @@ export default function SheetToolbar() {
         style={{ display: "none" }}
         onChange={handleFileChange}
       />
-      <VersionHistory open={versionsOpen} onClose={() => setVersionsOpen(false)} />
-      <DownloadOverlay open={downloadOpen} onClose={() => setDownloadOpen(false)} />
-      <UploadOverlay rows={uploadRows} onClose={() => setUploadRows(null)} />
+      {versionsOpen ? (
+        <Suspense fallback={null}>
+          <VersionHistory open={versionsOpen} onClose={() => setVersionsOpen(false)} />
+        </Suspense>
+      ) : null}
+      {downloadOpen ? (
+        <Suspense fallback={null}>
+          <DownloadOverlay open={downloadOpen} onClose={() => setDownloadOpen(false)} />
+        </Suspense>
+      ) : null}
+      {uploadRows ? (
+        <Suspense fallback={null}>
+          <UploadOverlay rows={uploadRows} onClose={() => setUploadRows(null)} />
+        </Suspense>
+      ) : null}
     </>
   );
 }

@@ -346,15 +346,17 @@ export default function SheetGrid() {
       onPointerLeave={handlePointerUp}
       onScroll={() => setLogPopup(null)}
     >
-      <table className="grid" cellSpacing={0} cellPadding={0}>
-        <thead>
-          <tr>
+      <table className="grid" role="grid" cellSpacing={0} cellPadding={0}>
+        <thead role="rowgroup">
+          <tr role="row">
             <th className="corner"></th>
-            {displayCols.map((col) => (
+            {displayCols.map((col, i) => (
               <th
                 key={col.key}
                 className={"ch" + (selectionMode && selCols.has(col.key) ? " col-sel" : "")}
                 data-col={col.key}
+                role="columnheader"
+                aria-colindex={i + 1}
               >
                 {col.label}
               </th>
@@ -362,11 +364,11 @@ export default function SheetGrid() {
             <th className="ch-dot"></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody role="rowgroup">
           {rows.map((_, i) => (
             <GridRow key={i} rowIdx={i} displayCols={displayCols} />
           ))}
-          <tr className="add-row">
+          <tr className="add-row" role="row">
             <td
               className="rh-add"
               colSpan={displayCols.length + 2}
@@ -585,19 +587,36 @@ const GridRow = memo(function GridRow({
           : status === "pending"
             ? "d-spin d-yellow"
             : "";
+  const statusLabel = isDupRow
+    ? "Duplicate row"
+    : status === "bad"
+      ? "Dead account"
+      : row?.wa_status === "eligible"
+        ? "FB page eligible"
+        : status === "good" || status === "done"
+          ? "Valid account"
+          : status === "pending"
+            ? "Checking…"
+            : "";
 
   return (
-    <tr className={isRowSel ? "row-selected" : ""}>
+    <tr className={isRowSel ? "row-selected" : ""} role="row">
       <th
         className={"rh" + (isRowSel ? " row-sel" : "")}
         data-row={rowIdx}
+        role="rowheader"
       >
         {rowIdx + 1}
       </th>
-      {displayCols.map((col) => (
-        <GridCell key={col.key} rowIdx={rowIdx} colKey={col.key} />
+      {displayCols.map((col, i) => (
+        <GridCell key={col.key} rowIdx={rowIdx} colKey={col.key} colIndex={i} />
       ))}
-      <td className="dot-cell" data-row={rowIdx}>
+      <td
+        className="dot-cell"
+        data-row={rowIdx}
+        title={statusLabel || undefined}
+        aria-label={statusLabel || undefined}
+      >
         <div
           style={{
             display: "flex",
@@ -616,9 +635,11 @@ const GridRow = memo(function GridRow({
 const GridCell = memo(function GridCell({
   rowIdx,
   colKey,
+  colIndex,
 }: {
   rowIdx: number;
   colKey: string;
+  colIndex: number;
 }) {
   const value = useSheetStore((s) => s.rows[rowIdx]?.[colKey] ?? "");
   const sel = useSheetStore((s) => s.selectedItems.has(rowIdx + ":" + colKey));
@@ -654,6 +675,10 @@ const GridCell = memo(function GridCell({
       }
       data-row={rowIdx}
       data-col={colKey}
+      role="gridcell"
+      aria-colindex={colIndex + 1}
+      tabIndex={active ? 0 : -1}
+      aria-label={value + (dup ? " (duplicate)" : "")}
     >
       <div className="cell-inner">
         {inlineActive ? (

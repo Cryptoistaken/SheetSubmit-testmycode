@@ -76,10 +76,28 @@ export default function BubbleMode({ fileId }: { fileId: string }) {
 
   useEffect(() => {
     if (status !== "ready") return;
-    const t = setInterval(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const check = () => {
+      if (cancelled) return;
+      if (document.visibilityState === "hidden") {
+        schedule();
+        return;
+      }
       void useSheetStore.getState().refreshSheet();
-    }, 6000);
-    return () => clearInterval(t);
+    };
+    const schedule = () => {
+      timer = setTimeout(() => {
+        check();
+        schedule();
+      }, 6000);
+    };
+    check();
+    schedule();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [status]);
 
   useEffect(() => {

@@ -168,6 +168,7 @@ function resetStore(): void {
     crossDups: {},
     checkRunning: false,
     pendingAutoCheck: false,
+    bubbleActiveRow: -1,
     adminMode: false,
     adminOwnerId: null,
   });
@@ -258,8 +259,9 @@ describe("sheetStore data-integrity", () => {
     // The resolved append must NOT clear the newer dirty state, journal or seq.
     expect(useSheetStore.getState().isDirty).toBe(true);
     expect(useSheetStore.getState().rows[0].uid).toBe("222");
+    // Journal is coalesced per-row: the later commit on the same row replaces
+    // the earlier one, so only the latest value survives.
     expect(useSheetStore.getState().changeJournal).toEqual([
-      { rowIdx: 0, cols: { uid: "111" } },
       { rowIdx: 0, cols: { uid: "222" } },
     ]);
     expect(useSheetStore.getState().lastSeq).toBe(0);
@@ -457,5 +459,90 @@ describe("sheetStore data-integrity", () => {
     expect(harness.appendCalls[0].payload.newLogs).toEqual([]);
     expect(harness.appendCalls[0].payload.undoNew).toEqual([]);
     expect(harness.appendCalls[0].payload.redoNew).toEqual([]);
+  });
+
+  it("changeJournal coalesces consecutive commits on the same row (latest value)", async () => {
+    await openTestFile();
+    useSheetStore.getState().commitCell(0, "uid", "111");
+    useSheetStore.getState().commitCell(0, "uid", "222");
+    expect(useSheetStore.getState().changeJournal).toEqual([
+      { rowIdx: 0, cols: { uid: "222" } },
+    ]);
+
+    useSheetStore.getState().commitCell(1, "uid", "333");
+    expect(useSheetStore.getState().changeJournal).toEqual([
+      { rowIdx: 0, cols: { uid: "222" } },
+      { rowIdx: 1, cols: { uid: "333" } },
+    ]);
+
+    useSheetStore.getState().commitCell(0, "uid", "444");
+    expect(useSheetStore.getState().changeJournal).toEqual([
+      { rowIdx: 1, cols: { uid: "333" } },
+      { rowIdx: 0, cols: { uid: "444" } },
+    ]);
+  });
+
+  it("changeJournal caps at 200 ops (keeps the tail)", async () => {
+    await openTestFile();
+    const rows = Array.from({ length: 220 }, (_, i) => ({
+      cookies: "",
+      uid: "",
+      twofakey: "",
+      index: String(i),
+    }));
+    useSheetStore.setState({ rows });
+    for (let i = 0; i < 220; i++) {
+      useSheetStore.getState().commitCell(i, "uid", String(i));
+    }
+    const journal = useSheetStore.getState().changeJournal;
+    expect(journal.length).toBe(200);
+    expect(journal[0].rowIdx).toBe(20);
+    expect(journal[journal.length - 1].rowIdx).toBe(219);
+  });
+
+  it("bubbleActiveRow resets on closeFile and openFile", async () => {
+    await openTestFile();
+    useSheetStore.setState({ bubbleActiveRow: 5 });
+    await useSheetStore.getState().closeFile();
+    expect(useSheetStore.getState().bubbleActiveRow).toBe(-1);
+
+    await openTestFile();
+    expect(useSheetStore.getState().bubbleActiveRow).toBe(-1);
+  });
+
+  it("incremental recomputeMarks keeps dup marks correct after editing a dup cell", async () => {
+    await openTestFile();
+    useSheetStore.setState({
+      rows: [
+        { cookies: "", uid: "111", twofakey: "" },
+        { cookies: "", uid: "111", twofakey: "" },
+        { cookies: "", uid: "222", twofakey: "" },
+      ],
+      dupCells: new Set(["0:uid", "1:uid"]),
+      dupRows: new Set([0, 1]),
+      hasDuplicates: true,
+    });
+
+    // Break the duplicate from row 0's side: row 1 becomes unique too.
+    useSheetStore.getState().commitCell(0, "uid", "333");
+    let s = useSheetStore.getState();
+    expect(s.rows[0].uid).toBe("333");
+    expect(s.dupCells).toEqual(new Set());
+    expect(s.dupRows).toEqual(new Set());
+    expect(s.hasDuplicates).toBe(false);
+
+    // Recreate the duplicate.
+    useSheetStore.getState().commitCell(0, "uid", "111");
+    s = useSheetStore.getState();
+    expect(s.dupCells).toEqual(new Set(["0:uid", "1:uid"]));
+    expect(s.dupRows).toEqual(new Set([0, 1]));
+    expect(s.hasDuplicates).toBe(true);
+
+    // Break it from row 1's side: the stale partner mark must be cleared.
+    useSheetStore.getState().commitCell(1, "uid", "444");
+    s = useSheetStore.getState();
+    expect(s.dupCells).toEqual(new Set());
+    expect(s.dupRows).toEqual(new Set());
+    expect(s.hasDuplicates).toBe(false);
   });
 });

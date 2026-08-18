@@ -335,6 +335,7 @@ export default function VersionHistory({
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [renaming, setRenaming] = useState<{ v: number; name: string } | null>(null);
   const renamingDone = useRef(false);
+  const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open || !fileId) return;
@@ -390,15 +391,26 @@ export default function VersionHistory({
       upd["v" + it.rec.v] = computeSummary(it.rec, it.prev, fileId);
     });
     setSummaries(upd);
-    pageItems.forEach((it) => {
-      void getVersionRows(fileId, it.rec.v, adminMode).then(() => {
+    let cursor = 0;
+    const workers = Math.min(4, pageItems.length);
+    const runWorker = async () => {
+      while (cursor < pageItems.length) {
+        const idx = cursor++;
+        const it = pageItems[idx];
+        await getVersionRows(fileId, it.rec.v, adminMode);
         setSummaries((old) => ({
           ...old,
           ["v" + it.rec.v]: computeSummary(it.rec, it.prev, fileId),
         }));
-      });
-    });
+      }
+    };
+    for (let w = 0; w < workers; w++) void runWorker();
   }, [fileId, meta, pageItems, adminMode]);
+
+  useEffect(() => {
+    if (!open) return;
+    boxRef.current?.focus();
+  }, [open]);
 
   if (!open || !fileId) return null;
 
@@ -464,7 +476,20 @@ export default function VersionHistory({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="modal-box">
+      <div
+        className="modal-box"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Version history"
+        ref={boxRef}
+        tabIndex={-1}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            onClose();
+          }
+        }}
+      >
         <div className="modal-title">Version history</div>
         <div className="version-list">
           {meta === null ? (

@@ -109,6 +109,94 @@ function recomputeMarks(
   return { dupCells, dupRows, crossDupRows, hasDuplicates: dupCells.size > 0 };
 }
 
+/** Incremental marks recompute for a single edited row. Reads the current
+ * dup/crossDup sets from the store, drops the edited row, recomputes its dup
+ * cells (and collision partners) from scratch, and rebuilds any column where
+ * the row previously held a dup mark that is no longer valid. */
+function recomputeMarksForRow(
+  rows: Row[],
+  crossDups: Record<string, unknown[]>,
+  columns: ColumnDef[],
+  rowIdx: number,
+): MarkResult {
+  const prev = useSheetStore.getState();
+  const dupCells = new Set(prev.dupCells);
+  const dupRows = new Set(prev.dupRows);
+  const crossDupRows = new Set(prev.crossDupRows);
+
+  const oldCells: string[] = [];
+  dupCells.forEach((c) => {
+    if (c.startsWith(rowIdx + ":")) oldCells.push(c);
+  });
+  oldCells.forEach((c) => dupCells.delete(c));
+  dupRows.delete(rowIdx);
+  crossDupRows.delete(rowIdx);
+
+  const row = rows[rowIdx];
+  if (row) {
+    let uid = row.uid ?? row.username;
+    if (!uid && row.cookies) {
+      const m = row.cookies.match(/c_user=(\d+)/);
+      if (m) uid = m[1];
+    }
+    if (uid && crossDups[uid]) crossDupRows.add(rowIdx);
+
+    for (const col of columns) {
+      const val = (row[col.key] ?? "").trim();
+      if (!val) continue;
+      const collisions: number[] = [];
+      for (let i = 0; i < rows.length; i++) {
+        if (i === rowIdx) continue;
+        if ((rows[i][col.key] ?? "").trim() === val) collisions.push(i);
+      }
+      if (collisions.length > 0) {
+        dupCells.add(`${rowIdx}:${col.key}`);
+        dupRows.add(rowIdx);
+        collisions.forEach((i) => {
+          dupCells.add(`${i}:${col.key}`);
+          dupRows.add(i);
+        });
+      }
+    }
+
+    oldCells.forEach((cell) => {
+      const sep = cell.indexOf(":");
+      const colKey = cell.slice(sep + 1);
+      if (!colKey || dupCells.has(`${rowIdx}:${colKey}`)) return;
+      dupCells.forEach((c) => {
+        if (c.slice(c.indexOf(":") + 1) === colKey) dupCells.delete(c);
+      });
+      const valMap = new Map<string, number[]>();
+      rows.forEach((r, i) => {
+        const v = (r[colKey] ?? "").trim();
+        if (!v) return;
+        const list = valMap.get(v);
+        if (list) list.push(i);
+        else valMap.set(v, [i]);
+      });
+      valMap.forEach((idxs) => {
+        if (idxs.length > 1) {
+          for (const ri of idxs) {
+            dupCells.add(`${ri}:${colKey}`);
+          }
+        }
+      });
+    });
+  }
+
+  const finalDupRows = new Set<number>();
+  dupCells.forEach((c) => {
+    finalDupRows.add(Number(c.slice(0, c.indexOf(":"))));
+  });
+
+  return {
+    dupCells,
+    dupRows: finalDupRows,
+    crossDupRows,
+    hasDuplicates: dupCells.size > 0,
+  };
+}
+
 function updateSelFlags(
   items: Set<string>,
   numCols: number,
@@ -203,6 +291,7 @@ export interface SheetState {
   selectAllCells: () => void;
   unselectAll: () => void;
   selectCellOnly: (rowIdx: number, colKey: string) => void;
+  focusCell: (rowIdx: number, colKey: string) => void;
   selectRange: (
     r1: number,
     c1: string,
@@ -243,6 +332,7 @@ export interface SheetState {
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 let openSeq = 0;
 let saveChain: Promise<void> = Promise.resolve();
+const MAX_JOURNAL = 200;
 
 export const useSheetStore = create<SheetState>()((set, get) => ({
   status: "idle",
@@ -335,6 +425,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         crossDups,
         checkRunning: false,
         pendingAutoCheck: false,
+        bubbleActiveRow: -1,
         ...recomputeMarks(rows, crossDups, columns),
       });
     } catch {
@@ -384,6 +475,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       crossDups: {},
       checkRunning: false,
       pendingAutoCheck: false,
+      bubbleActiveRow: -1,
       adminMode: false,
       adminOwnerId: null,
     });
@@ -443,6 +535,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         crossDups: {},
         checkRunning: false,
         pendingAutoCheck: false,
+        bubbleActiveRow: -1,
         ...recomputeMarks(rows, {}, columns),
       });
     } catch {
@@ -510,9 +603,12 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       journalCols[d.colKey] = newRows[rowIdx][d.colKey] ?? "";
     });
     const changeJournal: AppendOp[] = [
-      ...s.changeJournal,
+      ...s.changeJournal.filter((op) => op.rowIdx !== rowIdx),
       { rowIdx, cols: journalCols },
     ];
+    if (changeJournal.length > MAX_JOURNAL) {
+      changeJournal.splice(0, changeJournal.length - MAX_JOURNAL);
+    }
     set({
       rows: newRows,
       undoStack,
@@ -520,7 +616,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       isDirty: true,
       changeJournal,
       invalidCells: newInvalid,
-      ...recomputeMarks(newRows, s.crossDups, s.columns),
+      ...recomputeMarksForRow(newRows, s.crossDups, s.columns, rowIdx),
     });
     get().maybeAutoCheck(rowIdx, colKey);
     get().persist();
@@ -993,6 +1089,29 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       selRows: new Set(),
       selCols: new Set(),
     });
+  },
+
+  focusCell: (rowIdx, colKey) => {
+    const row = get().rows[rowIdx];
+    if (!row) return;
+    set({
+      selectedCell: { rowIdx, colIdx: colKey, originalVal: row[colKey] ?? "" },
+      draft: row[colKey] ?? "",
+      qebOpen: false,
+      inlineEdit: false,
+      selectionMode: false,
+      selectedItems: new Set(),
+      selRows: new Set(),
+      selCols: new Set(),
+    });
+    try {
+      const td = document.querySelector<HTMLElement>(
+        `td.dc[data-row="${rowIdx}"][data-col="${colKey}"]`,
+      );
+      td?.scrollIntoView({ block: "nearest" });
+    } catch {
+      // swallow — scrolling is best-effort
+    }
   },
 
   selectRange: (r1, c1, r2, c2, additive) => {
@@ -1819,7 +1938,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       isDirty: true,
       dirtyStructural: true,
       invalidCells: newInvalid,
-      ...recomputeMarks(rows, s.crossDups, s.columns),
+      ...recomputeMarksForRow(rows, s.crossDups, s.columns, idx),
     });
     get().persist("bubble");
     get().maybeAutoCheck(idx, "cookies");
@@ -1863,7 +1982,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       isDirty: true,
       dirtyStructural: true,
       invalidCells: newInvalid,
-      ...recomputeMarks(rows, s.crossDups, s.columns),
+      ...recomputeMarksForRow(rows, s.crossDups, s.columns, idx),
     });
     get().persist("bubble");
     if (complete) get().bubbleAdvanceActiveRow();

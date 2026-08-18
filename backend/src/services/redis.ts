@@ -28,10 +28,17 @@ export function key(k: string): string {
 }
 
 export async function getJSON<T>(k: string): Promise<T | null> {
+  let raw: string | null = null;
   try {
-    const raw = await redis.get(key(k));
-    return raw ? (JSON.parse(raw) as T) : null;
+    raw = await redis.get(key(k));
   } catch {
+    return null;
+  }
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch (e) {
+    console.error("[Redis] getJSON parse error key=" + key(k) + ":", (e as Error).message);
     return null;
   }
 }

@@ -15,10 +15,14 @@ export const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 export const REDIS_BACKUP_URL = process.env.REDIS_BACKUP_URL || "";
 
 export const TG_BOT_TOKEN = process.env.TG_BOT_TOKEN || "";
-export const ADMIN_IDS = (process.env.ADMIN_IDS || "8447133985,1772093705")
+const ADMIN_IDS_RAW = process.env.ADMIN_IDS;
+export const ADMIN_IDS = (ADMIN_IDS_RAW || "8447133985,1772093705")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+if (!ADMIN_IDS_RAW) {
+  console.warn("[Env] WARNING: ADMIN_IDS not set — granting admin to hardcoded fallback ids " + JSON.stringify(ADMIN_IDS) + ". Set ADMIN_IDS in production.");
+}
 
 export const RAILWAY_PUBLIC_DOMAIN = process.env.RAILWAY_PUBLIC_DOMAIN || "";
 

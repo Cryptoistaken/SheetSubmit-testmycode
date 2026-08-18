@@ -3,8 +3,8 @@ import { useNavigate, useParams } from "react-router";
 
 import DiffView from "@/components/sheet/DiffView";
 import { api } from "@/lib/api";
-import { useSheetStore } from "@/stores/sheetStore";
-import type { VersionMeta } from "@/lib/types";
+import { FILE_TYPE_DEFS } from "@/lib/types";
+import type { FileType, VersionMeta } from "@/lib/types";
 
 const WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -57,21 +57,27 @@ export default function VersionDiffPage() {
   const versionNum = Number(params.v);
   const ownerId = params.userId;
 
-  const file = useSheetStore((s) => s.file);
-  const fileStatus = useSheetStore((s) => s.status);
-
   const [meta, setMeta] = useState<VersionMeta[] | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [fileMeta, setFileMeta] = useState<{ name: string; type: FileType } | null>(null);
+  const [fileError, setFileError] = useState(false);
 
   const isAdmin = !!ownerId;
 
   useEffect(() => {
     if (!fileId) return;
-    if (ownerId) void useSheetStore.getState().openFileAdmin(fileId, ownerId);
-    else void useSheetStore.getState().openFile(fileId);
-    return () => {
-      void useSheetStore.getState().closeFile();
-    };
+    setFileMeta(null);
+    setFileError(false);
+    const fetchFile = ownerId
+      ? api.adminFile(fileId)
+      : api.getFiles().then((fs) => {
+          const f = fs.find((x) => x.id === fileId);
+          if (!f) throw new Error("file not found");
+          return f;
+        });
+    fetchFile
+      .then((f) => setFileMeta({ name: f.name, type: f.type }))
+      .catch(() => setFileError(true));
   }, [fileId, ownerId]);
 
   useEffect(() => {
@@ -116,7 +122,7 @@ export default function VersionDiffPage() {
     );
   }
 
-  if (loadError) {
+  if (loadError || fileError) {
     return (
       <div className="home-pane">
         <div className="empty-state">
@@ -129,7 +135,7 @@ export default function VersionDiffPage() {
     );
   }
 
-  if (fileStatus === "error") {
+  if (fileError) {
     return (
       <div className="home-pane">
         <div className="empty-state">
@@ -142,7 +148,7 @@ export default function VersionDiffPage() {
     );
   }
 
-  if (meta === null || fileStatus === "loading" || fileStatus === "idle" || !file) {
+  if (meta === null || !fileMeta) {
     return (
       <div className="home-pane">
         <div className="empty-state">
@@ -186,8 +192,10 @@ export default function VersionDiffPage() {
         fileId={fileId}
         rec={rec}
         prev={prev}
-        fileName={file.name}
-        typeName={file.type}
+        fileName={fileMeta.name}
+        typeName={fileMeta.type}
+        columns={FILE_TYPE_DEFS[fileMeta.type].columns}
+        adminMode={isAdmin}
       />
     </div>
   );

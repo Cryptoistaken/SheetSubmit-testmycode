@@ -1,4 +1,3 @@
-import * as XLSX from "xlsx";
 import { api } from "./api";
 import { FILE_TYPE_DEFS } from "./types";
 import type { ColumnDef, FileType, Row, WaCacheEntry } from "./types";
@@ -28,6 +27,7 @@ export async function importXlsx(
   fileName: string,
   existingFiles: { name: string }[],
 ): Promise<ImportXlsxResult> {
+  const XLSX = await import("xlsx");
   const wb = XLSX.read(arrayBuffer, { type: "array" });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const json = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1 });
@@ -112,12 +112,14 @@ export async function importXlsx(
   return { id, name, type: typeKey, rows, dataCount: rows.length };
 }
 
-export function buildXlsx(rows: Row[], columns: ColumnDef[]): ArrayBuffer {
+export async function buildXlsx(rows: Row[], columns: ColumnDef[]): Promise<ArrayBuffer> {
+  const XLSX = await import("xlsx");
   const data: string[][] = [];
   rows.forEach((row) => {
     const isEmpty = columns.every((c) => !row[c.key]);
     if (!isEmpty) data.push(columns.map((c) => row[c.key] || ""));
-  });  const ws = XLSX.utils.aoa_to_sheet(data);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(data);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
   return XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer;
@@ -138,8 +140,12 @@ function arrBufToDataUrl(buf: ArrayBuffer, mime: string): string {
   return "data:" + mime + ";base64," + btoa(binary);
 }
 
-export function downloadXlsx(rows: Row[], columns: ColumnDef[], fileName: string): void {
-  const buf = buildXlsx(rows, columns);
+export async function downloadXlsx(
+  rows: Row[],
+  columns: ColumnDef[],
+  fileName: string,
+): Promise<void> {
+  const buf = await buildXlsx(rows, columns);
   const mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
   const name = (fileName || "export") + ".xlsx";
   if (isNativeWebView()) {
@@ -160,10 +166,11 @@ export function downloadXlsx(rows: Row[], columns: ColumnDef[], fileName: string
 
 /** Parse the first sheet of an xlsx into rows for an open file (old sheet.js
  * header detection: match column key/label on row 0, else positional). */
-export function parseSheetRows(
+export async function parseSheetRows(
   arrayBuffer: ArrayBuffer,
   columns: ColumnDef[],
-): Row[] {
+): Promise<Row[]> {
+  const XLSX = await import("xlsx");
   const wb = XLSX.read(arrayBuffer, { type: "array" });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const json = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1 });
@@ -205,13 +212,14 @@ export function parseSheetRows(
 
 /** Sheet-level download (old _doDownload): uid column excluded, no header row,
  * filename "<name><suffix> [N].xlsx". Returns false when nothing to download. */
-export function downloadSheetRows(
+export async function downloadSheetRows(
   rows: Row[],
   columns: ColumnDef[],
   name: string,
   filterFn?: (row: Row) => boolean,
   suffix?: string,
-): boolean {
+): Promise<boolean> {
+  const XLSX = await import("xlsx");
   const dlCols = columns.filter((c) => c.key !== "uid");
   const data: string[][] = [];
   let hasData = false;

@@ -69,7 +69,7 @@ mock.module("../src/middleware/auth", () => authMock);
 const { filesRouter } = await import("../src/routes/files");
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use("/api/files", filesRouter);
 
 let server: ReturnType<typeof app.listen>;
@@ -105,10 +105,10 @@ function seedFile(id: string): StoredFile {
   return file;
 }
 
-async function api(route: string, body?: unknown): Promise<{ status: number; json: any }> {
+async function api(route: string, body?: unknown, method: "GET" | "PUT" | "POST" = body === undefined ? "GET" : "PUT"): Promise<{ status: number; json: any }> {
   const res = await fetch(baseUrl + "/api/files" + route, {
-    method: body === undefined ? "GET" : "PUT",
-    headers: body === undefined ? {} : { "content-type": "application/json" },
+    method,
+    headers: method === "GET" ? {} : { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   return { status: res.status, json: await res.json() };
@@ -267,21 +267,6 @@ describe("PUT /api/files/:id/append", () => {
     expect((store[key("redo:f8")] as string[]).map(parsed)).toEqual([{ r: 1 }]);
   });
 
-  test("legacy string-blob undo/redo migrated to lists on /undo read", async () => {
-    seedFile("f9");
-    fakeSet(key("rows:f9"), JSON.stringify([{ a: "1" }]));
-    fakeSet(key("undo:f9"), JSON.stringify([{ u: 1 }, { u: 2 }]));
-    fakeSet(key("redo:f9"), JSON.stringify([{ r: 1 }]));
-
-    const r = await api("/f9/undo");
-
-    expect(r.status).toBe(200);
-    expect(r.json.undo).toEqual([{ u: 1 }, { u: 2 }]);
-    expect(r.json.redo).toEqual([{ r: 1 }]);
-    expect(Array.isArray(store[key("undo:f9")])).toBe(true);
-    expect(Array.isArray(store[key("redo:f9")])).toBe(true);
-  });
-
   test("invalid payload returns 400", async () => {
     seedFile("f10");
     const bad = [
@@ -295,6 +280,55 @@ describe("PUT /api/files/:id/append", () => {
       expect(r.status).toBe(400);
       expect(r.json).toEqual({ error: "invalid append payload" });
     }
+  });
+
+  test("rejects rowIdx beyond the cap (DoS guard)", async () => {
+    seedFile("f11");
+    const r = await api("/f11/append", { base: 0, ops: [{ rowIdx: 1e9, cols: { a: "1" } }] });
+
+    expect(r.status).toBe(400);
+    expect(r.json).toEqual({ error: "invalid append payload" });
+    expect(store[key("rows:f11")]).toBeUndefined();
+  });
+
+  test("rejects more than MAX_OPS ops in one payload (DoS guard)", async () => {
+    seedFile("f12");
+    const ops = Array.from({ length: 10001 }, () => ({ rowIdx: 0, cols: { a: "1" } }));
+
+    const r = await api("/f12/append", { base: 0, ops });
+
+    expect(r.status).toBe(400);
+    expect(r.json).toEqual({ error: "invalid append payload" });
+    expect(store[key("rows:f12")]).toBeUndefined();
+  });
+
+  test("rejects appends that would grow rows beyond the cap", async () => {
+    seedFile("f13");
+    fakeSet(key("rows:f13"), JSON.stringify(Array.from({ length: 100001 }, () => ({}))));
+
+    const r = await api("/f13/append", { base: 0, ops: [{ rowIdx: 0, cols: { a: "1" } }] });
+
+    expect(r.status).toBe(400);
+    expect(r.json).toEqual({ error: "invalid append payload" });
+  });
+});
+
+describe("POST /api/files", () => {
+  test("ignores client-controlled id and binds data to the server-generated id", async () => {
+    const r = await api("/", { id: "evil-client-id", name: "New", type: "fb_cookie" }, "POST");
+
+    expect(r.status).toBe(200);
+    expect(r.json.id).toBeDefined();
+    expect(r.json.id).not.toBe("evil-client-id");
+    expect(r.json.userId).toBe("user1");
+    const files = JSON.parse(store[key("files:user1")] as string) as StoredFile[];
+    expect(files).toHaveLength(1);
+    expect(files[0].id).toBe(r.json.id);
+    fakeSet(key("rows:" + r.json.id), JSON.stringify([{ a: "1" }]));
+    const full = await api("/" + r.json.id + "/full");
+    expect(full.status).toBe(200);
+    expect(full.json.rows).toEqual([{ a: "1" }]);
+    expect(full.json.file.id).toBe(r.json.id);
   });
 });
 

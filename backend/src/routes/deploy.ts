@@ -3,6 +3,8 @@
 // Railway's own injected RAILWAY_SERVICE_ID / RAILWAY_ENVIRONMENT_ID — no IDs or
 // URLs hardcoded anywhere.
 import { Router } from "express";
+import crypto from "node:crypto";
+import { asyncRoute } from "../middleware/asyncRoute";
 
 export const deployRouter = Router();
 
@@ -10,7 +12,7 @@ const RAILWAY_API = "https://backboard.railway.com/graphql/v2";
 const REDEPLOY_QUERY =
   "mutation Redeploy($serviceId: String!, $environmentId: String!) { serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId) }";
 
-deployRouter.post("/__redeploy", async (req, res) => {
+deployRouter.post("/__redeploy", asyncRoute(async (req, res) => {
   const token = process.env.RAILWAY_TOKEN;
   const serviceId = process.env.RAILWAY_SERVICE_ID;
   const environmentId = process.env.RAILWAY_ENVIRONMENT_ID;
@@ -18,7 +20,9 @@ deployRouter.post("/__redeploy", async (req, res) => {
     res.status(503).json({ ok: false, error: "RAILWAY_TOKEN / RAILWAY_SERVICE_ID / RAILWAY_ENVIRONMENT_ID not set" });
     return;
   }
-  if ((req.headers.authorization || "") !== "Bearer " + token) {
+  const provided = req.headers.authorization || "";
+  const expected = "Bearer " + token;
+  if (provided.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected))) {
     res.status(401).json({ ok: false, error: "unauthorized" });
     return;
   }
@@ -43,4 +47,4 @@ deployRouter.post("/__redeploy", async (req, res) => {
   } catch (e) {
     res.status(500).json({ ok: false, error: (e as Error).message });
   }
-});
+}));

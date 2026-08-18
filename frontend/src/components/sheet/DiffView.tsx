@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useSheetStore } from "@/stores/sheetStore";
 import { getVersionRows } from "@/stores/versionCache";
-import type { VersionMeta } from "@/lib/types";
+import type { ColumnDef, VersionMeta } from "@/lib/types";
 import type { DiffLine, DiffResult } from "./diff";
 import { vComputeDiff } from "./diff";
 
@@ -136,15 +136,21 @@ export default function DiffView({
   prev,
   fileName,
   typeName,
+  columns: columnsProp,
+  adminMode: adminModeProp,
 }: {
   fileId: string;
   rec: VersionMeta;
   prev: VersionMeta | null;
   fileName: string;
   typeName: string;
+  columns?: ColumnDef[];
+  adminMode?: boolean;
 }) {
-  const columns = useSheetStore((s) => s.columns);
-  const adminMode = useSheetStore((s) => s.adminMode);
+  const storeColumns = useSheetStore((s) => s.columns);
+  const storeAdminMode = useSheetStore((s) => s.adminMode);
+  const columns = columnsProp ?? storeColumns;
+  const adminMode = adminModeProp ?? storeAdminMode;
   const [status, setStatus] = useState<"loading" | "error" | "done">("loading");
   const [diff, setDiff] = useState<DiffResult | null>(null);
   const [collapsed, setCollapsed] = useState(false);

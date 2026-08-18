@@ -7,7 +7,7 @@ import { useConfirm } from "@/lib/confirm";
 import { useToast } from "@/lib/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { FILE_TYPE_DEFS } from "@/lib/types";
-import type { AdminUser, ArchiveFile } from "@/lib/types";
+import type { AdminUser, ArchiveFile, SheetFile } from "@/lib/types";
 import { downloadXlsx } from "@/lib/xlsx";
 
 function userName(u: { firstName?: string; lastName?: string }): string {
@@ -36,11 +36,10 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
   }, []);
 
   useEffect(() => {
-    loadList();
     return () => {
       if (searchTimer.current) clearTimeout(searchTimer.current);
     };
-  }, [loadList]);
+  }, []);
 
   const showList = useCallback(() => {
     navigate("/admin");
@@ -68,8 +67,16 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(async () => {
       const query = q.trim();
-      if (query) setUsers(await api.adminSearchUsers(query));
-      else loadList();
+      if (query) {
+        try {
+          setUsers(await api.adminSearchUsers(query));
+        } catch {
+          showToast("Search failed");
+          loadList();
+        }
+      } else {
+        loadList();
+      }
     }, 300);
   };
 
@@ -89,7 +96,7 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
 
   const banUser = async () => {
     if (!detailUser) return;
-    const ok = window.confirm("Ban this user?");
+    const ok = await confirm("Ban this user?", "Ban");
     if (!ok) return;
     try {
       await api.adminBanUser(detailUser.id);
@@ -104,7 +111,7 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
 
   const unbanUser = async () => {
     if (!detailUser) return;
-    const ok = window.confirm("Unban this user?");
+    const ok = await confirm("Unban this user?", "Unban");
     if (!ok) return;
     try {
       await api.adminUnbanUser(detailUser.id);
@@ -130,15 +137,18 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
     if (detailUser) showDetail(detailUser.id);
   };
 
-  const downloadFile = async (fileId: string, name: string) => {
-    const rows = await api.adminFileRows(fileId);
+  const downloadFile = async (file: SheetFile) => {
+    const rows = await api.adminFileRows(file.id);
     if (!rows || !rows.length) {
       showToast("No data");
       return;
     }
-    const f = await api.adminFile(fileId);
-    downloadXlsx(rows, FILE_TYPE_DEFS[f.type].columns, name);
-    showToast("Downloaded");
+    try {
+      await downloadXlsx(rows, FILE_TYPE_DEFS[file.type].columns, file.name);
+      showToast("Downloaded");
+    } catch {
+      showToast("Download failed");
+    }
   };
 
   const openRename = (fileId: string, name: string) => {
@@ -289,7 +299,7 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
                     aria-label="Download"
                     onClick={(e) => {
                       e.stopPropagation();
-                      downloadFile(f.id, f.name);
+                      downloadFile(f);
                     }}
                   >
                     <Download size={14} />
@@ -390,7 +400,7 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
             if (e.target === e.currentTarget) setRenameFileId(null);
           }}
         >
-          <div className="modal-box">
+          <div className="modal-box" role="dialog" aria-modal="true" aria-label="Rename file">
             <div className="modal-title">Rename file</div>
             <input
               className="modal-input"

@@ -1,6 +1,7 @@
 // Admin routes — ported from the old server (API contract unchanged).
 import { Router } from "express";
 import type { Row, StoredFile } from "../lib/shared";
+import { MUTABLE_FILE_FIELDS } from "../lib/shared";
 import { createForkFile, updateUserFilesAtomic } from "../services/files";
 import {
   delHistoryKeys,
@@ -14,16 +15,18 @@ import { delKey, getJSON, key, redis, setJSON } from "../services/redis";
 import {
   findAllUserIds,
   findFileAcrossUsers,
+  invalidateBanCache,
   invalidateSession,
   migrateListKey,
   requireAdmin,
   requireAuth,
 } from "../middleware/auth";
+import { asyncRoute } from "../middleware/asyncRoute";
 
 export const adminRouter = Router();
 
 // ── Stats ──
-adminRouter.get("/stats", requireAuth, requireAdmin, async (_req, res) => {
+adminRouter.get("/stats", requireAuth, requireAdmin, asyncRoute(async (_req, res) => {
   try {
     const userIds = await findAllUserIds();
     const totalUsers = userIds.length;
@@ -48,13 +51,12 @@ adminRouter.get("/stats", requireAuth, requireAdmin, async (_req, res) => {
     console.error("[Admin Stats] error:", (e as Error).message);
     res.status(500).json({ error: "Failed to get stats" });
   }
-});
+}));
 
 // ── Users ──
-adminRouter.get("/users", requireAuth, requireAdmin, async (_req, res) => {
+adminRouter.get("/users", requireAuth, requireAdmin, asyncRoute(async (_req, res) => {
   try {
     const userIds = await findAllUserIds();
-    console.log("[Admin Users] userIds:", JSON.stringify(userIds));
     const users: Record<string, any>[] = [];
     if (userIds.length > 0) {
       const p = redis.pipeline();
@@ -67,11 +69,6 @@ adminRouter.get("/users", requireAuth, requireAdmin, async (_req, res) => {
       const results = (await p.exec()) || [];
       for (let i = 0; i < userIds.length; i++) {
         const userData = results[i * 4][1];
-        console.log(
-          "[Admin Users] id=" + userIds[i] +
-          " userData=" + (userData ? "exists" : "null") +
-          " filesData=" + (results[i * 4 + 1][1] ? "exists" : "null"),
-        );
         if (!userData) continue;
         let user: Record<string, any>;
         try {
@@ -111,9 +108,9 @@ adminRouter.get("/users", requireAuth, requireAdmin, async (_req, res) => {
     console.error("[Admin Users] error:", (e as Error).message);
     res.status(500).json({ error: "Failed to get users" });
   }
-});
+}));
 
-adminRouter.get("/users/search", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.get("/users/search", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   try {
     const q = String(req.query.q || "").toLowerCase().trim();
     const userIds = await findAllUserIds();
@@ -162,9 +159,9 @@ adminRouter.get("/users/search", requireAuth, requireAdmin, async (req, res) => 
     console.error("[Admin Search] error:", (e as Error).message);
     res.status(500).json({ error: "Failed to search users" });
   }
-});
+}));
 
-adminRouter.get("/user/:userId", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.get("/user/:userId", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   const user = await getJSON<Record<string, any>>("user:" + req.params.userId);
   if (!user) {
     res.status(404).json({ error: "user not found" });
@@ -178,19 +175,14 @@ adminRouter.get("/user/:userId", requireAuth, requireAdmin, async (req, res) => 
   user.banned = !!(await getJSON("ban:" + req.params.userId));
   user.files = files;
   res.json(user);
-});
+}));
 
-adminRouter.get("/user/:userId/files", requireAuth, requireAdmin, async (req, res) => {
-  const files = (await getJSON<StoredFile[]>("files:" + req.params.userId)) || [];
-  res.json(files);
-});
-
-adminRouter.get("/user/:userId/archive", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.get("/user/:userId/archive", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   const archived = (await getJSON<StoredFile[]>("archive:" + req.params.userId)) || [];
   res.json(archived);
-});
+}));
 
-adminRouter.post("/user/:userId/archive/:fileId/restore", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.post("/user/:userId/archive/:fileId/restore", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   const archived = (await getJSON<StoredFile[]>("archive:" + req.params.userId)) || [];
   const idx = archived.findIndex((f) => f.id === req.params.fileId);
   if (idx === -1) {
@@ -199,15 +191,20 @@ adminRouter.post("/user/:userId/archive/:fileId/restore", requireAuth, requireAd
   }
   const file = archived.splice(idx, 1)[0];
   delete file.deletedAt;
-  await updateUserFilesAtomic(req.params.userId, (files) => {
+  const restored = await updateUserFilesAtomic(req.params.userId, (files) => {
     files.unshift(file);
     return files;
   });
+  if (restored === null) {
+    archived.splice(idx, 0, file);
+    res.status(409).json({ error: "Conflict restoring file" });
+    return;
+  }
   await setJSON("archive:" + req.params.userId, archived);
   res.json({ ok: true });
-});
+}));
 
-adminRouter.delete("/user/:userId/archive/:fileId", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.delete("/user/:userId/archive/:fileId", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   const archived = (await getJSON<StoredFile[]>("archive:" + req.params.userId)) || [];
   const idx = archived.findIndex((f) => f.id === req.params.fileId);
   if (idx === -1) {
@@ -216,19 +213,19 @@ adminRouter.delete("/user/:userId/archive/:fileId", requireAuth, requireAdmin, a
   }
   const file = archived.splice(idx, 1)[0];
   await setJSON("archive:" + req.params.userId, archived);
-  const delPromises: Promise<unknown>[] = [];
-  delPromises.push(delKey("rows:" + file.id));
-  delPromises.push(delKey("undo:" + file.id));
-  delPromises.push(delKey("redo:" + file.id));
-  delPromises.push(delKey("sync:" + file.id));
-  delPromises.push(delKey("logs:" + file.id));
-  delPromises.push(delHistoryKeys(file.id));
-  await Promise.all(delPromises);
+  await redis.pipeline()
+    .del(key("rows:" + file.id))
+    .del(key("undo:" + file.id))
+    .del(key("redo:" + file.id))
+    .del(key("sync:" + file.id))
+    .del(key("logs:" + file.id))
+    .exec();
+  await delHistoryKeys(file.id);
   res.json({ ok: true });
-});
+}));
 
 // ── Cross-user file ops ──
-adminRouter.get("/file/:fileId", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.get("/file/:fileId", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   try {
     const found = await findFileAcrossUsers(req.params.fileId);
     if (!found) {
@@ -240,9 +237,9 @@ adminRouter.get("/file/:fileId", requireAuth, requireAdmin, async (req, res) => 
     console.error("[Admin Get File] error:", (e as Error).message);
     res.status(500).json({ error: "Failed to get file" });
   }
-});
+}));
 
-adminRouter.put("/file/:fileId", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.put("/file/:fileId", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   try {
     const found = await findFileAcrossUsers(req.params.fileId);
     if (!found) {
@@ -253,7 +250,10 @@ adminRouter.put("/file/:fileId", requireAuth, requireAdmin, async (req, res) => 
     const updated = await updateUserFilesAtomic(found.userId, (files) => {
       const idx = files.findIndex((f) => f.id === req.params.fileId);
       if (idx === -1) return null;
-      Object.keys(updates).forEach((k) => { files[idx][k] = updates[k]; });
+      const target = files[idx] as Record<string, unknown>;
+      MUTABLE_FILE_FIELDS.forEach((k) => {
+        if (updates[k] !== undefined) target[k] = updates[k];
+      });
       files[idx].updatedAt = Date.now();
       return files[idx];
     });
@@ -263,9 +263,9 @@ adminRouter.put("/file/:fileId", requireAuth, requireAdmin, async (req, res) => 
     console.error("[Admin Update File] error:", (e as Error).message);
     res.status(500).json({ error: "Failed to update file" });
   }
-});
+}));
 
-adminRouter.delete("/file/:fileId", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.delete("/file/:fileId", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   try {
     const found = await findFileAcrossUsers(req.params.fileId);
     if (!found) {
@@ -290,14 +290,14 @@ adminRouter.delete("/file/:fileId", requireAuth, requireAdmin, async (req, res) 
     console.error("[Admin Delete File] error:", (e as Error).message);
     res.status(500).json({ error: "Failed to delete file" });
   }
-});
+}));
 
-adminRouter.get("/file/:fileId/rows", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.get("/file/:fileId/rows", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   const rows = await getJSON<Row[]>("rows:" + req.params.fileId);
   res.json(rows || []);
-});
+}));
 
-adminRouter.get("/file/:fileId/undo", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.get("/file/:fileId/undo", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   const found = await findFileAcrossUsers(req.params.fileId);
   if (!found) {
     res.status(404).json({ error: "file not found" });
@@ -315,9 +315,9 @@ adminRouter.get("/file/:fileId/undo", requireAuth, requireAdmin, async (req, res
     undo: parseList(await redis.lrange(undoKey, 0, -1)),
     redo: parseList(await redis.lrange(redoKey, 0, -1)),
   });
-});
+}));
 
-adminRouter.get("/file/:fileId/history", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.get("/file/:fileId/history", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   try {
     const found = await findFileAcrossUsers(req.params.fileId);
     if (!found) {
@@ -331,9 +331,9 @@ adminRouter.get("/file/:fileId/history", requireAuth, requireAdmin, async (req, 
     console.error("[Hist] admin list error file=" + req.params.fileId + ":", (e as Error).message);
     res.status(500).json({ error: "Failed to read history" });
   }
-});
+}));
 
-adminRouter.get("/file/:fileId/history/:v", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.get("/file/:fileId/history/:v", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   try {
     const found = await findFileAcrossUsers(req.params.fileId);
     if (!found) {
@@ -358,9 +358,9 @@ adminRouter.get("/file/:fileId/history/:v", requireAuth, requireAdmin, async (re
     console.error("[Hist] admin materialize error file=" + req.params.fileId + ":", (e as Error).message);
     res.status(500).json({ error: "Failed to read version" });
   }
-});
+}));
 
-adminRouter.post("/file/:fileId/history/:v/restore", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.post("/file/:fileId/history/:v/restore", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   try {
     const found = await findFileAcrossUsers(req.params.fileId);
     if (!found) {
@@ -399,9 +399,9 @@ adminRouter.post("/file/:fileId/history/:v/restore", requireAuth, requireAdmin, 
     console.error("[Hist] admin restore error file=" + req.params.fileId + ":", (e as Error).message);
     res.status(500).json({ error: "Failed to restore version" });
   }
-});
+}));
 
-adminRouter.post("/file/:fileId/history/:v/name", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.post("/file/:fileId/history/:v/name", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   try {
     const found = await findFileAcrossUsers(req.params.fileId);
     if (!found) {
@@ -433,9 +433,9 @@ adminRouter.post("/file/:fileId/history/:v/name", requireAuth, requireAdmin, asy
     console.error("[Hist] admin name error file=" + req.params.fileId + ":", (e as Error).message);
     res.status(500).json({ error: "Failed to name version" });
   }
-});
+}));
 
-adminRouter.post("/file/:fileId/history/:v/fork", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.post("/file/:fileId/history/:v/fork", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   try {
     const found = await findFileAcrossUsers(req.params.fileId);
     if (!found) {
@@ -459,9 +459,9 @@ adminRouter.post("/file/:fileId/history/:v/fork", requireAuth, requireAdmin, asy
     console.error("[Hist] admin fork error file=" + req.params.fileId + ":", (e as Error).message);
     res.status(500).json({ error: "Failed to fork version" });
   }
-});
+}));
 
-adminRouter.put("/file/:fileId/persist", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.put("/file/:fileId/persist", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   const body = req.body as {
     rows?: Row[];
     action?: string;
@@ -473,6 +473,9 @@ adminRouter.put("/file/:fileId/persist", requireAuth, requireAdmin, async (req, 
   };
   await migrateListKey(key("undo:" + req.params.fileId));
   await migrateListKey(key("redo:" + req.params.fileId));
+  const seqRaw = await redis.get(key("seq:" + req.params.fileId));
+  const curSeq = seqRaw ? parseInt(seqRaw, 10) : 0;
+  const newSeq = (isNaN(curSeq) ? 0 : curSeq) + 1;
   const pipeline = redis.pipeline();
   if (body.rows !== undefined) {
     if (body.action) {
@@ -486,6 +489,7 @@ adminRouter.put("/file/:fileId/persist", requireAuth, requireAdmin, async (req, 
     }
     pipeline.set(key("rows:" + req.params.fileId), JSON.stringify(body.rows));
   }
+  pipeline.set(key("seq:" + req.params.fileId), String(newSeq));
   pipeline.set(key("meta:dirty"), String(Date.now()));
   if (body.userId) pipeline.del(key("crossdups:" + body.userId));
   if (body.logs !== undefined) {
@@ -533,33 +537,10 @@ adminRouter.put("/file/:fileId/persist", requireAuth, requireAdmin, async (req, 
     });
     if (updated === null) { res.status(500).json({ error: "Conflict saving files" }); return; }
   }
-  res.json({ ok: true });
-});
+  res.json({ ok: true, seq: newSeq });
+}));
 
-adminRouter.put("/file/:fileId/cell", requireAuth, requireAdmin, async (req, res) => {
-  const rows = (await getJSON<Row[]>("rows:" + req.params.fileId)) || [];
-  const r = req.body as { rowIdx?: number; colKey?: string; value?: string };
-  if (r.rowIdx !== undefined && r.colKey !== undefined) {
-    while (rows.length <= r.rowIdx) rows.push({});
-    rows[r.rowIdx][r.colKey] = r.value;
-    await setJSON("rows:" + req.params.fileId, rows);
-  }
-  res.json({ ok: true });
-});
-
-adminRouter.post("/file/:fileId/log", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const logKey = key("logs:" + req.params.fileId);
-    await redis.rpush(logKey, JSON.stringify((req.body as { log?: unknown }).log));
-    await redis.ltrim(logKey, -500, -1);
-    res.json({ ok: true });
-  } catch (e) {
-    console.error("[Log] Error:", (e as Error).message);
-    res.status(500).json({ error: "Failed to append log" });
-  }
-});
-
-adminRouter.get("/file/:fileId/logs", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.get("/file/:fileId/logs", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   try {
     const logKey = key("logs:" + req.params.fileId);
     const logs = await redis.lrange(logKey, 0, -1);
@@ -576,10 +557,10 @@ adminRouter.get("/file/:fileId/logs", requireAuth, requireAdmin, async (req, res
     console.error("[Logs] Error:", (e as Error).message);
     res.status(500).json({ error: "Failed to read logs" });
   }
-});
+}));
 
 // ── User delete / update ──
-adminRouter.delete("/user/:userId", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.delete("/user/:userId", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   const user = await getJSON("user:" + req.params.userId);
   if (!user) {
     res.status(404).json({ error: "user not found" });
@@ -588,59 +569,64 @@ adminRouter.delete("/user/:userId", requireAuth, requireAdmin, async (req, res) 
   const files = (await getJSON<StoredFile[]>("files:" + req.params.userId)) || [];
   const archived = (await getJSON<StoredFile[]>("archive:" + req.params.userId)) || [];
   const allFiles = files.concat(archived);
-  const delPromises: Promise<unknown>[] = [];
-  allFiles.forEach((f) => {
-    delPromises.push(delKey("rows:" + f.id));
-    delPromises.push(delKey("undo:" + f.id));
-    delPromises.push(delKey("redo:" + f.id));
-    delPromises.push(delKey("sync:" + f.id));
-    delPromises.push(delKey("logs:" + f.id));
-    delPromises.push(delHistoryKeys(f.id));
-  });
-  delPromises.push(delKey("files:" + req.params.userId));
-  delPromises.push(delKey("archive:" + req.params.userId));
-  delPromises.push(delKey("user:" + req.params.userId));
-  delPromises.push(redis.srem("ss:userIds", String(req.params.userId)));
   const sessIds = await redis.smembers(key("userSessions:" + req.params.userId));
+  const p = redis.pipeline();
+  allFiles.forEach((f) => {
+    p.del(key("rows:" + f.id));
+    p.del(key("undo:" + f.id));
+    p.del(key("redo:" + f.id));
+    p.del(key("sync:" + f.id));
+    p.del(key("logs:" + f.id));
+  });
+  p.del(key("files:" + req.params.userId));
+  p.del(key("archive:" + req.params.userId));
+  p.del(key("user:" + req.params.userId));
+  p.srem("ss:userIds", String(req.params.userId));
   sessIds.forEach((sid) => {
-    delPromises.push(delKey("session:" + sid));
+    p.del(key("session:" + sid));
     invalidateSession(sid);
   });
-  delPromises.push(delKey("userSessions:" + req.params.userId));
-  await Promise.all(delPromises);
+  p.del(key("userSessions:" + req.params.userId));
+  await p.exec();
+  for (const f of allFiles) {
+    await delHistoryKeys(f.id);
+  }
   res.json({ ok: true });
-});
+}));
 
-adminRouter.put("/user/:userId", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.put("/user/:userId", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   const user = await getJSON<Record<string, any>>("user:" + req.params.userId);
   if (!user) {
     res.status(404).json({ error: "user not found" });
     return;
   }
   const updates = req.body as Record<string, unknown>;
-  Object.keys(updates).forEach((k) => {
-    if (k !== "id") user[k] = updates[k];
+  const USER_MUTABLE_FIELDS = ["firstName", "lastName", "username", "fileId", "lastLogin"] as const;
+  USER_MUTABLE_FIELDS.forEach((k) => {
+    if (updates[k] !== undefined) user[k] = updates[k];
   });
   await setJSON("user:" + req.params.userId, user);
   res.json(user);
-});
+}));
 
-adminRouter.post("/user/:userId/ban", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.post("/user/:userId/ban", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   const user = await getJSON("user:" + req.params.userId);
   if (!user) {
     res.status(404).json({ error: "user not found" });
     return;
   }
   await setJSON("ban:" + req.params.userId, { ts: Date.now() });
+  invalidateBanCache(req.params.userId);
   res.json({ ok: true });
-});
+}));
 
-adminRouter.post("/user/:userId/unban", requireAuth, requireAdmin, async (req, res) => {
+adminRouter.post("/user/:userId/unban", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
   const user = await getJSON("user:" + req.params.userId);
   if (!user) {
     res.status(404).json({ error: "user not found" });
     return;
   }
   await delKey("ban:" + req.params.userId);
+  invalidateBanCache(req.params.userId);
   res.json({ ok: true });
-});
+}));

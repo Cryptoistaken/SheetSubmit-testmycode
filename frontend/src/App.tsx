@@ -13,9 +13,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/lib/theme";
 import HomePage from "@/pages/HomePage";
 import SheetPage from "@/pages/SheetPage";
-import VersionDiffPage from "@/pages/VersionDiffPage";
 
 const BubbleMode = lazy(() => import("@/components/bubble/BubbleMode"));
+const VersionDiffPage = lazy(() => import("@/pages/VersionDiffPage"));
 
 function getBubbleFileId(): string | null {
   try {
@@ -34,7 +34,9 @@ function Layout() {
   return (
     <div className="flex h-dvh flex-col">
       <Topbar />
-      <Outlet />
+      <Suspense fallback={<div className="flex h-dvh flex-col" />}>
+        <Outlet />
+      </Suspense>
     </div>
   );
 }

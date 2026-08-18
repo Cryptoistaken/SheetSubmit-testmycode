@@ -37,6 +37,9 @@ export interface StoredFile extends SheetFile {
 /** A grid row — cookie cells are plain string keys. */
 export type Row = Record<string, string | null | undefined>;
 
+/** Fields a client may mutate on an existing file via PUT (mass-assignment whitelist). */
+export const MUTABLE_FILE_FIELDS = ["name", "type", "columns"] as const;
+
 export const FILE_TYPE_DEFS: Record<FileType, FileTypeDef> = {
   fb_cookie: {
     key: "fb_cookie",

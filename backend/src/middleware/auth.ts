@@ -9,6 +9,9 @@ import { getJSON, redis } from "../services/redis";
 const sessionCache = new Map<string, { userId: string; ts: number }>();
 const SESSION_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+const banCache = new Map<string, { banned: boolean; ts: number }>();
+const BAN_CACHE_TTL = 15_000; // 15 seconds
+
 // Migrated log keys cache
 const _migratedLogKeys = new Set<string>();
 
@@ -45,7 +48,18 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       if (firstKey !== undefined) sessionCache.delete(firstKey);
     }
   }
-  const banned = await getJSON("ban:" + userId);
+  let banned = false;
+  const banCached = banCache.get(userId);
+  if (banCached && Date.now() - banCached.ts < BAN_CACHE_TTL) {
+    banned = banCached.banned;
+  } else {
+    banned = !!(await getJSON("ban:" + userId));
+    banCache.set(userId, { banned, ts: Date.now() });
+    if (banCache.size > 1000) {
+      const firstKey = banCache.keys().next().value;
+      if (firstKey !== undefined) banCache.delete(firstKey);
+    }
+  }
   if (banned) {
     res.status(403).json({ error: "account banned" });
     return;
@@ -75,6 +89,11 @@ export async function requireFileAccess(req: Request, res: Response, next: NextF
 // Drop a session from the in-process cache (used on logout).
 export function invalidateSession(sessionId: string): void {
   sessionCache.delete(sessionId);
+}
+
+// Drop a user's ban status from the in-process cache (used on ban/unban).
+export function invalidateBanCache(userId: string): void {
+  banCache.delete(userId);
 }
 
 export async function requireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -107,6 +126,10 @@ export async function migrateListKey(listKey: string): Promise<void> {
         await redis.del(listKey);
       }
     }
+  }
+  if (_migratedLogKeys.size > 10000) {
+    const firstKey = _migratedLogKeys.keys().next().value;
+    if (firstKey !== undefined) _migratedLogKeys.delete(firstKey);
   }
   _migratedLogKeys.add(listKey);
 }

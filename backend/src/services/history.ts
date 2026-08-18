@@ -116,65 +116,101 @@ async function gcBlobIfOrphaned(hash: string): Promise<void> {
   }
 }
 
-// Save the current rows as a new version. Returns the version number, or null on failure.
-export async function snapshotHistory(fileId: string, action: string, rows: Row[]): Promise<number | null> {
+// In-process per-file serialization of the history meta read-then-write. Snapshot
+// and prune both re-read the meta key and rewrite it; without a lock a prune that
+// lands between a snapshot's read and write clobbers the newest record (BE-8). The
+// lock chains on a per-file promise so overlapping calls run strictly in order.
+const fileLocks = new Map<string, Promise<unknown>>();
+
+async function withFileLock<T>(fileId: string, fn: () => Promise<T>): Promise<T> {
+  const prev = fileLocks.get(fileId);
+  const tail = prev ? prev.then(fn, fn) : fn();
+  fileLocks.set(fileId, tail);
   try {
-    const now = Date.now();
-    const meta = (await getJSON<HistRec[]>(histMetaKey(fileId))) || [];
-    const v = meta.length ? meta[meta.length - 1].v + 1 : 1;
-    const rowsArr = Array.isArray(rows) ? rows : [];
-    const rowCount = rowsArr.length;
-    const hash = hashRows(rowsArr);
-    const isCheckpoint = v === 1 || v % HISTORY_CHECKPOINT_EVERY === 0;
-    let payload: HistPayload | null = null;
-
-    // Between checkpoints try a delta vs the parent version keep it smaller.
-    if (!isCheckpoint && meta.length) {
-      const prevRec = meta[meta.length - 1];
-      const prevRows = await materializeVersion(fileId, prevRec.v);
-      if (Array.isArray(prevRows)) {
-        const delta = computeDelta(prevRows, rowsArr);
-        const deltaObj: HistPayload = {
-          type: "delta",
-          parentHash: prevRec.hash || hashRows(prevRows),
-          changed: delta.changed,
-          rowCount,
-        };
-        if (JSON.stringify(deltaObj).length < JSON.stringify(rowsArr).length) {
-          payload = deltaObj;
-        }
-      }
-    }
-
-    const type = payload ? "delta" : "full";
-    if (type === "full") payload = { type: "full", hash, rows: rowsArr };
-
-    const rec: HistRec = {
-      v,
-      ts: now,
-      action: action || "edit",
-      rowCount,
-      parentV: meta.length ? meta[meta.length - 1].v : null,
-      type,
-      hash,
-      name: null,
-    };
-
-    const p = redis.pipeline();
-    p.set(key(histBlobKey(fileId, v)), JSON.stringify(payload));
-    if (type === "full") {
-      const exists = await redis.exists(key(blobContentKey(hash)));
-      if (!exists) p.set(key(blobContentKey(hash)), JSON.stringify(rowsArr));
-      p.sadd(key(blobRefsKey(hash)), versionRef(fileId, v));
-    }
-    p.set(key(histMetaKey(fileId)), JSON.stringify(meta.concat([rec])));
-    await p.exec();
-    console.log("[Hist] snapshot v" + v + " action=" + rec.action + " type=" + type + " rows=" + rowCount + " file=" + fileId);
-    return v;
-  } catch (e) {
-    console.error("[Hist] snapshot error file=" + fileId + ":", (e as Error).message);
-    return null;
+    return await tail;
+  } finally {
+    if (fileLocks.get(fileId) === tail) fileLocks.delete(fileId);
   }
+}
+
+// Save the current rows as a new version. Returns the version number, or null on failure.
+// Version numbers are collision-proof: meta is re-read inside WATCH and the write
+// commits through MULTI, so a concurrent snapshot that bumps the meta key aborts our
+// exec and we retry with a fresh v (never tied to the file's seq: counter).
+export async function snapshotHistory(fileId: string, action: string, rows: Row[]): Promise<number | null> {
+  return withFileLock(fileId, async () => {
+    try {
+      const now = Date.now();
+      const rowsArr = Array.isArray(rows) ? rows : [];
+      const rowCount = rowsArr.length;
+      const hash = hashRows(rowsArr);
+
+      for (let attempt = 0; attempt < 5; attempt++) {
+        await redis.watch(key(histMetaKey(fileId)));
+        const meta = (await getJSON<HistRec[]>(histMetaKey(fileId))) || [];
+        const v = meta.length ? meta[meta.length - 1].v + 1 : 1;
+        const isCheckpoint = v === 1 || v % HISTORY_CHECKPOINT_EVERY === 0;
+        let payload: HistPayload | null = null;
+
+        // Between checkpoints try a delta vs the parent version keep it smaller.
+        if (!isCheckpoint && meta.length) {
+          const prevRec = meta[meta.length - 1];
+          const prevRows = await materializeVersion(fileId, prevRec.v);
+          if (Array.isArray(prevRows)) {
+            const delta = computeDelta(prevRows, rowsArr);
+            const deltaObj: HistPayload = {
+              type: "delta",
+              parentHash: prevRec.hash || hashRows(prevRows),
+              changed: delta.changed,
+              rowCount,
+            };
+            if (JSON.stringify(deltaObj).length < JSON.stringify(rowsArr).length) {
+              payload = deltaObj;
+            }
+          }
+        }
+
+        const type = payload ? "delta" : "full";
+        if (type === "full") payload = { type: "full", hash, rows: rowsArr };
+
+        const rec: HistRec = {
+          v,
+          ts: now,
+          action: action || "edit",
+          rowCount,
+          parentV: meta.length ? meta[meta.length - 1].v : null,
+          type,
+          hash,
+          name: null,
+        };
+
+        // Read-only checks can't be queued in MULTI — run them before exec.
+        const contentExists = type === "full" ? await redis.exists(key(blobContentKey(hash))) : false;
+
+        const p = redis.multi();
+        p.set(key(histBlobKey(fileId, v)), JSON.stringify(payload));
+        if (type === "full") {
+          if (!contentExists) p.set(key(blobContentKey(hash)), JSON.stringify(rowsArr));
+          p.sadd(key(blobRefsKey(hash)), versionRef(fileId, v));
+        }
+        p.set(key(histMetaKey(fileId)), JSON.stringify(meta.concat([rec])));
+
+        const res = await p.exec();
+        if (res === null) continue;
+        console.log("[Hist] snapshot v" + v + " action=" + rec.action + " type=" + type + " rows=" + rowCount + " file=" + fileId);
+        return v;
+      }
+      try {
+        await redis.unwatch();
+      } catch {
+        // ignore
+      }
+      return null;
+    } catch (e) {
+      console.error("[Hist] snapshot error file=" + fileId + ":", (e as Error).message);
+      return null;
+    }
+  });
 }
 
 export async function getHistoryMeta(fileId: string): Promise<HistRec[]> {
@@ -278,66 +314,68 @@ export async function materializeVersion(fileId: string, v: number): Promise<Row
 // Age-only prune: drop versions (and their blobs) older than HISTORY_RETENTION_DAYS.
 // Also releases blob refs and garbage-collects orphaned content-addressed blobs.
 export async function pruneHistory(fileId: string): Promise<number> {
-  try {
-    const meta = (await getJSON<HistRec[]>(histMetaKey(fileId))) || [];
-    if (!meta.length) return 0;
-    const cutoff = Date.now() - HISTORY_RETENTION_DAYS * 86400000;
-    const kept: HistRec[] = [];
-    const removed: HistRec[] = [];
-    meta.forEach((rec) => {
-      if (rec.ts < cutoff) removed.push(rec);
-      else kept.push(rec);
-    });
-    if (!removed.length) return 0;
+  return withFileLock(fileId, async () => {
+    try {
+      const meta = (await getJSON<HistRec[]>(histMetaKey(fileId))) || [];
+      if (!meta.length) return 0;
+      const cutoff = Date.now() - HISTORY_RETENTION_DAYS * 86400000;
+      const kept: HistRec[] = [];
+      const removed: HistRec[] = [];
+      meta.forEach((rec) => {
+        if (rec.ts < cutoff) removed.push(rec);
+        else kept.push(rec);
+      });
+      if (!removed.length) return 0;
 
-    // If the oldest retained version is a delta, re-write it as a full snapshot
-    // BEFORE deleting the (older) versions it depends on, so the chain stays
-    // rebuildable after the prune.
-    let upgrade: { rec: HistRec; hash: string; rows: Row[] } | null = null;
-    if (kept.length && kept[0].type !== "full") {
-      const stableRows = await materializeVersion(fileId, kept[0].v);
-      if (Array.isArray(stableRows)) {
-        upgrade = { rec: kept[0], hash: hashRows(stableRows), rows: stableRows };
-      } else {
-        console.error(
-          "[Hist] prune ABORTED file=" + fileId +
-          " — oldest retained version is a delta and materialization failed; skipping prune to keep history chain intact",
-        );
-        return 0;
+      // If the oldest retained version is a delta, re-write it as a full snapshot
+      // BEFORE deleting the (older) versions it depends on, so the chain stays
+      // rebuildable after the prune.
+      let upgrade: { rec: HistRec; hash: string; rows: Row[] } | null = null;
+      if (kept.length && kept[0].type !== "full") {
+        const stableRows = await materializeVersion(fileId, kept[0].v);
+        if (Array.isArray(stableRows)) {
+          upgrade = { rec: kept[0], hash: hashRows(stableRows), rows: stableRows };
+        } else {
+          console.error(
+            "[Hist] prune ABORTED file=" + fileId +
+            " — oldest retained version is a delta and materialization failed; skipping prune to keep history chain intact",
+          );
+          return 0;
+        }
       }
-    }
 
-    const p = redis.pipeline();
-    removed.forEach((rec) => {
-      p.del(key(histBlobKey(fileId, rec.v)));
-      if (rec.type === "full" && rec.hash) {
-        p.srem(key(blobRefsKey(rec.hash)), versionRef(fileId, rec.v));
+      const p = redis.pipeline();
+      removed.forEach((rec) => {
+        p.del(key(histBlobKey(fileId, rec.v)));
+        if (rec.type === "full" && rec.hash) {
+          p.srem(key(blobRefsKey(rec.hash)), versionRef(fileId, rec.v));
+        }
+      });
+      if (upgrade) {
+        upgrade.rec.type = "full";
+        upgrade.rec.hash = upgrade.hash;
+        upgrade.rec.rowCount = upgrade.rows.length;
+        p.set(key(blobContentKey(upgrade.hash)), JSON.stringify(upgrade.rows));
+        p.sadd(key(blobRefsKey(upgrade.hash)), versionRef(fileId, upgrade.rec.v));
+        p.set(key(histBlobKey(fileId, upgrade.rec.v)), JSON.stringify({ type: "full", hash: upgrade.hash, rows: upgrade.rows }));
       }
-    });
-    if (upgrade) {
-      upgrade.rec.type = "full";
-      upgrade.rec.hash = upgrade.hash;
-      upgrade.rec.rowCount = upgrade.rows.length;
-      p.set(key(blobContentKey(upgrade.hash)), JSON.stringify(upgrade.rows));
-      p.sadd(key(blobRefsKey(upgrade.hash)), versionRef(fileId, upgrade.rec.v));
-      p.set(key(histBlobKey(fileId, upgrade.rec.v)), JSON.stringify({ type: "full", hash: upgrade.hash, rows: upgrade.rows }));
-    }
-    p.set(key(histMetaKey(fileId)), JSON.stringify(kept));
-    await p.exec();
+      p.set(key(histMetaKey(fileId)), JSON.stringify(kept));
+      await p.exec();
 
-    const hashes: Record<string, boolean> = {};
-    removed.forEach((rec) => {
-      if (rec.type === "full" && rec.hash) hashes[rec.hash] = true;
-    });
-    for (const h in hashes) {
-      await gcBlobIfOrphaned(h);
+      const hashes: Record<string, boolean> = {};
+      removed.forEach((rec) => {
+        if (rec.type === "full" && rec.hash) hashes[rec.hash] = true;
+      });
+      for (const h in hashes) {
+        await gcBlobIfOrphaned(h);
+      }
+      console.log("[Hist] pruned " + removed.length + " version(s) older than " + HISTORY_RETENTION_DAYS + "d file=" + fileId);
+      return removed.length;
+    } catch (e) {
+      console.error("[Hist] prune error file=" + fileId + ":", (e as Error).message);
+      return 0;
     }
-    console.log("[Hist] pruned " + removed.length + " version(s) older than " + HISTORY_RETENTION_DAYS + "d file=" + fileId);
-    return removed.length;
-  } catch (e) {
-    console.error("[Hist] prune error file=" + fileId + ":", (e as Error).message);
-    return 0;
-  }
+  });
 }
 
 // Remove the full history for a file (meta + every version blob). Used on permanent delete.

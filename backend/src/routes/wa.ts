@@ -3,6 +3,7 @@ import { Router } from "express";
 import { WA_CACHE_TTL_MS } from "../config/env";
 import { delKey, getJSON, setJSON } from "../services/redis";
 import { requireAuth } from "../middleware/auth";
+import { asyncRoute } from "../middleware/asyncRoute";
 
 export const waRouter = Router();
 
@@ -13,15 +14,41 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// Per-user in-memory rate limiter for /fb/check (window 60 s, max 3 per window).
+const fbCheckHits = new Map<string, number[]>();
+const FB_CHECK_WINDOW_MS = 60 * 1000;
+const FB_CHECK_MAX = 3;
+
+function fbCheckLimited(userId: string): boolean {
+  const now = Date.now();
+  const hits = (fbCheckHits.get(userId) || []).filter((ts) => now - ts < FB_CHECK_WINDOW_MS);
+  if (hits.length >= FB_CHECK_MAX) {
+    fbCheckHits.set(userId, hits);
+    return true;
+  }
+  hits.push(now);
+  fbCheckHits.set(userId, hits);
+  if (fbCheckHits.size > 10000) {
+    for (const [uid, arr] of fbCheckHits) {
+      if (!arr.some((ts) => now - ts < FB_CHECK_WINDOW_MS)) fbCheckHits.delete(uid);
+    }
+  }
+  return false;
+}
+
 // ── FB Account Check Proxy (auth required) ──
-waRouter.post("/fb/check", requireAuth, async (req, res) => {
+waRouter.post("/fb/check", requireAuth, asyncRoute(async (req, res) => {
+  if (fbCheckLimited(req.userId || "")) {
+    res.status(429).json({ error: "rate limited" });
+    return;
+  }
   const uids = (req.body as { uids?: unknown[] }).uids;
   if (!uids || !uids.length) {
     res.status(400).json({ error: "No UIDs provided" });
     return;
   }
 
-  const unique = [...new Set(uids.map((u) => String(u)))];
+  const unique = [...new Set(uids.map((u) => String(u)))].slice(0, 500);
   const valid: string[] = [];
   const dead: string[] = [];
   const uncertain: string[] = [];
@@ -136,7 +163,7 @@ waRouter.post("/fb/check", requireAuth, async (req, res) => {
   }
 
   res.json({ valid, dead, uncertain });
-});
+}));
 
 // ── Page Check (auth required) ──
 // Detects whether the FB account owns a Facebook Page and extracts the linked
@@ -158,7 +185,7 @@ function extractLinkedNumber(html: string): string | null {
   return m ? m[1] : null;
 }
 
-waRouter.post("/fb/page-check", requireAuth, async (req, res) => {
+waRouter.post("/fb/page-check", requireAuth, asyncRoute(async (req, res) => {
   const cookie = String((req.body as { cookie?: unknown }).cookie || "");
   if (!cookie) {
     res.status(400).json({ error: "Cookie required" });
@@ -229,7 +256,7 @@ waRouter.post("/fb/page-check", requireAuth, async (req, res) => {
       res.json({ eligible: false, banReason: null, linkedNumber: null, pageName: null, error: err.message });
     }
   }
-});
+}));
 
 function extractWaPageId(html: string, finalUrl: string, cookie: string): string | null {
   let m = finalUrl.match(/[?&]asset_id[=_]\d{14,17}/);
@@ -259,7 +286,7 @@ function extractWaPageId(html: string, finalUrl: string, cookie: string): string
 }
 
 // ── WA Onboarding Eligibility Check (auth required) ──
-waRouter.post("/fb/wa-check", requireAuth, async (req, res) => {
+waRouter.post("/fb/wa-check", requireAuth, asyncRoute(async (req, res) => {
   const cookie = String((req.body as { cookie?: unknown }).cookie || "");
   if (!cookie) {
     res.status(400).json({ error: "Cookie required" });
@@ -382,10 +409,10 @@ waRouter.post("/fb/wa-check", requireAuth, async (req, res) => {
       res.json({ eligible: false, banReason: null, linkedNumber: null, error: err.message });
     }
   }
-});
+}));
 
 // ── WA eligibility cache ──
-waRouter.get("/wa/cache", requireAuth, async (req, res) => {
+waRouter.get("/wa/cache", requireAuth, asyncRoute(async (req, res) => {
   try {
     const uids = String(req.query.uids || "")
       .split(",")
@@ -411,4 +438,4 @@ waRouter.get("/wa/cache", requireAuth, async (req, res) => {
     console.error("[WaCache] error:", (e as Error).message);
     res.status(500).json({ error: "Failed to read wa cache" });
   }
-});
+}));
