@@ -201,7 +201,7 @@ waRouter.post("/fb/page-check", requireAuth, async (req, res) => {
     };
     if (cuser) {
       if (result.eligible) {
-        await setJSON("wa:" + cuser, {
+        await setJSON("wa:" + req.userId + ":" + cuser, {
           status: "eligible",
           banReason: null,
           pageName: result.pageName,
@@ -213,7 +213,7 @@ waRouter.post("/fb/page-check", requireAuth, async (req, res) => {
       } else {
         // definitive "no page" — never cache it; drop any stale entry so the
         // next load re-checks live instead of trusting an old result.
-        await delKey("wa:" + cuser);
+        await delKey("wa:" + req.userId + ":" + cuser);
       }
     }
     res.json(result);
@@ -358,7 +358,7 @@ waRouter.post("/fb/wa-check", requireAuth, async (req, res) => {
     };
     if (cuser) {
       if (result.eligible) {
-        await setJSON("wa:" + cuser, {
+        await setJSON("wa:" + req.userId + ":" + cuser, {
           status: "eligible",
           banReason: result.banReason || null,
           error: result.error || null,
@@ -366,7 +366,7 @@ waRouter.post("/fb/wa-check", requireAuth, async (req, res) => {
           checkedAt: Date.now(),
         });
       } else if (result.error === null) {
-        await delKey("wa:" + cuser);
+        await delKey("wa:" + req.userId + ":" + cuser);
       }
     }
     res.json(result);
@@ -393,15 +393,15 @@ waRouter.get("/wa/cache", requireAuth, async (req, res) => {
       .filter(Boolean);
     const cache: Record<string, unknown> = {};
     for (const uid of uids) {
-      const val = await getJSON<{ status?: string | null; banReason?: string | null; error?: string | null; pageName?: string | null; linkedNumber?: string | null; ts?: number }>("wa:" + uid);
+      const val = await getJSON<{ status?: string | null; banReason?: string | null; error?: string | null; pageName?: string | null; linkedNumber?: string | null; ts?: number }>("wa:" + req.userId + ":" + uid);
       if (!val) continue;
       if (WA_CACHE_TTL_MS > 0 && val.ts && Date.now() - val.ts > WA_CACHE_TTL_MS) {
-        await delKey("wa:" + uid);
+        await delKey("wa:" + req.userId + ":" + uid);
         continue;
       }
       if (val.status !== "eligible") {
         // stale legacy entry (old server cached ineligible/error) — purge, never serve
-        await delKey("wa:" + uid);
+        await delKey("wa:" + req.userId + ":" + uid);
         continue;
       }
       cache[uid] = { status: val.status || null, banReason: val.banReason || null, error: val.error || null, pageName: val.pageName || null, linkedNumber: val.linkedNumber || null, ts: val.ts || null };

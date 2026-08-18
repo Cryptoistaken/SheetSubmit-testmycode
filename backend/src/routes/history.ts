@@ -61,7 +61,11 @@ historyRouter.post("/:id/history/:v/restore", requireAuth, requireFileAccess, as
     // Git-revert semantics: commit the *current* state as a new 'restore'
     // version first, so the revert itself is always revertible.
     const curRows = await getJSON<Row[]>("rows:" + req.params.id);
-    await snapshotHistory(req.params.id, "restore", curRows || []);
+    const snapV = await snapshotHistory(req.params.id, "restore", curRows || []);
+    if (snapV === null) {
+      res.status(500).json({ error: "Failed to snapshot current state before restore" });
+      return;
+    }
     await setJSON("rows:" + req.params.id, rows);
     const file = req.files![req.fileIdx!];
     file.updatedAt = Date.now();

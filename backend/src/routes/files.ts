@@ -28,6 +28,7 @@ filesRouter.post("/", requireAuth, async (req, res) => {
   file.updatedAt = Date.now();
   files.unshift(file);
   await setJSON("files:" + req.userId, files);
+  await redis.set(key("meta:dirty"), String(Date.now()));
   res.json(file);
 });
 
@@ -39,6 +40,7 @@ filesRouter.put("/:id", requireAuth, requireFileAccess, async (req, res) => {
   });
   file.updatedAt = Date.now();
   await setJSON("files:" + req.userId, req.files!);
+  await redis.set(key("meta:dirty"), String(Date.now()));
   res.json(file);
 });
 
@@ -49,6 +51,7 @@ filesRouter.delete("/:id", requireAuth, requireFileAccess, async (req, res) => {
   archived.unshift(file);
   await setJSON("files:" + req.userId, req.files!);
   await setJSON("archive:" + req.userId, archived);
+  await redis.set(key("meta:dirty"), String(Date.now()));
   res.json({ ok: true });
 });
 
@@ -63,6 +66,7 @@ filesRouter.put("/:id/persist", requireAuth, requireFileAccess, async (req, res)
     dataCount?: number;
   };
   const fileId = req.params.id;
+  const serverLogLen = body.logs !== undefined ? await redis.llen(key("logs:" + fileId)) : -1;
   const pipeline = redis.pipeline();
   if (body.rows !== undefined) {
     // Snapshot the *current* rows before overwriting, only when a discrete
@@ -81,7 +85,7 @@ filesRouter.put("/:id/persist", requireAuth, requireFileAccess, async (req, res)
   }
   pipeline.set(key("meta:dirty"), String(Date.now()));
   pipeline.del(key("crossdups:" + req.userId));
-  if (body.logs !== undefined) {
+  if (body.logs !== undefined && body.logs.length >= serverLogLen) {
     const logKey = key("logs:" + fileId);
     pipeline.del(logKey);
     body.logs.forEach((l) => pipeline.rpush(logKey, JSON.stringify(l)));
@@ -228,6 +232,7 @@ archiveRouter.post("/:id/restore", requireAuth, async (req, res) => {
   files.unshift(file);
   await setJSON("archive:" + req.userId, archived);
   await setJSON("files:" + req.userId, files);
+  await redis.set(key("meta:dirty"), String(Date.now()));
   res.json({ ok: true });
 });
 
@@ -251,6 +256,7 @@ archiveRouter.post("/batch-restore", requireAuth, async (req, res) => {
   });
   await setJSON("archive:" + req.userId, archived);
   await setJSON("files:" + req.userId, files);
+  await redis.set(key("meta:dirty"), String(Date.now()));
   res.json({ restored });
 });
 
@@ -263,6 +269,7 @@ archiveRouter.delete("/:id", requireAuth, async (req, res) => {
   }
   archived = archived.filter((f) => f.id !== req.params.id);
   await setJSON("archive:" + req.userId, archived);
+  await redis.set(key("meta:dirty"), String(Date.now()));
   const delPromises: Promise<unknown>[] = [];
   delPromises.push(delKey("rows:" + req.params.id));
   delPromises.push(delKey("undo:" + req.params.id));
@@ -290,6 +297,7 @@ archiveRouter.post("/batch-delete", requireAuth, async (req, res) => {
   const ownedIds = archived.filter((f) => idSet[f.id]).map((f) => f.id);
   archived = archived.filter((f) => !idSet[f.id]);
   await setJSON("archive:" + req.userId, archived);
+  await redis.set(key("meta:dirty"), String(Date.now()));
   const delPromises: Promise<unknown>[] = [];
   ownedIds.forEach((id) => {
     delPromises.push(delKey("rows:" + id));
