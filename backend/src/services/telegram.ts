@@ -1,5 +1,5 @@
 // Telegram bot — ported from the old server (webhook on public URL, long-poll fallback).
-import { BACKEND_PUBLIC_URL, FRONTEND_URL, TG_BOT_TOKEN, WEBHOOK_URL } from "../config/env";
+import { BACKEND_PUBLIC_URL, LOGIN_BASE, TG_BOT_TOKEN, WEBHOOK_URL } from "../config/env";
 import { generateToken } from "../lib/ids";
 import { delKey, getJSON, redis, setJSON, setJSONex } from "./redis";
 
@@ -168,7 +168,7 @@ export async function handleBotUpdate(update: TgUpdate): Promise<void> {
         return;
       }
       const token = generateToken();
-      let url = FRONTEND_URL + "/api/auth/telegram?token=" + token;
+      let url = LOGIN_BASE + "/api/auth/telegram?token=" + token;
       const loginReq: Record<string, unknown> = { chatId: cb.message.chat.id };
       await setJSONex("login:" + token, loginReq, 900000);
       await tg("editMessageText", {
@@ -196,13 +196,12 @@ export async function startBot(): Promise<void> {
     console.log("[Bot] @" + botUsername + " id=" + info.result.id);
     await setJSON("bot:info", { username: botUsername });
 
-    const hasPublicUrl = !!(WEBHOOK_URL || BACKEND_PUBLIC_URL || process.env.FRONTEND_URL);
+    const hasPublicUrl = !!(WEBHOOK_URL || BACKEND_PUBLIC_URL);
     let usingWebhook = false;
     if (hasPublicUrl) {
-      // Webhook target: explicit WEBHOOK_URL wins, then the api's own public URL,
-      // then the frontend/nginx path. Login links always use FRONTEND_URL so
-      // cookies stay same-origin (nginx proxy).
-      const webhookUrl = (WEBHOOK_URL || BACKEND_PUBLIC_URL || FRONTEND_URL) + "/webhook/tg";
+      // Webhook target: explicit WEBHOOK_URL wins, else the api's own public URL.
+      // (No nginx/frontend path anymore — Telegram hits the api directly.)
+      const webhookUrl = (WEBHOOK_URL || BACKEND_PUBLIC_URL) + "/webhook/tg";
       const result = await tg("setWebhook", { url: webhookUrl, allowed_updates: ["message", "callback_query"] });
       if (result.ok) {
         usingWebhook = true;

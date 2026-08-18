@@ -28,17 +28,32 @@ export const BACKEND_PUBLIC_URL = RAILWAY_PUBLIC_DOMAIN
   ? "https://" + RAILWAY_PUBLIC_DOMAIN
   : "";
 
-// FRONTEND_URL = public URL of the web (frontend) service. Backend uses it for bot
-// login links (same-origin cookies via nginx). Explicit FRONTEND_URL wins.
-export const FRONTEND_URL = (process.env.FRONTEND_URL || "")
-  .replace(/\/+$/, "")
-  || `http://localhost:${PORT}`;
+// Railway-style vars often come in without a scheme ("seal.up.railway.app").
+// Normalize so login links / webhook URLs are always absolute.
+function withScheme(url: string): string {
+  if (/^https?:\/\//i.test(url)) return url;
+  if (/^localhost(:\d+)?$/i.test(url)) return "http://" + url;
+  return "https://" + url;
+}
+
+// FRONTEND_URL = public URL of the web (frontend) service. The frontend serves the
+// SPA; the api allows it via CORS and redirects login callbacks back to it.
+export const FRONTEND_URL = (process.env.FRONTEND_URL || "").replace(/\/+$/, "")
+  ? withScheme((process.env.FRONTEND_URL || "").replace(/\/+$/, ""))
+  : `http://localhost:${PORT}`;
 
 // Optional override for the Telegram webhook URL (base, without the path). If set,
 // backend registers the webhook here directly (e.g. the api's own public URL)
 // instead of the frontend/nginx path. Set it to the api's public URL only if you
 // want Telegram to hit the backend directly.
-export const WEBHOOK_URL = (process.env.WEBHOOK_URL || "").replace(/\/+$/, "");
+export const WEBHOOK_URL = process.env.WEBHOOK_URL
+  ? withScheme((process.env.WEBHOOK_URL || "").replace(/\/+$/, ""))
+  : "";
+
+// Base URL where the api's own routes live (login callback + webhook). Without the
+// nginx proxy these must point at the api service itself. Explicit WEBHOOK_URL wins,
+// then the api's public URL, then (local dev) the frontend dev URL which proxies /api.
+export const LOGIN_BASE = WEBHOOK_URL || BACKEND_PUBLIC_URL || FRONTEND_URL;
 
 export const HISTORY_RETENTION_DAYS = parseInt(process.env.HISTORY_RETENTION_DAYS || "30", 10);
 export const HISTORY_CHECKPOINT_EVERY = parseInt(process.env.HISTORY_CHECKPOINT_EVERY || "20", 10);

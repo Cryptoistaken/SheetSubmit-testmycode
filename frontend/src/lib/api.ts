@@ -10,7 +10,10 @@ import type {
   VersionMeta,
 } from "./types";
 
-const BASE = "/api";
+// Base URL of the backend API. Baked at build time from VITE_API_BASE (the api's
+// public URL) since the frontend no longer proxies /api through nginx. Empty in
+// local dev, where vite's dev proxy forwards /api → localhost:3000.
+const BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/+$/, "") + "/api";
 
 const pending = new Set<AbortController>();
 
@@ -20,6 +23,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     const res = await fetch(BASE + path, {
       ...init,
+      credentials: "include",
       headers: { "Content-Type": "application/json", ...init?.headers },
       signal: controller.signal,
     });

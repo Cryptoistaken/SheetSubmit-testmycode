@@ -1,11 +1,20 @@
 // Auth routes — ported from the old server (API contract unchanged).
 import { Router } from "express";
-import { TG_BOT_TOKEN as BOT_TOKEN } from "../config/env";
+import { BACKEND_PUBLIC_URL, FRONTEND_URL, TG_BOT_TOKEN as BOT_TOKEN } from "../config/env";
 import { delKey, getJSON } from "../services/redis";
 import { completeTelegramLogin, tg } from "../services/telegram";
 import { getSessionId, invalidateSession, isAdmin } from "../middleware/auth";
 
 export const authRouter = Router();
+
+// Session cookie. Cross-origin (frontend ↔ api are different origins now that
+// there is no nginx proxy), so production needs SameSite=None; Secure — browsers
+// otherwise drop the cookie on cross-site fetches. Over plain HTTP (local dev)
+// SameSite=None is rejected, so fall back to SameSite=Lax.
+function sessionCookie(value: string, secure: boolean): string {
+  const base = "session=" + value + "; Path=/; HttpOnly; Max-Age=" + (value ? 2592000 : 0);
+  return secure ? base + "; SameSite=None; Secure" : base + "; SameSite=Lax";
+}
 
 // Telegram login callback (device/login link → session cookie)
 authRouter.get("/telegram", async (req, res) => {
@@ -38,10 +47,12 @@ authRouter.get("/telegram", async (req, res) => {
 
   await delKey("login:" + token);
 
-  res.setHeader("Set-Cookie", "session=" + result.sessionId + "; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000");
+  res.setHeader("Set-Cookie", sessionCookie(result.sessionId, req.secure));
   console.log("[Auth] session created, redirecting");
 
-  res.redirect("/");
+  // Login now happens on the api origin (link goes straight to the api's public
+  // URL), so bounce the user back to the frontend.
+  res.redirect(FRONTEND_URL + "/");
 });
 
 // Serve the Telegram profile photo for a user
@@ -70,7 +81,7 @@ authRouter.get("/logout", async (req, res) => {
     await delKey("session:" + sessionId);
     invalidateSession(sessionId);
   }
-  res.setHeader("Set-Cookie", "session=; Path=/; HttpOnly; Max-Age=0");
+  res.setHeader("Set-Cookie", sessionCookie("", req.secure));
   res.json({ ok: true });
 });
 
@@ -94,7 +105,8 @@ authRouter.get("/me", async (req, res) => {
     return;
   }
   if (user) {
-    user.photoUrl = user.fileId ? "/api/auth/photo/" + user.id : null;
+    // Absolute URL so the cross-origin frontend <img> can load the photo.
+    user.photoUrl = user.fileId ? (BACKEND_PUBLIC_URL || "") + "/api/auth/photo/" + user.id : null;
     user.isAdmin = isAdmin(user.id);
   }
   console.log(

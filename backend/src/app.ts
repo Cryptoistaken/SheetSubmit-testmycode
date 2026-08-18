@@ -3,7 +3,7 @@
 import express from "express";
 import fs from "node:fs";
 import path from "node:path";
-import { STATIC_ROOT } from "./config/env";
+import { FRONTEND_URL, STATIC_ROOT } from "./config/env";
 import { errorHandler } from "./middleware/error";
 import { requestLogger } from "./middleware/logging";
 import { adminRouter } from "./routes/admin";
@@ -18,6 +18,28 @@ import { redis } from "./services/redis";
 export function createApp(): express.Express {
   const app = express();
   app.use(express.json({ limit: "10mb" }));
+
+  // Trust Railway's TLS-terminating proxy so req.secure reflects HTTPS (drives the
+  // SameSite=None cookie decision in auth.ts).
+  app.set("trust proxy", 1);
+
+  // CORS — the frontend now calls the api directly (no nginx proxy), so allow only
+  // the configured frontend origin with credentials. Preflight for application/json.
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && origin === FRONTEND_URL) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    }
+    if (req.method === "OPTIONS") {
+      res.sendStatus(204);
+      return;
+    }
+    next();
+  });
 
   // Request logger
   app.use(requestLogger);
@@ -40,8 +62,8 @@ export function createApp(): express.Express {
   // Bot routes (only when a bot token is configured)
   if (isBotEnabled()) {
     app.use("/api", createBotRouter());
-    // Webhook must live at the ROOT path — Telegram is registered with
-    // FRONTEND_URL + "/webhook/tg" (parity with the old server).
+    // Webhook must live at the ROOT path — Telegram is registered with the api's
+    // public URL + "/webhook/tg" (direct hit, no nginx proxy).
     app.use(createWebhookRouter());
   }
 

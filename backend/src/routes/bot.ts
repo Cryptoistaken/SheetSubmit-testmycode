@@ -14,7 +14,7 @@ export function createBotRouter(): Router {
 }
 
 // /webhook/tg at ROOT, not under /api — Telegram's registered webhook URL is
-// FRONTEND_URL + "/webhook/tg" (old: app.post('/webhook/tg')).
+// api public URL + "/webhook/tg" (direct hit, no nginx proxy).
 export function createWebhookRouter(): Router {
   const webhookRouter = Router();
 
