@@ -3,7 +3,7 @@ import { Router } from "express";
 import type { Row, StoredFile } from "../lib/shared";
 import { getDedupKey, getUserFiles } from "../services/files";
 import { delHistoryKeys, pruneHistory, snapshotHistory } from "../services/history";
-import { delKey, getJSON, key, redis, setJSON } from "../services/redis";
+import { delKey, getJSON, key, redis, setJSON, setJSONex } from "../services/redis";
 import { migrateLogKey, requireAuth, requireFileAccess } from "../middleware/auth";
 
 export const filesRouter = Router();
@@ -80,6 +80,7 @@ filesRouter.put("/:id/persist", requireAuth, requireFileAccess, async (req, res)
     pipeline.set(key("rows:" + fileId), JSON.stringify(body.rows));
   }
   pipeline.set(key("meta:dirty"), String(Date.now()));
+  pipeline.del(key("crossdups:" + req.userId));
   if (body.logs !== undefined) {
     const logKey = key("logs:" + fileId);
     pipeline.del(logKey);
@@ -306,6 +307,11 @@ archiveRouter.post("/batch-delete", requireAuth, async (req, res) => {
 crossDupsRouter.get("/", requireAuth, async (req, res) => {
   try {
     const fileId = req.query.fileId ? String(req.query.fileId) : null;
+    const cacheKey = "crossdups:" + req.userId;
+    if (!fileId) {
+      const cached = await getJSON(cacheKey);
+      if (cached) { res.json(cached); return; }
+    }
     const files = await getUserFiles(req.userId || "");
     const typeFiles: Record<string, StoredFile[]> = {};
     files.forEach((f) => {
@@ -361,6 +367,7 @@ crossDupsRouter.get("/", requireAuth, async (req, res) => {
       }
       res.json({ counts, dups: filtered });
     } else {
+      await setJSONex(cacheKey, { counts }, 60000);
       res.json({ counts });
     }
   } catch (e) {

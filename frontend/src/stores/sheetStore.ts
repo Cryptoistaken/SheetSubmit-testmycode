@@ -505,7 +505,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
 
   flushPersist: async (action) => {
     const s = get();
-    if (!s.fileId || !s.file) return;
+    if (!s.fileId || !s.file || !s.isDirty) return;
     const columns = FILE_TYPE_DEFS[s.file.type].columns;
     let dataCount = 0;
     let lastData = -1;
