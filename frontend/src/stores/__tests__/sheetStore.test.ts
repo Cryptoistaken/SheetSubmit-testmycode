@@ -44,6 +44,11 @@ interface AppendOpLike {
 interface AppendPayloadLike {
   base: number;
   ops: AppendOpLike[];
+  newLogs?: unknown[];
+  undoNew?: unknown[];
+  redoNew?: unknown[];
+  dataCount?: number;
+  action?: string;
 }
 
 interface AppendCall {
@@ -140,6 +145,9 @@ function resetStore(): void {
     undoStack: [],
     redoStack: [],
     apiLogs: [],
+    logBase: 0,
+    undoBase: 0,
+    redoBase: 0,
     isDirty: false,
     changeJournal: [],
     lastSeq: 0,
@@ -378,5 +386,76 @@ describe("sheetStore data-integrity", () => {
     expect(useSheetStore.getState().isDirty).toBe(false);
     expect(useSheetStore.getState().changeJournal).toEqual([]);
     expect(useSheetStore.getState().dirtyStructural).toBe(false);
+  });
+
+  it("appends sync logs/undo/redo incrementally (only new entries)", async () => {
+    await openTestFile();
+    const logA = { username: "A", status: "done" };
+    const logB = { username: "B", status: "done" };
+    useSheetStore.setState({ apiLogs: [logA] });
+    useSheetStore.getState().commitCell(0, "uid", "111");
+
+    await useSheetStore.getState().flushPersist();
+    expect(harness.appendCalls.length).toBe(1);
+    expect(harness.appendCalls[0].payload.newLogs).toEqual([logA]);
+    expect(harness.appendCalls[0].payload.ops).toEqual([
+      { rowIdx: 0, cols: { uid: "111" } },
+    ]);
+    expect(useSheetStore.getState().logBase).toBe(1);
+
+    // More log entries appear locally; the next append sends ONLY the new ones.
+    useSheetStore.setState({ apiLogs: [logA, logB] });
+    useSheetStore.getState().commitCell(0, "uid", "222");
+    await useSheetStore.getState().flushPersist();
+    expect(harness.appendCalls.length).toBe(2);
+    expect(harness.appendCalls[1].payload.newLogs).toEqual([logB]);
+    expect(harness.appendCalls[1].payload.undoNew).toEqual([
+      { rowIdx: 0, colKey: "uid", prevVal: "111" },
+    ]);
+    expect(useSheetStore.getState().logBase).toBe(2);
+  });
+
+  it("undoNew delta only sends the unsynced tail of the undo stack", async () => {
+    await openTestFile();
+    const undoA = { rowIdx: 0, colKey: "uid", prevVal: "old1" };
+    const undoB = { rowIdx: 1, colKey: "uid", prevVal: "old2" };
+    useSheetStore.setState({
+      undoStack: [undoA, undoB],
+      undoBase: 1,
+      changeJournal: [{ rowIdx: 0, cols: { uid: "999" } }],
+      isDirty: true,
+    });
+
+    await useSheetStore.getState().flushPersist();
+    expect(harness.appendCalls.length).toBe(1);
+    expect(harness.appendCalls[0].payload.undoNew).toEqual([undoB]);
+    expect(harness.appendCalls[0].payload.newLogs).toEqual([]);
+    expect(harness.appendCalls[0].payload.redoNew).toEqual([]);
+    expect(useSheetStore.getState().undoBase).toBe(2);
+  });
+
+  it("full persist resets sync bases; next append sends no stale entries", async () => {
+    await openTestFile();
+    const logA = { username: "A", status: "done" };
+    const logB = { username: "B", status: "done" };
+    useSheetStore.setState({ apiLogs: [logA, logB] });
+
+    useSheetStore.getState().addRow(); // structural → full persist
+    await useSheetStore.getState().flushPersist();
+    expect(harness.persistCalls.length).toBe(1);
+    expect(useSheetStore.getState().logBase).toBe(2);
+    expect(useSheetStore.getState().undoBase).toBe(0);
+    expect(useSheetStore.getState().redoBase).toBe(0);
+
+    // A later append has no new log/undo/redo entries to send.
+    useSheetStore.setState({
+      changeJournal: [{ rowIdx: 0, cols: { uid: "999" } }],
+      isDirty: true,
+    });
+    await useSheetStore.getState().flushPersist();
+    expect(harness.appendCalls.length).toBe(1);
+    expect(harness.appendCalls[0].payload.newLogs).toEqual([]);
+    expect(harness.appendCalls[0].payload.undoNew).toEqual([]);
+    expect(harness.appendCalls[0].payload.redoNew).toEqual([]);
   });
 });

@@ -64,9 +64,9 @@ export interface AppendOp {
 export interface AppendPayload {
   base: number;
   ops: AppendOp[];
-  logs?: unknown[];
-  undo?: unknown[];
-  redo?: unknown[];
+  newLogs?: unknown[];
+  undoNew?: unknown[];
+  redoNew?: unknown[];
   dataCount?: number;
   action?: string;
 }

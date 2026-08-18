@@ -4,7 +4,7 @@ import type { Row, StoredFile } from "../lib/shared";
 import { getDedupKey, getUserFiles, updateUserFilesAtomic } from "../services/files";
 import { delHistoryKeys, pruneHistory, snapshotHistory } from "../services/history";
 import { delKey, getJSON, key, redis, setJSON, setJSONex } from "../services/redis";
-import { migrateLogKey, requireAuth, requireFileAccess } from "../middleware/auth";
+import { migrateListKey, migrateLogKey, requireAuth, requireFileAccess } from "../middleware/auth";
 
 export const filesRouter = Router();
 export const archiveRouter = Router();
@@ -79,6 +79,8 @@ filesRouter.put("/:id/persist", requireAuth, requireFileAccess, async (req, res)
   let curSeq = seqRaw ? parseInt(seqRaw, 10) : 0;
   if (isNaN(curSeq)) curSeq = 0;
   const newSeq = curSeq + 1;
+  await migrateListKey(key("undo:" + fileId));
+  await migrateListKey(key("redo:" + fileId));
   const pipeline = redis.pipeline();
   if (body.rows !== undefined) {
     // Snapshot the *current* rows before overwriting, only when a discrete
@@ -103,8 +105,18 @@ filesRouter.put("/:id/persist", requireAuth, requireFileAccess, async (req, res)
     pipeline.del(logKey);
     body.logs.forEach((l) => pipeline.rpush(logKey, JSON.stringify(l)));
   }
-  if (body.undo !== undefined) pipeline.set(key("undo:" + fileId), JSON.stringify(body.undo));
-  if (body.redo !== undefined) pipeline.set(key("redo:" + fileId), JSON.stringify(body.redo));
+  if (body.undo !== undefined) {
+    const undoKey = key("undo:" + fileId);
+    pipeline.del(undoKey);
+    body.undo.forEach((u) => pipeline.rpush(undoKey, JSON.stringify(u)));
+    pipeline.ltrim(undoKey, -100, -1);
+  }
+  if (body.redo !== undefined) {
+    const redoKey = key("redo:" + fileId);
+    pipeline.del(redoKey);
+    body.redo.forEach((r) => pipeline.rpush(redoKey, JSON.stringify(r)));
+    pipeline.ltrim(redoKey, -100, -1);
+  }
   try {
     const results = await pipeline.exec(); if (!results) { console.error("[Persist] pipeline error: exec returned null"); res.status(500).json({ error: "Failed to persist data" }); return; }
     const failedCmd = results.find((r) => r[0] !== null);
@@ -136,9 +148,9 @@ filesRouter.put("/:id/append", requireAuth, requireFileAccess, async (req, res) 
   const body = req.body as {
     base: number;
     ops: { rowIdx: number; cols: Record<string, string> }[];
-    logs?: unknown[];
-    undo?: unknown[];
-    redo?: unknown[];
+    newLogs?: unknown[];
+    undoNew?: unknown[];
+    redoNew?: unknown[];
     dataCount?: number;
     action?: string;
   };
@@ -159,7 +171,12 @@ filesRouter.put("/:id/append", requireAuth, requireFileAccess, async (req, res) 
   }
   const fileId = req.params.id;
   let updatedFile: StoredFile | null = null;
-  const serverLogLen = body.logs !== undefined ? await redis.llen(key("logs:" + fileId)) : -1;
+  const logKey = key("logs:" + fileId);
+  const undoKey = key("undo:" + fileId);
+  const redoKey = key("redo:" + fileId);
+  await migrateListKey(logKey);
+  await migrateListKey(undoKey);
+  await migrateListKey(redoKey);
   let curSeq = 0;
   let committed = false;
   for (let attempt = 0; attempt < 5 && !committed; attempt++) {
@@ -192,13 +209,18 @@ filesRouter.put("/:id/append", requireAuth, requireFileAccess, async (req, res) 
     p.set(key("seq:" + fileId), String(curSeq + 1));
     p.set(key("meta:dirty"), String(Date.now()));
     p.del(key("crossdups:" + req.userId));
-    if (body.logs !== undefined && body.logs.length >= serverLogLen) {
-      const logKey = key("logs:" + fileId);
-      p.del(logKey);
-      body.logs.forEach((l) => p.rpush(logKey, JSON.stringify(l)));
+    if (Array.isArray(body.newLogs)) {
+      body.newLogs.forEach((l) => p.rpush(logKey, JSON.stringify(l)));
+      p.ltrim(logKey, -500, -1);
     }
-    if (body.undo !== undefined) p.set(key("undo:" + fileId), JSON.stringify(body.undo));
-    if (body.redo !== undefined) p.set(key("redo:" + fileId), JSON.stringify(body.redo));
+    if (Array.isArray(body.undoNew)) {
+      body.undoNew.forEach((u) => p.rpush(undoKey, JSON.stringify(u)));
+      p.ltrim(undoKey, -100, -1);
+    }
+    if (Array.isArray(body.redoNew)) {
+      body.redoNew.forEach((r) => p.rpush(redoKey, JSON.stringify(r)));
+      p.ltrim(redoKey, -100, -1);
+    }
     try {
       const results = await p.exec();
       if (results !== null) committed = true;
@@ -243,11 +265,15 @@ filesRouter.get("/:id/rows", requireAuth, requireFileAccess, async (req, res) =>
 filesRouter.get("/:id/full", requireAuth, requireFileAccess, async (req, res) => {
   const id = req.params.id;
   const logKey = key("logs:" + id);
+  const undoKey = key("undo:" + id);
+  const redoKey = key("redo:" + id);
+  await migrateListKey(undoKey);
+  await migrateListKey(redoKey);
   const pipe = redis.pipeline();
   pipe.get(key("rows:" + id));
   pipe.lrange(logKey, 0, -1);
-  pipe.get(key("undo:" + id));
-  pipe.get(key("redo:" + id));
+  pipe.lrange(undoKey, 0, -1);
+  pipe.lrange(redoKey, 0, -1);
   pipe.get(key("seq:" + id));
   const results = await pipe.exec();
   const val = (r: [Error | null, unknown] | null): unknown =>
@@ -267,9 +293,17 @@ filesRouter.get("/:id/full", requireAuth, requireFileAccess, async (req, res) =>
       });
     }
     const undoRaw = val(results[2]);
-    if (typeof undoRaw === "string") undo = JSON.parse(undoRaw);
+    if (Array.isArray(undoRaw)) {
+      undo = undoRaw.map((l) => {
+        try { return JSON.parse(String(l)); } catch { return l; }
+      });
+    }
     const redoRaw = val(results[3]);
-    if (typeof redoRaw === "string") redo = JSON.parse(redoRaw);
+    if (Array.isArray(redoRaw)) {
+      redo = redoRaw.map((l) => {
+        try { return JSON.parse(String(l)); } catch { return l; }
+      });
+    }
     const seqRaw = val(results[4]);
     if (typeof seqRaw === "string") {
       seq = parseInt(seqRaw, 10);
@@ -285,9 +319,18 @@ filesRouter.get("/:id/sync", requireAuth, requireFileAccess, async (req, res) =>
 });
 
 filesRouter.get("/:id/undo", requireAuth, requireFileAccess, async (req, res) => {
-  const undo = (await getJSON("undo:" + req.params.id)) || [];
-  const redo = (await getJSON("redo:" + req.params.id)) || [];
-  res.json({ undo, redo });
+  const undoKey = key("undo:" + req.params.id);
+  const redoKey = key("redo:" + req.params.id);
+  await migrateListKey(undoKey);
+  await migrateListKey(redoKey);
+  const parseList = (arr: string[]): unknown[] =>
+    arr.map((l) => {
+      try { return JSON.parse(l); } catch { return l; }
+    });
+  res.json({
+    undo: parseList(await redis.lrange(undoKey, 0, -1)),
+    redo: parseList(await redis.lrange(redoKey, 0, -1)),
+  });
 });
 
 filesRouter.put("/:id/sync", requireAuth, requireFileAccess, async (req, res) => {

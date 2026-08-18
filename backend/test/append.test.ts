@@ -8,9 +8,33 @@ import express from "express";
 import type { NextFunction, Request, Response } from "express";
 import path from "node:path";
 import type { StoredFile } from "../src/lib/shared";
-import { fakeSet, installRedisMock, key, resetStore, store } from "./redis-mock";
+import { fakeSet, installRedisMock, key, redis, resetStore, store } from "./redis-mock";
 
 installRedisMock();
+
+// Real migration for the auth mock (mirrors backend/src/middleware/auth.ts):
+// converts a legacy string-typed key (e.g. undo/redo JSON blob) to a list.
+async function migrateListKey(listKey: string): Promise<void> {
+  const type = await redis.type(listKey);
+  if (type === "string") {
+    const old = await redis.get(listKey);
+    if (old) {
+      try {
+        const parsed = JSON.parse(old);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const p = redis.pipeline();
+          p.del(listKey);
+          parsed.forEach((l) => p.rpush(listKey, JSON.stringify(l)));
+          await p.exec();
+        } else {
+          await redis.del(listKey);
+        }
+      } catch {
+        await redis.del(listKey);
+      }
+    }
+  }
+}
 
 const authMock = {
   requireAuth: async (req: Request, _res: Response, next: NextFunction) => {
@@ -35,7 +59,8 @@ const authMock = {
     req.file = file;
     next();
   },
-  migrateLogKey: async () => {},
+  migrateListKey,
+  migrateLogKey: migrateListKey,
 };
 
 mock.module(path.join(import.meta.dir, "..", "src", "middleware", "auth"), () => authMock);
@@ -151,33 +176,114 @@ describe("PUT /api/files/:id/append", () => {
     expect(meta[0].action).toBe("append");
   });
 
-  test("logs replaced when client list length >= server length", async () => {
+  test("appends newLogs incrementally onto the server log list", async () => {
     seedFile("f5");
     fakeSet(key("rows:f5"), JSON.stringify([]));
     fakeSet(key("logs:f5"), [JSON.stringify({ m: 1 }), JSON.stringify({ m: 2 })]);
-    const clientLogs = [{ m: 3 }, { m: 4 }, { m: 5 }];
 
-    const r = await api("/f5/append", { base: 0, ops: [{ rowIdx: 0, cols: { a: "1" } }], logs: clientLogs });
+    const r = await api("/f5/append", {
+      base: 0,
+      ops: [{ rowIdx: 0, cols: { a: "1" } }],
+      newLogs: [{ m: 3 }, { m: 4 }],
+    });
 
     expect(r.status).toBe(200);
     const stored = (store[key("logs:f5")] as string[]).map((l) => parsed(l));
-    expect(stored).toEqual(clientLogs);
+    expect(stored).toEqual([{ m: 1 }, { m: 2 }, { m: 3 }, { m: 4 }]);
   });
 
-  test("logs NOT replaced when client list is shorter than server length", async () => {
+  test("newLogs/undoNew/redoNew LTRIM to 500/100", async () => {
     seedFile("f6");
     fakeSet(key("rows:f6"), JSON.stringify([]));
-    const serverLogs = [JSON.stringify({ m: 1 }), JSON.stringify({ m: 2 }), JSON.stringify({ m: 3 })];
-    fakeSet(key("logs:f6"), serverLogs);
+    fakeSet(
+      key("logs:f6"),
+      Array.from({ length: 510 }, (_, i) => JSON.stringify({ m: i })),
+    );
+    fakeSet(
+      key("undo:f6"),
+      Array.from({ length: 120 }, (_, i) => JSON.stringify({ u: i })),
+    );
 
-    const r = await api("/f6/append", { base: 0, ops: [{ rowIdx: 0, cols: { a: "1" } }], logs: [{ m: 4 }, { m: 5 }] });
+    const r = await api("/f6/append", {
+      base: 0,
+      ops: [{ rowIdx: 0, cols: { a: "1" } }],
+      newLogs: [{ m: 999 }],
+      undoNew: [{ u: 999 }],
+      redoNew: [{ r: 1 }, { r: 2 }],
+    });
 
     expect(r.status).toBe(200);
-    expect(store[key("logs:f6")]).toEqual(serverLogs);
+    const logs = (store[key("logs:f6")] as string[]).map((l) => parsed(l));
+    expect(logs.length).toBe(500);
+    expect(logs[logs.length - 1]).toEqual({ m: 999 });
+    const undo = (store[key("undo:f6")] as string[]).map((l) => parsed(l));
+    expect(undo.length).toBe(100);
+    expect(undo[undo.length - 1]).toEqual({ u: 999 });
+    const redo = (store[key("redo:f6")] as string[]).map((l) => parsed(l));
+    expect(redo).toEqual([{ r: 1 }, { r: 2 }]);
+  });
+
+  test("second append with next entries only: both sets present, no duplicates", async () => {
+    seedFile("f7");
+    fakeSet(key("rows:f7"), JSON.stringify([]));
+
+    const r1 = await api("/f7/append", {
+      base: 0,
+      ops: [{ rowIdx: 0, cols: { a: "1" } }],
+      newLogs: [{ m: 1 }, { m: 2 }],
+      undoNew: [{ u: 1 }],
+      redoNew: [{ r: 1 }],
+    });
+    expect(r1.status).toBe(200);
+
+    const r2 = await api("/f7/append", {
+      base: 1,
+      ops: [{ rowIdx: 0, cols: { b: "2" } }],
+      newLogs: [{ m: 3 }],
+      undoNew: [{ u: 2 }],
+      redoNew: [{ r: 2 }],
+    });
+    expect(r2.status).toBe(200);
+
+    expect((store[key("logs:f7")] as string[]).map(parsed)).toEqual([{ m: 1 }, { m: 2 }, { m: 3 }]);
+    expect((store[key("undo:f7")] as string[]).map(parsed)).toEqual([{ u: 1 }, { u: 2 }]);
+    expect((store[key("redo:f7")] as string[]).map(parsed)).toEqual([{ r: 1 }, { r: 2 }]);
+  });
+
+  test("omitted undoNew/redoNew preserves existing stack entries", async () => {
+    seedFile("f8");
+    fakeSet(key("rows:f8"), JSON.stringify([]));
+    fakeSet(key("undo:f8"), [JSON.stringify({ u: 1 }), JSON.stringify({ u: 2 })]);
+    fakeSet(key("redo:f8"), [JSON.stringify({ r: 1 })]);
+
+    const r = await api("/f8/append", {
+      base: 0,
+      ops: [{ rowIdx: 0, cols: { a: "1" } }],
+      newLogs: [{ m: 1 }],
+    });
+
+    expect(r.status).toBe(200);
+    expect((store[key("undo:f8")] as string[]).map(parsed)).toEqual([{ u: 1 }, { u: 2 }]);
+    expect((store[key("redo:f8")] as string[]).map(parsed)).toEqual([{ r: 1 }]);
+  });
+
+  test("legacy string-blob undo/redo migrated to lists on /undo read", async () => {
+    seedFile("f9");
+    fakeSet(key("rows:f9"), JSON.stringify([{ a: "1" }]));
+    fakeSet(key("undo:f9"), JSON.stringify([{ u: 1 }, { u: 2 }]));
+    fakeSet(key("redo:f9"), JSON.stringify([{ r: 1 }]));
+
+    const r = await api("/f9/undo");
+
+    expect(r.status).toBe(200);
+    expect(r.json.undo).toEqual([{ u: 1 }, { u: 2 }]);
+    expect(r.json.redo).toEqual([{ r: 1 }]);
+    expect(Array.isArray(store[key("undo:f9")])).toBe(true);
+    expect(Array.isArray(store[key("redo:f9")])).toBe(true);
   });
 
   test("invalid payload returns 400", async () => {
-    seedFile("f7");
+    seedFile("f10");
     const bad = [
       { base: 0, ops: "nope" },
       { base: 0, ops: [{ rowIdx: -1, cols: {} }] },
@@ -185,7 +291,7 @@ describe("PUT /api/files/:id/append", () => {
       { base: "0", ops: [] },
     ];
     for (const body of bad) {
-      const r = await api("/f7/append", body as any);
+      const r = await api("/f10/append", body as any);
       expect(r.status).toBe(400);
       expect(r.json).toEqual({ error: "invalid append payload" });
     }
@@ -204,6 +310,45 @@ describe("seq versioning on full read + persist", () => {
     expect(r.json.seq).toBe(5);
     expect(r.json.file.id).toBe("g1");
     expect(r.json.rows).toEqual([{ a: "1" }]);
+  });
+
+  test("full persist replaces undo/redo as lists", async () => {
+    seedFile("g3");
+
+    const r = await api("/g3/persist", { undo: [{ u: 1 }, { u: 2 }], redo: [{ r: 1 }] });
+
+    expect(r.status).toBe(200);
+    expect(r.json.ok).toBe(true);
+    expect((store[key("undo:g3")] as string[]).map(parsed)).toEqual([{ u: 1 }, { u: 2 }]);
+    expect((store[key("redo:g3")] as string[]).map(parsed)).toEqual([{ r: 1 }]);
+    expect(Array.isArray(store[key("undo:g3")])).toBe(true);
+    expect(Array.isArray(store[key("redo:g3")])).toBe(true);
+  });
+
+  test("full persist over an existing list replaces it wholesale", async () => {
+    seedFile("g4");
+    fakeSet(key("undo:g4"), [JSON.stringify({ u: 1 })]);
+
+    const r = await api("/g4/persist", { undo: [{ u: 2 }, { u: 3 }] });
+
+    expect(r.status).toBe(200);
+    expect((store[key("undo:g4")] as string[]).map(parsed)).toEqual([{ u: 2 }, { u: 3 }]);
+  });
+
+  test("GET /full migrates legacy string-blob undo/redo to lists", async () => {
+    seedFile("g5");
+    fakeSet(key("rows:g5"), JSON.stringify([{ a: "1" }]));
+    fakeSet(key("seq:g5"), "0");
+    fakeSet(key("undo:g5"), JSON.stringify([{ u: 9 }]));
+    fakeSet(key("redo:g5"), JSON.stringify([{ r: 9 }]));
+
+    const r = await api("/g5/full");
+
+    expect(r.status).toBe(200);
+    expect(r.json.undo).toEqual([{ u: 9 }]);
+    expect(r.json.redo).toEqual([{ r: 9 }]);
+    expect(Array.isArray(store[key("undo:g5")])).toBe(true);
+    expect(Array.isArray(store[key("redo:g5")])).toBe(true);
   });
 
   test("full persist advances seq and returns it", async () => {

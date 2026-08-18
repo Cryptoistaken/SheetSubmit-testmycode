@@ -70,8 +70,8 @@ export async function createForkFile(
     return files;
   });
   await setJSON("rows:" + newId, rows || []);
-  await setJSON("undo:" + newId, []);
-  await setJSON("redo:" + newId, []);
+  await redis.del(key("undo:" + newId));
+  await redis.del(key("redo:" + newId));
   return file;
 }
 

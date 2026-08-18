@@ -179,7 +179,7 @@ Telegram can hit `/webhook/tg` — backend auto-registers the webhook to
   `compression` middleware; `e7fdc2d` perf: cross-dup counts cached 60s per user
   (`crossdups:<userId>`, invalidated in persist pipeline) + `flushPersist` no-op when not dirty.
   Both typechecks clean per task. Not deployed — run `redeploy.bat` only after user sign-off.
-- **Delta persistence (shipped):** cell edits autosave as ops (`/append`, seq-versioned), structural saves fall back to full `/persist`. Both return `seq`; 409 → client refetches + re-applies journal.
+- **Delta persistence (shipped):** cell edits autosave as ops (`/append`, seq-versioned), structural saves fall back to full `/persist`. Both return `seq`; 409 → client refetches + re-applies journal. **Part 2:** logs/undo/redo are now Redis LISTS synced incrementally (`newLogs`/`undoNew`/`redoNew` + client sync bases), migrated from legacy JSON blobs; full-replace only on structural saves.
 - **Data-integrity hardening (deployed):** audit found data-loss bugs; fixed in
   `0bc9cbb` (autosaves serialized via `saveChain`, dirty cleared only when rows unchanged,
   `closeFile` commits draft + awaits final flush, `refreshSheet` skips when dirty, keepalive

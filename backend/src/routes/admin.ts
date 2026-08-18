@@ -15,6 +15,7 @@ import {
   findAllUserIds,
   findFileAcrossUsers,
   invalidateSession,
+  migrateListKey,
   requireAdmin,
   requireAuth,
 } from "../middleware/auth";
@@ -302,9 +303,18 @@ adminRouter.get("/file/:fileId/undo", requireAuth, requireAdmin, async (req, res
     res.status(404).json({ error: "file not found" });
     return;
   }
-  const undo = (await getJSON("undo:" + req.params.fileId)) || [];
-  const redo = (await getJSON("redo:" + req.params.fileId)) || [];
-  res.json({ undo, redo });
+  const parseList = (arr: string[]): unknown[] =>
+    arr.map((l) => {
+      try { return JSON.parse(l); } catch { return l; }
+    });
+  const undoKey = key("undo:" + req.params.fileId);
+  const redoKey = key("redo:" + req.params.fileId);
+  await migrateListKey(undoKey);
+  await migrateListKey(redoKey);
+  res.json({
+    undo: parseList(await redis.lrange(undoKey, 0, -1)),
+    redo: parseList(await redis.lrange(redoKey, 0, -1)),
+  });
 });
 
 adminRouter.get("/file/:fileId/history", requireAuth, requireAdmin, async (req, res) => {
@@ -461,6 +471,8 @@ adminRouter.put("/file/:fileId/persist", requireAuth, requireAdmin, async (req, 
     dataCount?: number;
     userId?: string;
   };
+  await migrateListKey(key("undo:" + req.params.fileId));
+  await migrateListKey(key("redo:" + req.params.fileId));
   const pipeline = redis.pipeline();
   if (body.rows !== undefined) {
     if (body.action) {
@@ -481,8 +493,18 @@ adminRouter.put("/file/:fileId/persist", requireAuth, requireAdmin, async (req, 
     pipeline.del(logKey);
     body.logs.forEach((l) => pipeline.rpush(logKey, JSON.stringify(l)));
   }
-  if (body.undo !== undefined) pipeline.set(key("undo:" + req.params.fileId), JSON.stringify(body.undo));
-  if (body.redo !== undefined) pipeline.set(key("redo:" + req.params.fileId), JSON.stringify(body.redo));
+  if (body.undo !== undefined) {
+    const undoKey = key("undo:" + req.params.fileId);
+    pipeline.del(undoKey);
+    body.undo.forEach((u) => pipeline.rpush(undoKey, JSON.stringify(u)));
+    pipeline.ltrim(undoKey, -100, -1);
+  }
+  if (body.redo !== undefined) {
+    const redoKey = key("redo:" + req.params.fileId);
+    pipeline.del(redoKey);
+    body.redo.forEach((r) => pipeline.rpush(redoKey, JSON.stringify(r)));
+    pipeline.ltrim(redoKey, -100, -1);
+  }
   try {
     const results = await pipeline.exec();
     if (!results) {

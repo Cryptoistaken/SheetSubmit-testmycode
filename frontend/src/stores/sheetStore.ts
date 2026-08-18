@@ -144,6 +144,9 @@ export interface SheetState {
   undoStack: UndoEntry[];
   redoStack: UndoEntry[];
   apiLogs: unknown[];
+  logBase: number;
+  undoBase: number;
+  redoBase: number;
   isDirty: boolean;
   changeJournal: AppendOp[];
   lastSeq: number;
@@ -251,6 +254,9 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
   undoStack: [],
   redoStack: [],
   apiLogs: [],
+  logBase: 0,
+  undoBase: 0,
+  redoBase: 0,
   isDirty: false,
   changeJournal: [],
   lastSeq: 0,
@@ -310,6 +316,9 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         undoStack,
         redoStack,
         apiLogs,
+        logBase: apiLogs.length,
+        undoBase: undoStack.length,
+        redoBase: redoStack.length,
         isDirty: false,
         changeJournal: [],
         lastSeq: full.seq ?? 0,
@@ -352,6 +361,9 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       undoStack: [],
       redoStack: [],
       apiLogs: [],
+      logBase: 0,
+      undoBase: 0,
+      redoBase: 0,
       isDirty: false,
       changeJournal: [],
       lastSeq: 0,
@@ -412,6 +424,9 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         undoStack,
         redoStack,
         apiLogs,
+        logBase: apiLogs.length,
+        undoBase: undoStack.length,
+        redoBase: redoStack.length,
         isDirty: false,
         changeJournal: [],
         lastSeq: 0,
@@ -586,6 +601,9 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
             changeJournal: [],
             lastSeq: resp?.seq ?? s.lastSeq,
             dirtyStructural: false,
+            logBase: cur.apiLogs.length,
+            undoBase: cur.undoStack.length,
+            redoBase: cur.redoStack.length,
           });
           trimMemoryRows();
         }
@@ -594,16 +612,23 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         const payload: AppendPayload = {
           base: s.lastSeq,
           ops: s.changeJournal,
-          logs: s.apiLogs,
-          undo: s.undoStack,
-          redo: s.redoStack,
+          newLogs: s.apiLogs.slice(s.logBase),
+          undoNew: s.undoStack.slice(s.undoBase),
+          redoNew: s.redoStack.slice(s.redoBase),
           dataCount,
         };
         try {
           const resp = await api.append(s.fileId, payload, { keepalive: !!viaUnload });
           const cur = get();
           if (cur.fileId === s.fileId && cur.rows === s.rows) {
-            set({ changeJournal: [], lastSeq: resp.seq, isDirty: false });
+            set({
+              changeJournal: [],
+              lastSeq: resp.seq,
+              isDirty: false,
+              logBase: cur.apiLogs.length,
+              undoBase: cur.undoStack.length,
+              redoBase: cur.redoStack.length,
+            });
             trimMemoryRows();
           }
         } catch (e) {
@@ -632,6 +657,9 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
                 undoStack: (fresh.undo ?? []) as UndoEntry[],
                 redoStack: (fresh.redo ?? []) as UndoEntry[],
                 apiLogs: fresh.logs ?? [],
+                logBase: fresh.logs?.length ?? 0,
+                undoBase: fresh.undo?.length ?? 0,
+                redoBase: fresh.redo?.length ?? 0,
                 isDirty: true,
                 ...recomputeMarks(rows, cur.crossDups, cur.columns),
               });

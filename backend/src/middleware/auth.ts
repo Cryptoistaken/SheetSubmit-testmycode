@@ -85,29 +85,35 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
   next();
 }
 
-// Migrate a legacy string-typed log key to a list (one-time per key).
-export async function migrateLogKey(logKey: string): Promise<void> {
-  if (_migratedLogKeys.has(logKey)) return;
-  const type = await redis.type(logKey);
+// Migrate a legacy string-typed key to a list (one-time per key). Applies to
+// any list-backed key (logs/undo/redo). The key must already be prefixed.
+export async function migrateListKey(listKey: string): Promise<void> {
+  if (_migratedLogKeys.has(listKey)) return;
+  const type = await redis.type(listKey);
   if (type === "string") {
-    const old = await redis.get(logKey);
+    const old = await redis.get(listKey);
     if (old) {
       try {
         const parsed = JSON.parse(old);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const p = redis.pipeline();
-          p.del(logKey);
-          parsed.forEach((l) => p.rpush(logKey, JSON.stringify(l)));
+          p.del(listKey);
+          parsed.forEach((l) => p.rpush(listKey, JSON.stringify(l)));
           await p.exec();
         } else {
-          await redis.del(logKey);
+          await redis.del(listKey);
         }
       } catch {
-        await redis.del(logKey);
+        await redis.del(listKey);
       }
     }
   }
-  _migratedLogKeys.add(logKey);
+  _migratedLogKeys.add(listKey);
+}
+
+// Migrate a legacy string-typed log key to a list (one-time per key).
+export async function migrateLogKey(logKey: string): Promise<void> {
+  await migrateListKey(logKey);
 }
 
 export async function findAllUserIds(): Promise<string[]> {
