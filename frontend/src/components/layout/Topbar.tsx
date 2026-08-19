@@ -338,20 +338,24 @@ export default function Topbar() {
               </div>
             </>
           ) : null}
-          <div className="gear-divider"></div>
-          <a
-            className="gear-toggle-row"
-            style={{ cursor: "pointer", textDecoration: "none" }}
-            href="https://github.com/Cryptoistaken/SheetSubmit-testmycode/releases/latest/download/SheetSubmit.apk"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div>
-              <div className="gear-toggle-label">Download app</div>
-              <div className="gear-toggle-sub">Install the latest Android APK</div>
-            </div>
-            <Download size={18} />
-          </a>
+          {!isAndroid && (
+            <>
+              <div className="gear-divider"></div>
+              <a
+                className="gear-toggle-row"
+                style={{ cursor: "pointer", textDecoration: "none" }}
+                href="https://github.com/Cryptoistaken/SheetSubmit-testmycode/releases/latest/download/SheetSubmit.apk"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <div>
+                  <div className="gear-toggle-label">Download app</div>
+                  <div className="gear-toggle-sub">Install the latest Android APK</div>
+                </div>
+                <Download size={18} />
+              </a>
+            </>
+          )}
           <div className="gear-divider"></div>
           <button
             className="btn btn-ghost"
