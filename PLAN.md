@@ -231,3 +231,32 @@ Telegram can hit `/webhook/tg` — backend auto-registers the webhook to
   - Tests: 7 new sync tests (fake db + fake api, no mocking) → **23 frontend pass**. Backend untouched (append/persist/seq already replay-friendly). Verdict vs estimate: backend change = 0 (was the highest-risk item).
   - **Known v1 limits:** full `persist` queue entries replay as whole-sheet replaces; only cell ops (append) get merge-on-409; pending count poll is 5s; login still needs network.
 - Resume: run Phase 3 smoke (login via test bot, CRUD, checks, bubble), then deploy offline work, updating this file.
+- **Login fix + delta checks + API suite (deployed, all green):**
+  - **Login bug (fixed + verified live):** SPA (`seal.up.railway.app`) and API (`sealbackend.up.railway.app`)
+    are different sites (`up.railway.app` is on the public suffix list) → the session cookie written by the
+    cross-site `fetch('/api/auth/device/claim')` was a 3rd-party cookie and got dropped under browser
+    3P-cookie blocking → after approving in Telegram, the reload landed back on login. Fix = same-origin
+    reverse proxy in `frontend/server.js` (`/api/*` + `/webhook/tg` → `BACKEND_URL`), SPA now calls relative
+    `/api` (`config.js` sets `apiBase:""`), `backend` reads `LOGIN_BASE` env (now `https://seal.up.railway.app`)
+    for login links. Railway env: Frontend `BACKEND_URL=https://sealbackend.up.railway.app`, Backend
+    `LOGIN_BASE=https://seal.up.railway.app`.
+  - **Proxy gotchas (fixed in server.js):** (1) forwarding hop-by-hop headers (`Transfer-Encoding`,
+    `Connection`) made Bun treat the body as pre-chunked → empty 200 responses — strip them; (2) Bun's
+    `fetch` decompresses the upstream body but keeps the stale `content-encoding: gzip` header, and
+    Railway's edge re-injects `Transfer-Encoding` on the way out — forward `Accept-Encoding: identity` to
+    the backend, strip `content-encoding`, buffer the body, and set an explicit `Content-Length`.
+  - **Delta appends:** `runCheck` (commit `d744714`) + `runWaChecks` now snapshot rows pre-check, diff the
+    checked fields (`WA_FIELDS = wa_status/wa_ban_reason/wa_page_name/wa_linked_number` for WA), and flush
+    only the changed rows as one cell-op journal (no `dirtyStructural`, no per-account `set`) — `runWaChecks`
+    flushes only after ALL accounts finish; zero changed rows → no persist call at all.
+  - **Live API test suite:** `scripts/api-live.mjs` exercises all endpoints incl. admin, reading the session
+    token from `scripts/.env.live` (gitignored) or `SESSION_COOKIE`. `scripts/test-data.json` = SCRUBBED fake
+    cookies (repo is public!); real data stays in gitignored `scripts/test-data.real.json` (from
+    `test.xlsx`: col A cookie, col B code, no header). **48/48 pass** against both direct backend and the
+    proxy. Gotcha: `/fb/check` has a per-user rate limiter (3/min) → re-running the suite inside 60s yields
+    429; the script accepts 400/429. `POST /files` returns 200 (not 201); history versions only recorded
+    when the persist payload includes `action`.
+  - Verified live: `GET /api/auth/me` with the session cookie returns the full admin user through the proxy.
+  - Latest commits: `d744714` (runCheck delta), `5b8e9d6` (proxy + wa delta + api suite), `6bc4c96` +
+    `adee957` + `f3e3d2f` (proxy hop-by-hop / buffering / identity encoding fixes), `3bd2ebf` (rate-limit
+    tolerant suite).
