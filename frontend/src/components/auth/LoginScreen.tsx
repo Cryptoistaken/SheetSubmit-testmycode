@@ -21,6 +21,7 @@ export default function LoginScreen() {
   const [label, setLabel] = useState("Connecting...");
   const [href, setHref] = useState<string | null>(null);
   const [fallbackHref, setFallbackHref] = useState<string | null>(null);
+  const [showFallback, setShowFallback] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const [dark] = useState(() => getInitialTheme() === "dark");
 
@@ -84,7 +85,11 @@ export default function LoginScreen() {
             className={`login-btn${href ? " ready" : " loading"}`}
             href={href ?? "#"}
             onClick={(e) => {
-              if (!href) e.preventDefault();
+              if (!href) {
+                e.preventDefault();
+              } else {
+                setShowFallback(true);
+              }
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -92,15 +97,10 @@ export default function LoginScreen() {
             </svg>
             <span className="btn-label">{label}</span>
           </a>
-          {href && fallbackHref && !waiting && (
+          {showFallback && href && fallbackHref && !waiting && (
             <a className="login-fallback" href={fallbackHref} target="_blank" rel="noopener noreferrer">
               Can't open? Open in browser
             </a>
-          )}
-          {href && !waiting && (
-            <p className="login-hint">
-              Open Telegram, tap <b>Login</b>, then come back — this page logs you in automatically.
-            </p>
           )}
           {waiting && <p className="login-hint">Logged in — opening your workspace…</p>}
         </div>
