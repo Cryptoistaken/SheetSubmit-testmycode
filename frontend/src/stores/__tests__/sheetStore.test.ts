@@ -451,6 +451,44 @@ describe("sheetStore data-integrity", () => {
     expect(useSheetStore.getState().isDirty).toBe(false);
   });
 
+  it("wa check flushes changed statuses as one delta append after all accounts finish; identical re-check sends nothing", async () => {
+    await openTestFile();
+    useSheetStore.setState({
+      rows: [
+        { cookies: "c_user=202;", uid: "202", twofakey: "", status: "good", wa_status: "" },
+      ],
+    });
+    expect(useSheetStore.getState().rows[0].wa_status).toBe("");
+
+    // pageCheck mock returns null -> wa_status becomes "ineligible" + null fields:
+    // delta append, not full persist.
+    await useSheetStore.getState().runWaChecks();
+    await useSheetStore.getState().flushPersist();
+
+    expect(harness.persistCalls.length).toBe(0);
+    expect(harness.appendCalls.length).toBe(1);
+    expect(harness.appendCalls[0].payload.ops).toEqual([
+      {
+        rowIdx: 0,
+        cols: {
+          wa_status: "ineligible",
+          wa_ban_reason: "",
+          wa_page_name: "",
+          wa_linked_number: "",
+        },
+      },
+    ]);
+    expect(useSheetStore.getState().rows[0].wa_status).toBe("ineligible");
+    expect(useSheetStore.getState().isDirty).toBe(false);
+
+    // Same WA result again -> nothing sent.
+    const calls = harness.appendCalls.length + harness.persistCalls.length;
+    await useSheetStore.getState().runWaChecks();
+    await useSheetStore.getState().flushPersist();
+    expect(harness.appendCalls.length + harness.persistCalls.length).toBe(calls);
+    expect(useSheetStore.getState().rows[0].wa_status).toBe("ineligible");
+  });
+
   it("appends sync logs/undo/redo incrementally (only new entries)", async () => {
     await openTestFile();
     const logA = { username: "A", status: "done" };

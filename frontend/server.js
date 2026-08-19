@@ -1,5 +1,9 @@
-// Minimal static file server for the built SPA (no nginx, no proxy — all API
-// calls go straight to the backend public URL injected at container start).
+// Static file server for the built SPA with a same-origin API proxy. /api/* and
+// /webhook/tg are reverse-proxied to the backend (BACKEND_URL env). This keeps the
+// session cookie FIRST-PARTY: the SPA and API live on different Railway sites, and
+// a cross-site HttpOnly cookie written by a fetch() is dropped under browser
+// third-party cookie blocking — which broke login (approve in Telegram → reload →
+// login page again).
 import { readFileSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 
@@ -7,18 +11,45 @@ const ROOT = join(import.meta.dir, "dist");
 const PORT = Number(process.env.PORT || 80);
 const RAILWAY_API = "https://backboard.railway.com/graphql/v2";
 
-// Base URL of the backend API — read at container start (Railway web service
-// Variables), never hardcoded. Normalized: scheme-less values get https://.
-let apiBase = (process.env.VITE_API_BASE || "").replace(/\/+$/, "");
-if (apiBase && !/^https?:\/\//i.test(apiBase)) apiBase = "https://" + apiBase;
+// Backend origin the proxy forwards to. VITE_API_BASE is kept as a fallback so a
+// stale value can't silently point the SPA cross-site again.
+let BACKEND = (process.env.BACKEND_URL || process.env.VITE_API_BASE || "").replace(/\/+$/, "");
+if (BACKEND && !/^https?:\/\//i.test(BACKEND)) BACKEND = "https://" + BACKEND;
 
-const CONFIG_JS = "window.APP_CONFIG=" + JSON.stringify({ apiBase }) + ";\n";
+// The SPA talks to the API through this origin, so the injected base is empty.
+const CONFIG_JS = "window.APP_CONFIG=" + JSON.stringify({ apiBase: "" }) + ";\n";
 
 function json(status, payload) {
   return new Response(JSON.stringify(payload), {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+async function proxyRequest(req, url) {
+  if (!BACKEND) {
+    return json(500, { ok: false, error: "BACKEND_URL not set on web service" });
+  }
+  const headers = new Headers(req.headers);
+  headers.delete("host");
+  headers.set("x-forwarded-proto", "https");
+  headers.set("x-forwarded-host", req.headers.get("host") || "");
+  const body = req.method === "GET" || req.method === "HEAD" ? undefined : await req.arrayBuffer();
+  const res = await fetch(BACKEND + url.pathname + url.search, {
+    method: req.method,
+    headers,
+    body,
+    redirect: "manual",
+  });
+  const out = new Headers(res.headers);
+  // Preserve every Set-Cookie — the session cookie must reach the browser first-party.
+  const cookies =
+    typeof res.headers.getSetCookie === "function" ? res.headers.getSetCookie() : [];
+  if (cookies.length) {
+    out.delete("set-cookie");
+    for (const c of cookies) out.append("set-cookie", c);
+  }
+  return new Response(res.body, { status: res.status, headers: out });
 }
 
 // POST /__redeploy — redeploy THIS service on Railway (used by redeploy.bat after
@@ -77,9 +108,12 @@ Bun.serve({
     } catch {
       /* keep as-is */
     }
-    const clean = normalize(pathname).replace(/[\\/]+\.\.[\\/]/g, "/");
+    const clean = normalize(pathname).replace(/\\/g, "/").replace(/[\\/]+\.\.[\\/]/g, "/");
     if (req.method === "POST" && clean === "/__redeploy") {
       return handleRedeploy(req);
+    }
+    if (clean.startsWith("/api/") || clean === "/webhook/tg") {
+      return proxyRequest(req, url);
     }
     if (clean === "/config.js") {
       return new Response(CONFIG_JS, { headers: { "Content-Type": "text/javascript" } });

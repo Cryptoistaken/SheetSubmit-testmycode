@@ -1628,7 +1628,6 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       cache = {};
     }
     if (get().fileId !== s.fileId) return;
-    let cachedApply = false;
     const live = waRows.filter((w) => {
       const hit = w.uid ? cache[w.uid] : null;
       if (!hit || !hit.status) return true;
@@ -1637,26 +1636,10 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         w.row.wa_ban_reason = hit.banReason ?? null;
         w.row.wa_page_name = hit.pageName ?? null;
         w.row.wa_linked_number = hit.linkedNumber ?? null;
-        cachedApply = true;
         return false;
       }
       return true;
     });
-    if (!live.length) {
-      if (cachedApply) {
-        const finalRows = writeBack();
-        const cur = get();
-        set({
-          rows: finalRows,
-          isDirty: true,
-          dirtyStructural: true,
-          structuralVersion: ++structuralCounter,
-          ...recomputeMarks(finalRows, cur.crossDups, cur.columns),
-        });
-        get().persist();
-      }
-      return;
-    }
     const concurrency = 3;
     let pos = 0;
     const nextBatch = async (): Promise<void> => {
@@ -1675,16 +1658,6 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
             if (wa_linked_number !== undefined) newRow.wa_linked_number = wa_linked_number;
             rows[w.idx] = newRow;
             live[i] = { ...w, row: newRow };
-            if (get().fileId !== s.fileId) return;
-            const finalRows = writeBack();
-            const cur = get();
-            set({
-              rows: finalRows,
-              isDirty: true,
-              dirtyStructural: true,
-              structuralVersion: ++structuralCounter,
-              ...recomputeMarks(finalRows, cur.crossDups, cur.columns),
-            });
           };
           try {
             const wa = (await api.pageCheck(w.row.cookies ?? "")) as {
@@ -1714,11 +1687,39 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     if (get().fileId !== s.fileId) return;
     const finalRows = writeBack();
     const cur = get();
+    const WA_FIELDS = ["wa_status", "wa_ban_reason", "wa_page_name", "wa_linked_number"] as const;
+    const changed: { rowIdx: number; cols: Record<string, string> }[] = [];
+    const changedSet = new Set<number>();
+    finalRows.forEach((row, i) => {
+      const prev = s.rows[i] ?? {};
+      const cols: Record<string, string> = {};
+      let diff = false;
+      for (const k of WA_FIELDS) {
+        const pv = (prev as Record<string, unknown>)[k];
+        const nv = (row as Record<string, unknown>)[k];
+        if (pv !== nv) {
+          diff = true;
+          cols[k] = nv == null ? "" : String(nv);
+        }
+      }
+      if (diff) {
+        changed.push({ rowIdx: i, cols });
+        changedSet.add(i);
+      }
+    });
+    // Same WA results as before — nothing new to save, skip persist entirely.
+    if (changed.length === 0) return;
+    const changeJournal = [
+      ...s.changeJournal.filter((op) => !changedSet.has(op.rowIdx)),
+      ...changed,
+    ];
+    if (changeJournal.length > MAX_JOURNAL) {
+      changeJournal.splice(0, changeJournal.length - MAX_JOURNAL);
+    }
     set({
       rows: finalRows,
+      changeJournal,
       isDirty: true,
-      dirtyStructural: true,
-      structuralVersion: ++structuralCounter,
       ...recomputeMarks(finalRows, cur.crossDups, cur.columns),
     });
     get().persist();

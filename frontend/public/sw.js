@@ -47,6 +47,9 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  // API goes through the same-origin proxy — never serve/cache auth or data GETs.
+  if (url.pathname.startsWith("/api/") || url.pathname === "/webhook/tg") return;
+
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request, "/"));
     return;

@@ -54,10 +54,14 @@ export const WEBHOOK_URL = process.env.WEBHOOK_URL
   ? withScheme((process.env.WEBHOOK_URL || "").replace(/\/+$/, ""))
   : "";
 
-// Base URL where the api's own routes live (login callback + webhook). Without the
-// nginx proxy these must point at the api service itself. Explicit WEBHOOK_URL wins,
-// then the api's public URL, then (local dev) the frontend dev URL which proxies /api.
-export const LOGIN_BASE = WEBHOOK_URL || BACKEND_PUBLIC_URL || FRONTEND_URL;
+// Base URL where the api's own routes live (login callback + webhook). When the
+// frontend reverse-proxies /api, LOGIN_BASE must be the FRONTEND_URL so the session
+// cookie is set first-party (browser 3rd-party cookie blocking drops cross-site
+// cookie writes). Explicit LOGIN_BASE env wins, then WEBHOOK_URL, then the api's
+// public URL, then (local dev) the frontend dev URL which proxies /api.
+export const LOGIN_BASE = process.env.LOGIN_BASE
+  ? withScheme((process.env.LOGIN_BASE || "").replace(/\/+$/, ""))
+  : WEBHOOK_URL || BACKEND_PUBLIC_URL || FRONTEND_URL;
 
 export const HISTORY_RETENTION_DAYS = parseInt(process.env.HISTORY_RETENTION_DAYS || "30", 10);
 export const HISTORY_CHECKPOINT_EVERY = parseInt(process.env.HISTORY_CHECKPOINT_EVERY || "20", 10);
