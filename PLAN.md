@@ -222,4 +222,12 @@ Telegram can hit `/webhook/tg` — backend auto-registers the webhook to
   can still drop on hard tab-kill); `archive:` list itself still non-atomic (archive-vs-archive
   races are user-initiated single-action, accepted); session index accumulates stale tokens until
   next logout/user-delete (harmless).
-- Resume: run Phase 3 smoke (login via test bot, CRUD, checks, bubble), updating this file.
+- **Offline support (committed `0a0488f`, NOT deployed yet):** SPA loads + edits survive going offline.
+  - `frontend/public/sw.js` + registration in `main.tsx` (prod only): install-time asset discovery + cache (`/`, `/config.js`, `/assets/*`); navigate = network-first→cached `/`; assets = cache-first; `/config.js` = stale-while-revalidate. API is cross-origin → never intercepted.
+  - `frontend/src/offline/db.ts`: IndexedDB (`sheetsubmit-offline`/`queue`, auto-increment id) — enqueue/list/remove/count/clear/available; graceful no-op when IndexedDB missing (private mode / tests).
+  - `frontend/src/offline/sync.ts`: `createOfflineSync({db, api})` + singleton `offlineSync`. `queueSave` on network failure, `flush` drains oldest→newest via `api.append`/`api.persist`; append 409 → refetch `getFileFull` + re-apply ops + full `persist` (reuses the seq-conflict idea); network error stops the drain; `online` event auto-flushes; `typeof window` guard for bun tests.
+  - `sheetStore.ts`: `offlineDirty` state; `flushPersist` catch → on network error (`TypeError` or `!navigator.onLine`) queues the payload instead of swallowing; 409 merge path unchanged; success clears `offlineDirty`; subscribe → on reconnect drains journal + IDB queue.
+  - `OfflineBanner.tsx` (in Layout): fixed pill — offline = "changes saved locally"; online+pending = "Syncing… N" + Sync now. Token-only CSS.
+  - Tests: 7 new sync tests (fake db + fake api, no mocking) → **23 frontend pass**. Backend untouched (append/persist/seq already replay-friendly). Verdict vs estimate: backend change = 0 (was the highest-risk item).
+  - **Known v1 limits:** full `persist` queue entries replay as whole-sheet replaces; only cell ops (append) get merge-on-409; pending count poll is 5s; login still needs network.
+- Resume: run Phase 3 smoke (login via test bot, CRUD, checks, bubble), then deploy offline work, updating this file.
