@@ -41,7 +41,27 @@ async function proxyRequest(req, url) {
     body,
     redirect: "manual",
   });
-  const out = new Headers(res.headers);
+  const out = new Headers();
+  // Hop-by-hop + framing headers must NOT be forwarded (they describe the
+  // upstream connection, not ours) — forwarding Transfer-Encoding made Bun treat
+  // the body as pre-chunked and the response came back empty.
+  for (const [k, v] of res.headers) {
+    const lk = k.toLowerCase();
+    if (
+      lk === "transfer-encoding" ||
+      lk === "connection" ||
+      lk === "keep-alive" ||
+      lk === "upgrade" ||
+      lk === "proxy-authenticate" ||
+      lk === "proxy-authorization" ||
+      lk === "te" ||
+      lk === "trailer" ||
+      lk === "content-length"
+    ) {
+      continue;
+    }
+    out.set(k, v);
+  }
   // Preserve every Set-Cookie — the session cookie must reach the browser first-party.
   const cookies =
     typeof res.headers.getSetCookie === "function" ? res.headers.getSetCookie() : [];
