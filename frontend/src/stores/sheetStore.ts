@@ -13,6 +13,7 @@ import { toast } from "@/lib/toast";
 import { vibrate } from "@/lib/utils";
 import { IS_DESKTOP } from "@/lib/device";
 import { getCachedTOTP } from "@/features/filetypes/totp";
+import { offlineSync } from "@/offline/sync";
 
 export interface CellDelta {
   rowIdx: number;
@@ -239,6 +240,7 @@ export interface SheetState {
   changeJournal: AppendOp[];
   lastSeq: number;
   dirtyStructural: boolean;
+  offlineDirty: boolean;
   selectedCell: SelectedCell | null;
   draft: string;
   qebOpen: boolean;
@@ -334,6 +336,12 @@ let openSeq = 0;
 let saveChain: Promise<void> = Promise.resolve();
 const MAX_JOURNAL = 200;
 
+const isNetworkError = (e: unknown) =>
+  e instanceof TypeError ||
+  (typeof navigator !== "undefined" &&
+    typeof navigator.onLine === "boolean" &&
+    !navigator.onLine);
+
 export const useSheetStore = create<SheetState>()((set, get) => ({
   status: "idle",
   fileId: null,
@@ -351,6 +359,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
   changeJournal: [],
   lastSeq: 0,
   dirtyStructural: false,
+  offlineDirty: false,
   selectedCell: null,
   draft: "",
   qebOpen: false,
@@ -687,7 +696,11 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
           } else {
             resp = await api.persist(s.fileId, payload, { keepalive: !!viaUnload });
           }
-        } catch {
+        } catch (e) {
+          if (isNetworkError(e)) {
+            await offlineSync.queueSave({ fileId: s.fileId, kind: "persist", payload });
+            set({ offlineDirty: true });
+          }
           // swallow — old app is fire-and-forget
         }
         const cur = get();
@@ -697,6 +710,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
             changeJournal: [],
             lastSeq: resp?.seq ?? s.lastSeq,
             dirtyStructural: false,
+            offlineDirty: false,
             logBase: cur.apiLogs.length,
             undoBase: cur.undoStack.length,
             redoBase: cur.redoStack.length,
@@ -721,6 +735,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
               changeJournal: [],
               lastSeq: resp.seq,
               isDirty: false,
+              offlineDirty: false,
               logBase: cur.apiLogs.length,
               undoBase: cur.undoStack.length,
               redoBase: cur.redoStack.length,
@@ -728,6 +743,11 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
             trimMemoryRows();
           }
         } catch (e) {
+          if (isNetworkError(e)) {
+            await offlineSync.queueSave({ fileId: s.fileId, kind: "append", payload });
+            set({ offlineDirty: true });
+            return;
+          }
           const errMsg = e instanceof Error ? e.message : String(e);
           if (errMsg.startsWith("409")) {
             // Version conflict: the append base is stale. Refetch the server's
@@ -1996,6 +2016,16 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     get().bubbleAdvanceActiveRow();
   },
 }));
+
+offlineSync.subscribe(() => {
+  const st = useSheetStore.getState();
+  if (offlineSync.isOnline()) {
+    if (st.offlineDirty && st.fileId) {
+      void useSheetStore.getState().flushPersist();
+    }
+    void offlineSync.flush();
+  }
+});
 
 async function refreshCrossDups(fileId: string | null) {
   if (!fileId) return;

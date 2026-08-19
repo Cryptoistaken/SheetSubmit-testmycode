@@ -8,6 +8,7 @@ import {
 } from "react-router";
 
 import LoginScreen from "@/components/auth/LoginScreen";
+import OfflineBanner from "@/components/layout/OfflineBanner";
 import Topbar from "@/components/layout/Topbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/lib/theme";
@@ -32,12 +33,15 @@ function getBubbleFileId(): string | null {
 
 function Layout() {
   return (
-    <div className="flex h-dvh flex-col">
-      <Topbar />
-      <Suspense fallback={<div className="flex h-dvh flex-col" />}>
-        <Outlet />
-      </Suspense>
-    </div>
+    <>
+      <div className="flex h-dvh flex-col">
+        <Topbar />
+        <Suspense fallback={<div className="flex h-dvh flex-col" />}>
+          <Outlet />
+        </Suspense>
+      </div>
+      <OfflineBanner />
+    </>
   );
 }
 

@@ -3181,3 +3181,48 @@ body.bubble-mode tr.add-row .add-col { font-size: 11px; }
 .version-menu-item:hover { background: var(--bg3); }
 .version-menu-item.danger { color: var(--red); }
 .version-menu-item.danger:hover { background: var(--red-bg); }
+
+/* ── Offline banner ── */
+.offline-banner {
+    position: fixed;
+    top: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 900;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    box-shadow: var(--shadow-md);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    max-width: calc(100vw - 32px);
+    animation: smIn 0.15s var(--ease-out);
+}
+.offline-banner-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.offline-banner.offline {
+    background: var(--yellow-bg);
+    border-color: var(--border2);
+}
+.offline-banner.offline .offline-banner-dot {
+    background: var(--yellow);
+}
+.offline-banner.syncing {
+    background: var(--bg);
+    border-color: var(--sel-border);
+}
+.offline-banner.syncing .offline-banner-dot {
+    background: var(--blue);
+}
+.offline-banner .btn.btn-sm {
+    flex-shrink: 0;
+}
