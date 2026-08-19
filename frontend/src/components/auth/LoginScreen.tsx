@@ -20,6 +20,7 @@ const did = getOrCreateDid();
 export default function LoginScreen() {
   const [label, setLabel] = useState("Connecting...");
   const [href, setHref] = useState<string | null>(null);
+  const [fallbackHref, setFallbackHref] = useState<string | null>(null);
   const [waiting, setWaiting] = useState(false);
   const [dark] = useState(() => getInitialTheme() === "dark");
 
@@ -28,7 +29,9 @@ export default function LoginScreen() {
       .botInfo()
       .then((info) => {
         if (info.username) {
-          setHref("https://t.me/" + info.username + "?start=login_" + did);
+          const tme = "https://t.me/" + info.username + "?start=login_" + did;
+          setHref("tg://resolve?domain=" + info.username + "&start=login_" + did);
+          setFallbackHref(tme);
           setLabel("Open Telegram");
         } else {
           setLabel("Bot not available");
@@ -89,6 +92,11 @@ export default function LoginScreen() {
             </svg>
             <span className="btn-label">{label}</span>
           </a>
+          {href && fallbackHref && !waiting && (
+            <a className="login-fallback" href={fallbackHref} target="_blank" rel="noopener noreferrer">
+              Can't open? Open in browser
+            </a>
+          )}
           {href && !waiting && (
             <p className="login-hint">
               Open Telegram, tap <b>Login</b>, then come back — this page logs you in automatically.

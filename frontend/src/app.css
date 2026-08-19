@@ -246,6 +246,13 @@ button, input, select, textarea {
 .login-hint b {
     color: var(--text);
 }
+.login-fallback {
+    display: inline-block;
+    margin: 12px 0 0;
+    font-size: 12px;
+    color: var(--text-2);
+    text-decoration: underline;
+}
 
 /* ── Accessibility ── */
 @media (prefers-reduced-motion: reduce) {
