@@ -52,6 +52,8 @@ jobs:
         run: |
           cp android/app/build/outputs/apk/release/app-release.apk \
              android/app/build/outputs/apk/release/SheetSubmit-1.0.${{ github.run_number }}.apk
+          cp android/app/build/outputs/apk/release/app-release.apk \
+             android/app/build/outputs/apk/release/SheetSubmit.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v7
@@ -85,4 +87,6 @@ jobs:
           tag_name: v${{ github.run_number }}
           name: v${{ github.run_number }}
           body_path: changelog.md
-          files: android/app/build/outputs/apk/release/SheetSubmit-1.0.${{ github.run_number }}.apk
+          files: |
+            android/app/build/outputs/apk/release/SheetSubmit-1.0.${{ github.run_number }}.apk
+            android/app/build/outputs/apk/release/SheetSubmit.apk
