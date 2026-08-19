@@ -423,6 +423,34 @@ describe("sheetStore data-integrity", () => {
     ]);
   });
 
+  it("check with changed results persists as an append; identical re-check sends nothing", async () => {
+    await openTestFile();
+    useSheetStore.setState({
+      rows: [{ cookies: "c_user=202;", uid: "202", twofakey: "" }],
+    });
+    expect(useSheetStore.getState().rows[0].status).toBeUndefined();
+
+    // First check flips status (undefined) -> "pending": small append, not a full persist.
+    await useSheetStore.getState().runCheck();
+    await useSheetStore.getState().flushPersist();
+
+    expect(harness.persistCalls.length).toBe(0);
+    expect(harness.appendCalls.length).toBe(1);
+    expect(harness.appendCalls[0].payload.ops).toEqual([
+      { rowIdx: 0, cols: { status: "pending" } },
+    ]);
+    expect(useSheetStore.getState().rows[0].status).toBe("pending");
+    expect(useSheetStore.getState().isDirty).toBe(false);
+
+    // Same result again -> nothing sent, check history not grown.
+    const calls = harness.appendCalls.length + harness.persistCalls.length;
+    await useSheetStore.getState().runCheck();
+    await useSheetStore.getState().flushPersist();
+    expect(harness.appendCalls.length + harness.persistCalls.length).toBe(calls);
+    expect(useSheetStore.getState().rows[0].status).toBe("pending");
+    expect(useSheetStore.getState().isDirty).toBe(false);
+  });
+
   it("appends sync logs/undo/redo incrementally (only new entries)", async () => {
     await openTestFile();
     const logA = { username: "A", status: "done" };

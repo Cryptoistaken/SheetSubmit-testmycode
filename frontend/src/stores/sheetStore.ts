@@ -1449,7 +1449,6 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     const behavior = getFileBehavior(s.file?.type ?? "fb_cookie");
     if (!behavior?.checkAccounts) return;
     const rows = s.rows.map((r) => ({ ...r }));
-    const rowsRef = s.rows;
     rows.forEach((row) => {
       const isEmpty = s.columns.every((c) => !row[c.key]);
       if (isEmpty) row.status = "";
@@ -1457,8 +1456,64 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     set({ checkRunning: true });
     try {
       const result = await behavior.checkAccounts(rows);
+      const showSummary = () => {
+        if (get().pendingAutoCheck) {
+          set({ pendingAutoCheck: false });
+          void get().runCheck();
+          return;
+        }
+        if (
+          typeof document !== "undefined" &&
+          document.body.classList.contains("bubble-mode")
+        ) {
+          const parts: string[] = [];
+          if (result.valid > 0) parts.push(result.valid + " alive");
+          if (result.dead > 0) parts.push(result.dead + " dead");
+          if (result.uncertain > 0) parts.push(result.uncertain + " uncertain");
+          toast("Check: " + (parts.join(" · ") || "0 checked"));
+        } else {
+          const parts: string[] = [];
+          if (result.valid > 0) parts.push(result.valid + " valid");
+          if (result.dead > 0) parts.push(result.dead + " dead");
+          if (result.uncertain > 0) parts.push(result.uncertain + " uncertain");
+          toast("Check done " + (parts.join(", ") || "0 checked"));
+        }
+        if (
+          s.file?.type === "fb_cookie" &&
+          localStorage.getItem("ss_waCheck") === "true"
+        ) {
+          void get().runWaChecks();
+        }
+      };
+      // Figure out which rows actually changed vs the pre-check snapshot.
+      // Identity always differs (rows were copied), so compare values per key.
+      const changed: { rowIdx: number; cols: Record<string, string> }[] = [];
+      rows.forEach((row, i) => {
+        const prev = s.rows[i] ?? {};
+        const cols: Record<string, string> = {};
+        let diff = false;
+        new Set([...Object.keys(prev), ...Object.keys(row)]).forEach((k) => {
+          const pv = (prev as Record<string, unknown>)[k];
+          const nv = (row as Record<string, unknown>)[k];
+          if (pv !== nv) {
+            diff = true;
+            cols[k] = nv == null ? "" : String(nv);
+          }
+        });
+        if (diff) changed.push({ rowIdx: i, cols });
+      });
+      const changedByRow = new Map(changed.map((c) => [c.rowIdx, c]));
+      if (changed.length === 0) {
+        // Same results as before — nothing new to save, don't persist and don't
+        // grow the check history with redundant entries.
+        set({ checkRunning: false });
+        showSummary();
+        return;
+      }
       const apiLogs = s.apiLogs.slice();
-      rows.forEach((row) => {
+      const changedSet = new Set(changed.map((c) => c.rowIdx));
+      changed.forEach(({ rowIdx }) => {
+        const row = rows[rowIdx];
         let uid = row.uid ?? null;
         if (!uid && row.cookies) {
           const m = row.cookies.match(/c_user=(\d+)/);
@@ -1476,53 +1531,27 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       });
       if (apiLogs.length > 200) apiLogs.splice(0, apiLogs.length - 200);
       const cur = get();
-      const finalRows =
-        cur.rows === rowsRef
-          ? rows
-          : cur.rows.map((r, i) => {
-              const snap = rows[i];
-              if (snap && snap.status !== r.status) {
-                return { ...r, status: snap.status };
-              }
-              return r;
-            });
+      const finalRows = cur.rows.map((r, i) => {
+        const hit = changedByRow.get(i);
+        return hit ? { ...r, ...hit.cols } : r;
+      });
+      const changeJournal = [
+        ...s.changeJournal.filter((op) => !changedSet.has(op.rowIdx)),
+        ...changed.map((c) => ({ rowIdx: c.rowIdx, cols: c.cols })),
+      ];
+      if (changeJournal.length > MAX_JOURNAL) {
+        changeJournal.splice(0, changeJournal.length - MAX_JOURNAL);
+      }
       set({
         rows: finalRows,
         apiLogs,
+        changeJournal,
         isDirty: true,
-        dirtyStructural: true,
-        structuralVersion: ++structuralCounter,
         checkRunning: false,
         ...recomputeMarks(finalRows, s.crossDups, s.columns),
       });
       get().persist();
-      if (get().pendingAutoCheck) {
-        set({ pendingAutoCheck: false });
-        void get().runCheck();
-        return;
-      }
-      if (
-        typeof document !== "undefined" &&
-        document.body.classList.contains("bubble-mode")
-      ) {
-        const parts: string[] = [];
-        if (result.valid > 0) parts.push(result.valid + " alive");
-        if (result.dead > 0) parts.push(result.dead + " dead");
-        if (result.uncertain > 0) parts.push(result.uncertain + " uncertain");
-        toast("Check: " + (parts.join(" · ") || "0 checked"));
-      } else {
-        const parts: string[] = [];
-        if (result.valid > 0) parts.push(result.valid + " valid");
-        if (result.dead > 0) parts.push(result.dead + " dead");
-        if (result.uncertain > 0) parts.push(result.uncertain + " uncertain");
-        toast("Check done " + (parts.join(", ") || "0 checked"));
-      }
-      if (
-        s.file?.type === "fb_cookie" &&
-        localStorage.getItem("ss_waCheck") === "true"
-      ) {
-        void get().runWaChecks();
-      }
+      showSummary();
     } catch (e) {
       set({ checkRunning: false, pendingAutoCheck: false });
       toast("Check failed: " + (e instanceof Error ? e.message : String(e)));
