@@ -69,7 +69,12 @@ async function proxyRequest(req, url) {
     out.delete("set-cookie");
     for (const c of cookies) out.append("set-cookie", c);
   }
-  return new Response(res.body, { status: res.status, headers: out });
+  // Buffer the upstream body and set an explicit Content-Length. Streaming a
+  // chunked body through here made Railway's edge drop the payload for some
+  // responses (empty body on 200) — buffering sidesteps that entirely.
+  const buf = await res.arrayBuffer();
+  out.set("content-length", String(buf.byteLength));
+  return new Response(buf, { status: res.status, headers: out });
 }
 
 // POST /__redeploy — redeploy THIS service on Railway (used by redeploy.bat after
