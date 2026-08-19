@@ -34,6 +34,11 @@ async function proxyRequest(req, url) {
   headers.delete("host");
   headers.set("x-forwarded-proto", "https");
   headers.set("x-forwarded-host", req.headers.get("host") || "");
+  // Ask the backend for an uncompressed body. Bun's fetch decompresses the body
+  // but leaves the upstream `content-encoding` header in place — forwarding that
+  // mismatch makes clients fail (ZlibError / empty body). identity keeps the proxy
+  // deterministic: plain body in, plain body out.
+  headers.set("accept-encoding", "identity");
   const body = req.method === "GET" || req.method === "HEAD" ? undefined : await req.arrayBuffer();
   const res = await fetch(BACKEND + url.pathname + url.search, {
     method: req.method,
@@ -56,7 +61,8 @@ async function proxyRequest(req, url) {
       lk === "proxy-authorization" ||
       lk === "te" ||
       lk === "trailer" ||
-      lk === "content-length"
+      lk === "content-length" ||
+      lk === "content-encoding"
     ) {
       continue;
     }
