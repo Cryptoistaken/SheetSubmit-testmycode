@@ -26,6 +26,7 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -40,6 +41,7 @@ public class FloatingBubbleService extends Service {
     private static final String TAG = "FloatingBubble";
     private static final String CHANNEL_ID = "bubble";
     private static final int NOTIFICATION_ID = 3;
+    private static final long LONG_PRESS_MS = 500L;
     private static final String PREFS_NAME = "sheetsubmit";
     private static final String KEY_FILE = "bubble_file";
     private static final String KEY_CLIP = "bubble_clip";
@@ -60,7 +62,7 @@ public class FloatingBubbleService extends Service {
     private boolean dragging;
     private long panelShownAt;
     private boolean panelShowing;
-    private long lastBubbleTapAt;
+    private long downAt;
 
     public static void start(Context ctx) {
         Intent i = new Intent(ctx, FloatingBubbleService.class);
@@ -203,6 +205,7 @@ public class FloatingBubbleService extends Service {
                     initialBubbleX = bubbleParams.x;
                     initialBubbleY = bubbleParams.y;
                     dragging = false;
+                    downAt = SystemClock.elapsedRealtime();
                     v.animate().scaleX(0.92f).scaleY(0.92f).setDuration(120).start();
                     return true;
                 case MotionEvent.ACTION_MOVE:
@@ -225,14 +228,15 @@ public class FloatingBubbleService extends Service {
                             .apply();
                     if (!dragging) {
                         long now = SystemClock.elapsedRealtime();
-                        if (now - lastBubbleTapAt < 400) {
-                            lastBubbleTapAt = 0;
+                        if (now - downAt >= LONG_PRESS_MS) {
+                            v.performClick();
+                            v.performHapticFeedback(View.HapticFeedbackConstants.LONG_PRESS);
                             if (miniWebView != null) {
                                 miniWebView.evaluateJavascript(
                                     "window.__ss&&window.__ss.bubbleSkipNo2FA&&window.__ss.bubbleSkipNo2FA();", null);
                             }
+                            if (!panelShowing) togglePanel();
                         } else {
-                            lastBubbleTapAt = now;
                             v.performClick();
                             togglePanel();
                         }
@@ -273,18 +277,35 @@ public class FloatingBubbleService extends Service {
             panelH = Math.min(panelH, scrH - dp(16));
 
             panelRoot = new FrameLayout(this);
-            panelRoot.setBackgroundColor(0x33000000);
 
             LinearLayout card = new LinearLayout(this);
             card.setOrientation(LinearLayout.VERTICAL);
             GradientDrawable cardBg = new GradientDrawable();
             cardBg.setColor(0xFFFFFFFF);
-            cardBg.setCornerRadius(dp(18));
+            cardBg.setCornerRadius(dp(16));
+            cardBg.setStroke(dp(1), 0xFFE4E4E7);
             card.setBackground(cardBg);
             card.setClipToOutline(true);
-            FrameLayout.LayoutParams cardParams = new FrameLayout.LayoutParams(panelW, panelH, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-            int bubbleCenterY = bubbleParams.y + bubbleParams.height / 2;
-            cardParams.topMargin = clamp(bubbleCenterY - panelH / 2, dp(8), Math.max(dp(8), scrH - panelH - dp(8)));
+            FrameLayout.LayoutParams cardParams = new FrameLayout.LayoutParams(panelW, panelH, Gravity.TOP | Gravity.START);
+            int bx = bubbleParams.x + bubbleParams.width / 2;
+            int by = bubbleParams.y + bubbleParams.height / 2;
+            int gap = dp(8);
+            int left, top;
+            if (scrW - bx >= panelW + gap) {
+                left = bx + gap;
+                top = clamp(by - panelH / 2, dp(8), Math.max(dp(8), scrH - panelH - dp(8)));
+            } else if (bx >= panelW + gap) {
+                left = bx - panelW - gap;
+                top = clamp(by - panelH / 2, dp(8), Math.max(dp(8), scrH - panelH - dp(8)));
+            } else if (scrH - by >= panelH + gap) {
+                left = clamp(bx - panelW / 2, dp(8), Math.max(dp(8), scrW - panelW - dp(8)));
+                top = by + gap;
+            } else {
+                left = clamp(bx - panelW / 2, dp(8), Math.max(dp(8), scrW - panelW - dp(8)));
+                top = by - panelH - gap;
+            }
+            cardParams.leftMargin = left;
+            cardParams.topMargin = top;
             card.setLayoutParams(cardParams);
 
             ensureMiniWebView();
@@ -337,6 +358,11 @@ public class FloatingBubbleService extends Service {
             }
 
             panelRoot.addView(card);
+            card.setAlpha(0f);
+            card.setScaleX(0.9f);
+            card.setScaleY(0.9f);
+            card.animate().alpha(1f).scaleX(1f).scaleY(1f)
+                    .setDuration(120).setInterpolator(new AccelerateDecelerateInterpolator()).start();
             panelRoot.setOnTouchListener(new View.OnTouchListener() {
                 @Override
                 public boolean onTouch(View v, MotionEvent event) {
