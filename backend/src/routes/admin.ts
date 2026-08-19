@@ -1,5 +1,6 @@
 // Admin routes — ported from the old server (API contract unchanged).
 import { Router } from "express";
+import { BACKEND_PUBLIC_URL } from "../config/env";
 import type { Row, StoredFile } from "../lib/shared";
 import { MUTABLE_FILE_FIELDS } from "../lib/shared";
 import { createForkFile, updateUserFilesAtomic } from "../services/files";
@@ -97,7 +98,7 @@ adminRouter.get("/users", requireAuth, requireAdmin, asyncRoute(async (_req, res
         user.fileCount = files.length;
         user.archivedCount = archived.length;
         user.banned = !!banData;
-        user.photoUrl = user.fileId ? "/api/auth/photo/" + user.id : null;
+        user.photoUrl = user.fileId ? (BACKEND_PUBLIC_URL || "") + "/api/auth/photo/" + user.id : null;
         users.push(user);
       }
     }
@@ -149,7 +150,7 @@ adminRouter.get("/users/search", requireAuth, requireAdmin, asyncRoute(async (re
         const banData = results[i * 3 + 2][1];
         user.fileCount = files.length;
         user.banned = !!banData;
-        user.photoUrl = user.fileId ? "/api/auth/photo/" + user.id : null;
+        user.photoUrl = user.fileId ? (BACKEND_PUBLIC_URL || "") + "/api/auth/photo/" + user.id : null;
         users.push(user);
       }
     }
@@ -169,7 +170,7 @@ adminRouter.get("/user/:userId", requireAuth, requireAdmin, asyncRoute(async (re
   }
   const files = (await getJSON<StoredFile[]>("files:" + req.params.userId)) || [];
   const archived = (await getJSON<StoredFile[]>("archive:" + req.params.userId)) || [];
-  user.photoUrl = user.fileId ? "/api/auth/photo/" + user.id : null;
+  user.photoUrl = user.fileId ? (BACKEND_PUBLIC_URL || "") + "/api/auth/photo/" + user.id : null;
   user.fileCount = files.length;
   user.archivedCount = archived.length;
   user.banned = !!(await getJSON("ban:" + req.params.userId));
@@ -561,6 +562,10 @@ adminRouter.get("/file/:fileId/logs", requireAuth, requireAdmin, asyncRoute(asyn
 
 // ── User delete / update ──
 adminRouter.delete("/user/:userId", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
+  if (String(req.params.userId) === String(req.userId)) {
+    res.status(400).json({ error: "cannot delete your own account" });
+    return;
+  }
   const user = await getJSON("user:" + req.params.userId);
   if (!user) {
     res.status(404).json({ error: "user not found" });
@@ -610,6 +615,10 @@ adminRouter.put("/user/:userId", requireAuth, requireAdmin, asyncRoute(async (re
 }));
 
 adminRouter.post("/user/:userId/ban", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
+  if (String(req.params.userId) === String(req.userId)) {
+    res.status(400).json({ error: "cannot ban your own account" });
+    return;
+  }
   const user = await getJSON("user:" + req.params.userId);
   if (!user) {
     res.status(404).json({ error: "user not found" });

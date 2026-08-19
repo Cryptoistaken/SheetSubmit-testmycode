@@ -233,19 +233,21 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
               </div>
             </div>
             <div className="admin-detail-actions">
-              {detailUser.banned ? (
-                <button className="btn btn-sm" onClick={unbanUser}>
-                  Unban User
-                </button>
-              ) : (
-                <button className="btn btn-danger btn-sm" onClick={banUser}>
-                  Ban User
-                </button>
-              )}
               {detailUser.id !== me?.id ? (
-                <button className="btn btn-danger btn-sm" onClick={deleteUser}>
-                  Delete User
-                </button>
+                <>
+                  {detailUser.banned ? (
+                    <button className="btn btn-sm" onClick={unbanUser}>
+                      Unban User
+                    </button>
+                  ) : (
+                    <button className="btn btn-danger btn-sm" onClick={banUser}>
+                      Ban User
+                    </button>
+                  )}
+                  <button className="btn btn-danger btn-sm" onClick={deleteUser}>
+                    Delete User
+                  </button>
+                </>
               ) : null}
             </div>
           </div>
