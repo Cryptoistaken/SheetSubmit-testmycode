@@ -236,6 +236,16 @@ button, input, select, textarea {
     cursor: pointer;
     pointer-events: auto;
 }
+.login-hint {
+    margin: 14px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-2);
+    font-family: var(--sans);
+}
+.login-hint b {
+    color: var(--text);
+}
 
 /* ── Accessibility ── */
 @media (prefers-reduced-motion: reduce) {

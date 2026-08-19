@@ -156,3 +156,24 @@ authRouter.get("/device", asyncRoute(async (req, res) => {
   console.log("[Auth] device " + did.slice(0, 8) + "... picked up session");
   res.json({ ok: true, sessionId: info.sessionId });
 }));
+
+// Web login pickup. The SPA polls this while the user taps Login in Telegram.
+// The bot completes the session in-chat (device:<did> → sessionId, exactly like
+// the Android flow); here we set the HttpOnly cookie directly so the browser
+// logs in without copy-pasting a login URL from the bot.
+authRouter.get("/device/claim", asyncRoute(async (req, res) => {
+  const did = String(req.query.token || "").trim();
+  if (!/^[A-Za-z0-9-]{8,64}$/.test(did)) {
+    res.json({ ok: false });
+    return;
+  }
+  const info = await getJSON<{ sessionId?: string }>("device:" + did);
+  if (!info || !info.sessionId) {
+    res.json({ ok: false });
+    return;
+  }
+  await delKey("device:" + did);
+  res.setHeader("Set-Cookie", sessionCookie(info.sessionId, req.secure));
+  console.log("[Auth] device " + did.slice(0, 8) + "... claimed session for web");
+  res.json({ ok: true });
+}));

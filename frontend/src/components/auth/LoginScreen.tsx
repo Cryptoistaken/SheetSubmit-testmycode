@@ -3,9 +3,24 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { getInitialTheme } from "@/lib/theme";
 
+// Per-browser login id. Piggybacks on the app's device-login flow (the bot
+// completes the session in-chat and stores device:<did> → sessionId), so the
+// web page picks up the session by polling instead of copy-pasting a URL.
+function getOrCreateDid(): string {
+  const KEY = "ss_login_did";
+  const existing = localStorage.getItem(KEY);
+  if (existing && /^[A-Za-z0-9-]{8,64}$/.test(existing)) return existing;
+  const did = crypto.randomUUID().replace(/-/g, "");
+  localStorage.setItem(KEY, did);
+  return did;
+}
+
+const did = getOrCreateDid();
+
 export default function LoginScreen() {
   const [label, setLabel] = useState("Connecting...");
   const [href, setHref] = useState<string | null>(null);
+  const [waiting, setWaiting] = useState(false);
   const [dark] = useState(() => getInitialTheme() === "dark");
 
   useEffect(() => {
@@ -13,13 +28,39 @@ export default function LoginScreen() {
       .botInfo()
       .then((info) => {
         if (info.username) {
-          setHref("https://t.me/" + info.username + "?start=login");
+          setHref("https://t.me/" + info.username + "?start=login_" + did);
           setLabel("Open Telegram");
         } else {
           setLabel("Bot not available");
         }
       })
       .catch(() => setLabel("Connection failed"));
+  }, []);
+
+  // Poll the claim endpoint until the bot has completed the login in Telegram,
+  // then reload — the /auth/me call on mount picks up the new session cookie.
+  useEffect(() => {
+    let stop = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const poll = async () => {
+      if (stop) return;
+      try {
+        const res = await api.claimDeviceSession(did);
+        if (res.ok) {
+          setWaiting(true);
+          window.location.href = "/";
+          return;
+        }
+      } catch {
+        // transient network error — keep polling
+      }
+      timer = setTimeout(poll, 3000);
+    };
+    timer = setTimeout(poll, 1500);
+    return () => {
+      stop = true;
+      if (timer) clearTimeout(timer);
+    };
   }, []);
 
   return (
@@ -48,6 +89,12 @@ export default function LoginScreen() {
             </svg>
             <span className="btn-label">{label}</span>
           </a>
+          {href && !waiting && (
+            <p className="login-hint">
+              Open Telegram, tap <b>Login</b>, then come back — this page logs you in automatically.
+            </p>
+          )}
+          {waiting && <p className="login-hint">Logged in — opening your workspace…</p>}
         </div>
       </div>
     </div>

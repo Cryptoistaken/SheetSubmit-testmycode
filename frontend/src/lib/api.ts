@@ -178,4 +178,6 @@ export const api = {
   me: () => request<User | null>("/auth/me"),
   logout: () => request<{ ok: boolean }>("/auth/logout"),
   botInfo: () => request<{ username: string }>("/bot/info"),
+  claimDeviceSession: (token: string) =>
+    request<{ ok: boolean }>(`/auth/device/claim?token=${encodeURIComponent(token)}`),
 };
