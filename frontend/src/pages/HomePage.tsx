@@ -224,13 +224,13 @@ export default function HomePage() {
     }
     const id = genId();
     try {
-      await api.createFile({ id, name: finalName, type });
+      const created = await api.createFile({ id, name: finalName, type });
+      navigate("/file/" + created.id);
     } catch {
       showToast("Failed to create file");
       return;
     }
     showToast(FILE_TYPE_DEFS[type].label + " file created");
-    navigate("/file/" + id);
   };
 
   const uploadFile = async (file: File) => {
@@ -239,16 +239,16 @@ export default function HomePage() {
       const current = files ?? (await api.getFiles());
       const result = await importXlsx(buf, file.name, current);
       await hydrateWaCache(result.rows);
-      await api.createFile({ id: result.id, name: result.name, type: result.type });
+      const created = await api.createFile({ id: result.id, name: result.name, type: result.type });
       try {
-        await api.persist(result.id, {
+        await api.persist(created.id, {
           rows: result.rows,
           dataCount: result.dataCount,
           action: "import",
         });
       } catch {
         try {
-          await api.deleteFile(result.id);
+          await api.deleteFile(created.id);
         } catch {
           // rollback best-effort
         }
@@ -256,7 +256,7 @@ export default function HomePage() {
         return;
       }
       showToast("Imported " + result.dataCount + " rows");
-      navigate("/file/" + result.id);
+      navigate("/file/" + created.id);
     } catch {
       showToast("Import failed");
     }
