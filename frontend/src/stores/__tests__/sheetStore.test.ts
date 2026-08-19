@@ -390,6 +390,39 @@ describe("sheetStore data-integrity", () => {
     expect(useSheetStore.getState().dirtyStructural).toBe(false);
   });
 
+  it("cell edit during an in-flight structural persist appends instead of full-persisting", async () => {
+    await openTestFile();
+    useSheetStore.getState().commitCell(0, "uid", "111");
+    await useSheetStore.getState().flushPersist();
+    expect(harness.persistCalls.length).toBe(0);
+
+    // Structural change starts a full persist...
+    useSheetStore.getState().enterSelectionMode("cell", 0, "uid");
+    useSheetStore.getState().deleteSelected();
+    expect(useSheetStore.getState().dirtyStructural).toBe(true);
+
+    harness.nextPersist = deferred<{ ok: boolean }>();
+    const p = useSheetStore.getState().flushPersist();
+    await Promise.resolve();
+    expect(harness.persistCalls.length).toBe(1);
+
+    // ...and a cell edit lands while it is in flight (rows reference changes).
+    useSheetStore.getState().commitCell(0, "uid", "222");
+    expect(useSheetStore.getState().rows[0].uid).toBe("222");
+
+    harness.nextPersist.resolve({ ok: true });
+    await p;
+    expect(useSheetStore.getState().dirtyStructural).toBe(false);
+
+    // The pending cell edit must flush as a small append — not another full upload.
+    await useSheetStore.getState().flushPersist();
+    expect(harness.persistCalls.length).toBe(1);
+    expect(harness.appendCalls.length).toBe(2);
+    expect(harness.appendCalls[1].payload.ops).toEqual([
+      { rowIdx: 0, cols: { uid: "222" } },
+    ]);
+  });
+
   it("appends sync logs/undo/redo incrementally (only new entries)", async () => {
     await openTestFile();
     const logA = { username: "A", status: "done" };

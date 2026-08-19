@@ -240,6 +240,7 @@ export interface SheetState {
   changeJournal: AppendOp[];
   lastSeq: number;
   dirtyStructural: boolean;
+  structuralVersion: number;
   offlineDirty: boolean;
   selectedCell: SelectedCell | null;
   draft: string;
@@ -333,6 +334,7 @@ export interface SheetState {
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 let openSeq = 0;
+let structuralCounter = 0;
 let saveChain: Promise<void> = Promise.resolve();
 const MAX_JOURNAL = 200;
 
@@ -359,6 +361,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
   changeJournal: [],
   lastSeq: 0,
   dirtyStructural: false,
+  structuralVersion: 0,
   offlineDirty: false,
   selectedCell: null,
   draft: "",
@@ -448,7 +451,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     if (st.selectedCell && (st.qebOpen || st.inlineEdit)) {
       const rows = st.rows.slice();
       rows[st.selectedCell.rowIdx] = { ...rows[st.selectedCell.rowIdx], [st.selectedCell.colIdx]: st.draft };
-      set({ rows, isDirty: true, dirtyStructural: true });
+      set({ rows, isDirty: true, dirtyStructural: true, structuralVersion: ++structuralCounter });
     }
     if (get().isDirty) await get().flushPersist();
     set({
@@ -688,6 +691,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
           dataCount,
         };
         if (action) payload.action = action;
+        const startStruct = s.structuralVersion;
         let resp: { ok: boolean; seq?: number } | undefined;
         try {
           if (s.adminMode) {
@@ -716,6 +720,12 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
             redoBase: cur.redoStack.length,
           });
           trimMemoryRows();
+        } else if (cur.fileId === s.fileId && resp) {
+          // Newer edits landed while the structural persist was in flight. The
+          // structural change was already sent; keep dirtyStructural only if a
+          // NEW structural change arrived (cell edits belong in the journal and
+          // can go out as a small append instead of another full upload).
+          set({ dirtyStructural: cur.structuralVersion !== startStruct });
         }
       } else {
         if (s.changeJournal.length === 0 && !s.isDirty) return;
@@ -834,6 +844,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       redoStack,
       isDirty: true,
       dirtyStructural: true,
+      structuralVersion: ++structuralCounter,
       ...recomputeMarks(rows, s.crossDups, s.columns),
     });
     get().persist();
@@ -884,6 +895,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       redoStack,
       isDirty: true,
       dirtyStructural: true,
+      structuralVersion: ++structuralCounter,
       ...recomputeMarks(rows, s.crossDups, s.columns),
     });
     get().persist();
@@ -1206,6 +1218,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       redoStack: [],
       isDirty: true,
       dirtyStructural: true,
+      structuralVersion: ++structuralCounter,
       invalidCells: newInvalid,
       ...recomputeMarks(rows, s.crossDups, s.columns),
     });
@@ -1262,7 +1275,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     const rows = s.rows.concat(
       Array.from({ length: 100 }, () => makeEmptyRow(s.columns)),
     );
-    set({ rows, isDirty: true, dirtyStructural: true });
+    set({ rows, isDirty: true, dirtyStructural: true, structuralVersion: ++structuralCounter });
     get().persist();
     toast("100 rows added");
   },
@@ -1478,6 +1491,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         apiLogs,
         isDirty: true,
         dirtyStructural: true,
+        structuralVersion: ++structuralCounter,
         checkRunning: false,
         ...recomputeMarks(finalRows, s.crossDups, s.columns),
       });
@@ -1607,6 +1621,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
           rows: finalRows,
           isDirty: true,
           dirtyStructural: true,
+          structuralVersion: ++structuralCounter,
           ...recomputeMarks(finalRows, cur.crossDups, cur.columns),
         });
         get().persist();
@@ -1638,6 +1653,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
               rows: finalRows,
               isDirty: true,
               dirtyStructural: true,
+              structuralVersion: ++structuralCounter,
               ...recomputeMarks(finalRows, cur.crossDups, cur.columns),
             });
           };
@@ -1673,6 +1689,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       rows: finalRows,
       isDirty: true,
       dirtyStructural: true,
+      structuralVersion: ++structuralCounter,
       ...recomputeMarks(finalRows, cur.crossDups, cur.columns),
     });
     get().persist();
@@ -1702,6 +1719,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         redoStack: [],
         isDirty: true,
         dirtyStructural: true,
+        structuralVersion: ++structuralCounter,
         selectedCell: null,
         qebOpen: false,
       inlineEdit: false,
@@ -1749,6 +1767,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       redoStack: [],
       isDirty: true,
       dirtyStructural: true,
+      structuralVersion: ++structuralCounter,
       ...recomputeMarks(rows, s.crossDups, s.columns),
     });
     get().persist("merge");
@@ -1779,6 +1798,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         redoStack: [],
         isDirty: true,
         dirtyStructural: true,
+        structuralVersion: ++structuralCounter,
         selectedCell: null,
         qebOpen: false,
       inlineEdit: false,
@@ -1795,6 +1815,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         redoStack: [],
         isDirty: true,
         dirtyStructural: true,
+        structuralVersion: ++structuralCounter,
         ...recomputeMarks(rows, s.crossDups, s.columns),
       });
       get().persist("append");
@@ -1836,6 +1857,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       redoStack: [],
       isDirty: true,
       dirtyStructural: true,
+      structuralVersion: ++structuralCounter,
       ...recomputeMarks(rows, s.crossDups, s.columns),
       selectedCell: null,
       qebOpen: false,
@@ -1872,6 +1894,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       redoStack: [],
       isDirty: true,
       dirtyStructural: true,
+      structuralVersion: ++structuralCounter,
       ...recomputeMarks(rows, s.crossDups, s.columns),
       selectedCell: null,
       qebOpen: false,
@@ -1957,6 +1980,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       rows,
       isDirty: true,
       dirtyStructural: true,
+      structuralVersion: ++structuralCounter,
       invalidCells: newInvalid,
       ...recomputeMarksForRow(rows, s.crossDups, s.columns, idx),
     });
@@ -2001,6 +2025,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       rows,
       isDirty: true,
       dirtyStructural: true,
+      structuralVersion: ++structuralCounter,
       invalidCells: newInvalid,
       ...recomputeMarksForRow(rows, s.crossDups, s.columns, idx),
     });
@@ -2123,6 +2148,7 @@ function applyCells(
     redoStack: [],
     isDirty: true,
     dirtyStructural: true,
+    structuralVersion: ++structuralCounter,
     invalidCells: newInvalid,
     ...recomputeMarks(rows, s.crossDups, s.columns),
   });
