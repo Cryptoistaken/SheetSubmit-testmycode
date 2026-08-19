@@ -21,6 +21,7 @@ import android.os.SystemClock;
 import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -230,7 +231,7 @@ public class FloatingBubbleService extends Service {
                         long now = SystemClock.elapsedRealtime();
                         if (now - downAt >= LONG_PRESS_MS) {
                             v.performClick();
-                            v.performHapticFeedback(View.HapticFeedbackConstants.LONG_PRESS);
+                            v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                             if (miniWebView != null) {
                                 miniWebView.evaluateJavascript(
                                     "window.__ss&&window.__ss.bubbleSkipNo2FA&&window.__ss.bubbleSkipNo2FA();", null);
