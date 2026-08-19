@@ -80,10 +80,6 @@ export default function Topbar() {
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     const check = () => {
-      if (document.visibilityState === "hidden") {
-        schedule();
-        return;
-      }
       api
         .health()
         .then((h) => {
@@ -100,7 +96,7 @@ export default function Topbar() {
     };
     const schedule = () => {
       timer = setTimeout(() => {
-        check();
+        if (document.visibilityState !== "hidden") check();
         schedule();
       }, interval);
     };
