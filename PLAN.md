@@ -275,3 +275,19 @@ Telegram can hit `/webhook/tg` — backend auto-registers the webhook to
     Fix: `fileTypeDef(type)` safe lookup (falls back to `fb_cookie`) used everywhere + backend `POST
     /files` coerces invalid/missing type to `fb_cookie`. Verified live: new bundle served
     (`index-U14UgSov.js`), user created a file without crash.
+  - **Bubble fixes (committed `575fd08`, deployed):** user reported bubble issues on the phone:
+    1. **Saved 2FA key "vanished"** (and cookies too) — root cause: `refreshSheet` checked
+       `isDirty` only BEFORE the fetch, so a 6s poll that started while clean could apply stale
+       server rows AFTER a local bubble save, wiping it. Fix: re-check `isDirty` after the await
+       before applying. 2. **No TOTP auto-copy:** `bubbleSaveKey` saved the key but never copied
+       the generated code — now generates the code and copies it + toast `Code copied`.
+       3. **Long-press skip: no vibration + no feedback** — Android bubble long-press now uses a
+       haptic helper (`performHapticFeedback(..., FLAG_IGNORE_VIEW_SETTING)` + `Vibrator`
+       fallback, since `FLAG_NOT_FOCUSABLE` overlay windows often swallow haptics) and the skip
+       writes a `No_2Fa` marker into the 2fa cell (`bubbleSkipNo2FA`) so the row visibly shows it
+       was set empty by the bubble action. 4. **Marker never exported:** `No_2Fa` is stripped from
+       all xlsx exports (`buildXlsx`/`downloadSheetRows` via `exportCellValue`); validation accepts
+       it as a placeholder (not flagged invalid). New tests (30 frontend / 34 backend, all green):
+       bubble user-flow (cookie→key→code copy→advance), skip marker + persist + advance, no-cookie
+       skip, download-strip. Re-ran full API suite: **48/48 pass**. Deployed; live bundle served
+       (contains `No_2Fa`/`Code copied`/`bubbleSkipNo2FA` + the refreshSheet isDirty re-check).
