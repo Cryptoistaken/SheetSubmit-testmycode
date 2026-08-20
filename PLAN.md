@@ -265,3 +265,7 @@ Telegram can hit `/webhook/tg` — backend auto-registers the webhook to
     `mgetJSON` (one `MGET` round-trip) → **~0.5s** for the same 59 uids (verified live, direct + proxy).
     Note: browsers may keep calling the API at the direct `sealbackend` URL until the service worker
     revalidates `/config.js` (stale-while-revalidate) — hard refresh picks up the `apiBase:""` proxy path.
+  - **More N+1 fixes (committed `d5f1649`, deployed):** audit found `batch-delete` + admin `user-delete`
+    deleting each file's history sequentially (`delHistoryKeys` = 1 get + 1 pipeline + orphan GC per file).
+    Now parallelized via `deleteFilesHistory` (bounded concurrency 4). Verified: 8-file batch-delete ≈ 595ms.
+    Rest of backend already pipelined (admin lists, cross-dups row reads, history prune, persist/append).
