@@ -4,7 +4,7 @@ import type { Row, StoredFile } from "../lib/shared";
 import { MUTABLE_FILE_FIELDS } from "../lib/shared";
 import { genFileId } from "../lib/ids";
 import { getDedupKey, getUserFiles, updateUserFilesAtomic } from "../services/files";
-import { delHistoryKeys, pruneHistory, snapshotHistory } from "../services/history";
+import { delHistoryKeys, deleteFilesHistory, pruneHistory, snapshotHistory } from "../services/history";
 import { getJSON, key, redis, setJSON, setJSONex } from "../services/redis";
 import { migrateListKey, requireAuth, requireFileAccess } from "../middleware/auth";
 import { asyncRoute } from "../middleware/asyncRoute";
@@ -438,9 +438,7 @@ archiveRouter.post("/batch-delete", requireAuth, asyncRoute(async (req, res) => 
     delPipeline.del(key("logs:" + id));
   });
   await delPipeline.exec();
-  for (const id of ownedIds) {
-    await delHistoryKeys(id);
-  }
+  await deleteFilesHistory(ownedIds);
   res.json({ deleted: ownedIds.length });
 }));
 

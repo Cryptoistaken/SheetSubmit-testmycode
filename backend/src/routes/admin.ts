@@ -6,6 +6,7 @@ import { MUTABLE_FILE_FIELDS } from "../lib/shared";
 import { createForkFile, updateUserFilesAtomic } from "../services/files";
 import {
   delHistoryKeys,
+  deleteFilesHistory,
   getHistoryMeta,
   histMetaKey,
   materializeVersion,
@@ -593,9 +594,7 @@ adminRouter.delete("/user/:userId", requireAuth, requireAdmin, asyncRoute(async 
   });
   p.del(key("userSessions:" + req.params.userId));
   await p.exec();
-  for (const f of allFiles) {
-    await delHistoryKeys(f.id);
-  }
+  await deleteFilesHistory(allFiles.map((f) => f.id));
   res.json({ ok: true });
 }));
 

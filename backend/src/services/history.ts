@@ -403,6 +403,20 @@ export async function delHistoryKeys(fileId: string): Promise<void> {
   }
 }
 
+// Delete history for many files with bounded parallelism (was: N sequential
+// Redis round-trips per file — scales linearly with the batch size).
+export async function deleteFilesHistory(fileIds: string[], concurrency = 4): Promise<void> {
+  const ids = [...fileIds];
+  const workers = Array.from({ length: Math.min(concurrency, ids.length) }, async () => {
+    for (;;) {
+      const id = ids.shift();
+      if (id === undefined) return;
+      await delHistoryKeys(id);
+    }
+  });
+  await Promise.all(workers);
+}
+
 // Global blob GC sweep (best-effort, ~every HISTORY_GC_INTERVAL_MS).
 export async function gcHistoryBlobs(): Promise<void> {
   try {
