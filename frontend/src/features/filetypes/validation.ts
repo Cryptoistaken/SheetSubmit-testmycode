@@ -1,3 +1,5 @@
+import { NO_2FA_MARK } from "@/lib/types";
+
 export function validateCell(
   colKey: string,
   value: string,
@@ -10,6 +12,7 @@ export function validateCell(
     return { valid: true };
   }
   if (colKey === "twofakey") {
+    if (value === NO_2FA_MARK) return { valid: true };
     const cleaned = value.replace(/[\s\-]/g, "").toUpperCase();
     if (cleaned.length < 10) return { valid: false, msg: "2FA key too short" };
     if (!cleaned.match(/^[A-Z2-7]+$/)) {

@@ -1,5 +1,5 @@
 import { api } from "./api";
-import { FILE_TYPE_DEFS } from "./types";
+import { exportCellValue, FILE_TYPE_DEFS } from "./types";
 import type { ColumnDef, FileType, Row, WaCacheEntry } from "./types";
 
 export function genId(): string {
@@ -117,7 +117,7 @@ export async function buildXlsx(rows: Row[], columns: ColumnDef[]): Promise<Arra
   const data: string[][] = [];
   rows.forEach((row) => {
     const isEmpty = columns.every((c) => !row[c.key]);
-    if (!isEmpty) data.push(columns.map((c) => row[c.key] || ""));
+    if (!isEmpty) data.push(columns.map((c) => exportCellValue(c.key, row[c.key])));
   });
   const ws = XLSX.utils.aoa_to_sheet(data);
   const wb = XLSX.utils.book_new();
@@ -228,7 +228,7 @@ export async function downloadSheetRows(
     const isEmpty = dlCols.every((c) => !row[c.key]);
     if (!isEmpty) {
       hasData = true;
-      data.push(dlCols.map((c) => row[c.key] || ""));
+      data.push(dlCols.map((c) => exportCellValue(c.key, row[c.key])));
     }
   });
   if (!hasData) return false;

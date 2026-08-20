@@ -18,6 +18,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.SystemClock;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
@@ -196,6 +198,28 @@ public class FloatingBubbleService extends Service {
         }
     }
 
+    private void hapticFeedback() {
+        try {
+            if (bubbleView != null) {
+                bubbleView.performHapticFeedback(
+                        HapticFeedbackConstants.LONG_PRESS,
+                        HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
+            }
+        } catch (Exception ignored) {}
+        // Fallback for devices/overlays where performHapticFeedback is a no-op
+        // (FLAG_NOT_FOCUSABLE windows often swallow haptics).
+        try {
+            Vibrator vib = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+            if (vib != null && vib.hasVibrator()) {
+                if (Build.VERSION.SDK_INT >= 26) {
+                    vib.vibrate(VibrationEffect.createOneShot(30, VibrationEffect.DEFAULT_AMPLITUDE));
+                } else {
+                    vib.vibrate(30);
+                }
+            }
+        } catch (Exception ignored) {}
+    }
+
     private final View.OnTouchListener bubbleTouchListener = new View.OnTouchListener() {
         @Override
         public boolean onTouch(View v, MotionEvent ev) {
@@ -231,7 +255,7 @@ public class FloatingBubbleService extends Service {
                         long now = SystemClock.elapsedRealtime();
                         if (now - downAt >= LONG_PRESS_MS) {
                             v.performClick();
-                            v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                            hapticFeedback();
                             if (miniWebView != null) {
                                 miniWebView.evaluateJavascript(
                                     "window.__ss&&window.__ss.bubbleSkipNo2FA&&window.__ss.bubbleSkipNo2FA();", null);

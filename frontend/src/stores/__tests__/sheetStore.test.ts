@@ -133,6 +133,7 @@ mock.module("@/lib/api", () => ({
 }));
 
 const { useSheetStore } = await import("../sheetStore");
+import { NO_2FA_MARK, FILE_TYPE_DEFS } from "@/lib/types";
 
 function resetStore(): void {
   useSheetStore.setState({
@@ -643,5 +644,95 @@ describe("sheetStore data-integrity", () => {
     expect(s.dupCells).toEqual(new Set());
     expect(s.dupRows).toEqual(new Set());
     expect(s.hasDuplicates).toBe(false);
+  });
+});
+
+describe("bubble user flow (as a user uses it)", () => {
+  it("cookie + key save completes the row, copies the code, and advances", async () => {
+    await openTestFile();
+    const writes: string[] = [];
+    const hadNav = "navigator" in globalThis;
+    const prevNav = (globalThis as Record<string, unknown>).navigator;
+    Object.defineProperty(globalThis, "navigator", {
+      value: { clipboard: { writeText: async (t: string) => { writes.push(t); } } },
+      configurable: true,
+      writable: true,
+    });
+    useSheetStore.setState({ isDesktop: false } as never);
+    try {
+      useSheetStore.getState().bubbleSaveCookie("c_user=123; foo=bar;");
+      let s = useSheetStore.getState();
+      expect(s.rows[0].cookies).toContain("c_user=123");
+      expect(s.bubbleActiveRow).toBe(0);
+      expect(s.isDirty).toBe(true);
+      expect(s.invalidCells.has("0:cookies")).toBe(false);
+
+      await useSheetStore.getState().bubbleSaveKey("JBSWY3DPEHPK3PXP");
+      await new Promise((r) => setTimeout(r, 0));
+      s = useSheetStore.getState();
+      expect(s.rows[0].twofakey).toBe("JBSWY3DPEHPK3PXP");
+      expect(s.bubbleActiveRow).toBe(1);
+      expect(writes).toHaveLength(1);
+      expect(writes[0]).toMatch(/^\d{6}$/);
+    } finally {
+      if (hadNav) {
+        Object.defineProperty(globalThis, "navigator", { value: prevNav, configurable: true });
+      } else {
+        delete (globalThis as Record<string, unknown>).navigator;
+      }
+    }
+  });
+
+  it("long-press skip writes No_2Fa into the 2fa cell, persists it, and advances", async () => {
+    await openTestFile();
+    useSheetStore.setState({
+      rows: [{ cookies: "c_user=1; x=y", uid: "1", twofakey: "" }],
+      bubbleActiveRow: 0,
+      isDirty: true,
+      dirtyStructural: true,
+    });
+    useSheetStore.getState().bubbleSkipNo2FA();
+    let s = useSheetStore.getState();
+    expect(s.rows[0].twofakey).toBe(NO_2FA_MARK);
+    expect(s.rows[0].cookies).toBe("c_user=1; x=y");
+    expect(s.bubbleActiveRow).toBe(1);
+    expect(s.invalidCells.has("0:twofakey")).toBe(false);
+
+    await useSheetStore.getState().flushPersist();
+    s = useSheetStore.getState();
+    expect(s.isDirty).toBe(false);
+    const p = harness.persistCalls[harness.persistCalls.length - 1];
+    expect((p.payload.rows as Array<Record<string, unknown>>)[0].twofakey).toBe(NO_2FA_MARK);
+
+    // The marked row is complete, so the active row advances on the next scan.
+    expect(useSheetStore.getState().bubbleGetActiveRow()).toBe(1);
+  });
+
+  it("skip with no cookie does not write a marker", () => {
+    useSheetStore.setState({
+      rows: [{ cookies: "", uid: "", twofakey: "" }],
+      bubbleActiveRow: 0,
+    });
+    useSheetStore.getState().bubbleSkipNo2FA();
+    const s = useSheetStore.getState();
+    expect(s.rows[0].twofakey).toBe("");
+    expect(s.bubbleActiveRow).toBe(1);
+  });
+
+  it("download strips the No_2Fa marker from the 2fa column", async () => {
+    (globalThis as Record<string, unknown>).window = { APP_CONFIG: {} };
+    const { buildXlsx, parseSheetRows } = await import("@/lib/xlsx");
+    const cols = FILE_TYPE_DEFS.fb_cookie.columns;
+    const buf = await buildXlsx(
+      [
+        { cookies: "c_user=1; a=b", uid: "1", twofakey: NO_2FA_MARK },
+        { cookies: "c_user=2; a=b", uid: "2", twofakey: "JBSWY3DPEHPK3PXP" },
+      ],
+      cols,
+    );
+    const rows = await parseSheetRows(buf, cols);
+    expect(rows[0].twofakey).toBe("");
+    expect(rows[1].twofakey).toBe("JBSWY3DPEHPK3PXP");
+    expect(rows[0].cookies).toBe("c_user=1; a=b");
   });
 });

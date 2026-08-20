@@ -52,6 +52,18 @@ export function fileTypeDef(type?: string): FileTypeDef {
   return (type && t in FILE_TYPE_DEFS ? FILE_TYPE_DEFS[t] : FILE_TYPE_DEFS.fb_cookie);
 }
 
+/** Marker the bubble writes into the 2fa cell when the user long-press-skips
+ * 2FA ("set empty by the bubble action"). Display-only — never exported. */
+export const NO_2FA_MARK = "No_2Fa";
+
+/** Value to write into a cell on export. Strips the bubble's No_2Fa marker so
+ * skipped rows download with an empty 2fa cell. */
+export function exportCellValue(colKey: string, value: string | null | undefined): string {
+  if (!value) return "";
+  if (colKey === "twofakey" && value === NO_2FA_MARK) return "";
+  return value;
+}
+
 /** Authenticated Telegram user. */
 export interface User {
   id: string;

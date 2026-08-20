@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { api, type AppendOp, type AppendPayload } from "@/lib/api";
 import {
   fileTypeDef,
+  NO_2FA_MARK,
   type ColumnDef,
   type CrossDupEntry,
   type Row,
@@ -564,6 +565,10 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         ? await api.adminFileRows(fileId)
         : await api.getRows(fileId);
       if (fileId !== get().fileId) return;
+      // A local edit (bubble save / commitCell) landed while the fetch was in
+      // flight — applying the stale snapshot would wipe it. Keep the local rows
+      // and let the next clean cycle refresh instead.
+      if (get().isDirty) return;
       const columns = get().columns;
       const rows: Row[] = [...(rowsRes ?? [])];
       while (rows.length < 100) rows.push(makeEmptyRow(columns));
@@ -2061,13 +2066,40 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     });
     get().persist("bubble");
     if (complete) get().bubbleAdvanceActiveRow();
+    if (!s.isDesktop) {
+      void getCachedTOTP(key)
+        .then((r) => {
+          if (!r) return;
+          if (useSheetStore.getState().fileId !== s.fileId) return;
+          navigator.clipboard.writeText(r.code).catch(() => {});
+          toast("Code copied");
+        })
+        .catch(() => {});
+    }
   },
 
   bubbleSkipNo2FA: () => {
-    const idx = get().bubbleGetActiveRow();
-    const row = get().rows[idx];
-    toast(row?.cookies ? "2FA skipped" : row?.twofakey ? "Skipped" : "Skipped");
+    const s = get();
+    const idx = s.bubbleActiveRow >= 0 ? s.bubbleActiveRow : s.bubbleGetActiveRow();
+    const row = s.rows[idx];
+    const hadCookie = !!(row?.cookies);
+    if (row?.cookies && !row.twofakey) {
+      const rows = s.rows.slice();
+      rows[idx] = { ...rows[idx], twofakey: NO_2FA_MARK };
+      const newInvalid = new Set(s.invalidCells);
+      newInvalid.delete(idx + ":twofakey");
+      set({
+        rows,
+        isDirty: true,
+        dirtyStructural: true,
+        structuralVersion: ++structuralCounter,
+        invalidCells: newInvalid,
+        ...recomputeMarksForRow(rows, s.crossDups, s.columns, idx),
+      });
+      get().persist("bubble");
+    }
     vibrate(15);
+    toast(hadCookie ? "2FA skipped" : row?.twofakey ? "Skipped" : "Nothing to skip");
     get().bubbleAdvanceActiveRow();
   },
 }));
