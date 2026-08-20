@@ -45,6 +45,13 @@ export const FILE_TYPE_DEFS: Record<FileType, FileTypeDef> = {
   },
 };
 
+/** Safe FILE_TYPE_DEFS lookup — falls back to fb_cookie for missing/unknown
+ * types (e.g. files created by older builds or direct API calls). */
+export function fileTypeDef(type?: string): FileTypeDef {
+  const t = type as FileType;
+  return (type && t in FILE_TYPE_DEFS ? FILE_TYPE_DEFS[t] : FILE_TYPE_DEFS.fb_cookie);
+}
+
 /** Authenticated Telegram user. */
 export interface User {
   id: string;

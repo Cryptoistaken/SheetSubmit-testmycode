@@ -1,7 +1,7 @@
 import { Download, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 
-import { FILE_TYPE_DEFS } from "@/lib/types";
+import { fileTypeDef } from "@/lib/types";
 import type { SheetFile } from "@/lib/types";
 
 interface FileCardProps {
@@ -68,7 +68,7 @@ export default function FileCard({
   };
 
   const count = file.dataCount ?? file.rowCount ?? 0;
-  const badge = FILE_TYPE_DEFS[file.type].badge;
+  const badge = fileTypeDef(file.type).badge;
 
   return (
     <div

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router";
 
 import DiffView from "@/components/sheet/DiffView";
 import { api } from "@/lib/api";
-import { FILE_TYPE_DEFS } from "@/lib/types";
+import { fileTypeDef } from "@/lib/types";
 import type { FileType, VersionMeta } from "@/lib/types";
 
 const WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -194,7 +194,7 @@ export default function VersionDiffPage() {
         prev={prev}
         fileName={fileMeta.name}
         typeName={fileMeta.type}
-        columns={FILE_TYPE_DEFS[fileMeta.type].columns}
+        columns={fileTypeDef(fileMeta.type).columns}
         adminMode={isAdmin}
       />
     </div>

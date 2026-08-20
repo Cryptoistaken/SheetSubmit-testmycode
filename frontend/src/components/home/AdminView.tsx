@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { useConfirm } from "@/lib/confirm";
 import { useToast } from "@/lib/toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { FILE_TYPE_DEFS } from "@/lib/types";
+import { fileTypeDef } from "@/lib/types";
 import type { AdminUser, ArchiveFile, SheetFile } from "@/lib/types";
 import { downloadXlsx } from "@/lib/xlsx";
 
@@ -144,7 +144,7 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
       return;
     }
     try {
-      await downloadXlsx(rows, FILE_TYPE_DEFS[file.type].columns, file.name);
+      await downloadXlsx(rows, fileTypeDef(file.type).columns, file.name);
       showToast("Downloaded");
     } catch {
       showToast("Download failed");
@@ -289,7 +289,7 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
                 </div>
                 <div className="file-card-name">{f.name}</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
-                  <span className="file-type-badge t-fb">{FILE_TYPE_DEFS[f.type].label}</span>
+                  <span className="file-type-badge t-fb">{fileTypeDef(f.type).label}</span>
                   <span className="file-card-meta">
                     {count} row{count !== 1 ? "s" : ""}
                   </span>
@@ -362,7 +362,7 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
                     </div>
                     <div className="file-card-name">{f.name}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
-                      <span className="file-type-badge t-fb">{FILE_TYPE_DEFS[f.type].label}</span>
+                      <span className="file-type-badge t-fb">{fileTypeDef(f.type).label}</span>
                       <span className="file-card-meta">{daysLeft} days left</span>
                     </div>
                     <div className="file-card-actions">

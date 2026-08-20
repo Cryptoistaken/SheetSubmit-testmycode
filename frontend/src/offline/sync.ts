@@ -1,5 +1,5 @@
 import { api, type AppendPayload } from "@/lib/api";
-import { FILE_TYPE_DEFS, type FileType, type Row } from "@/lib/types";
+import { fileTypeDef, type Row } from "@/lib/types";
 import { offlineDb, type OfflineDb, type QueuedSave, type QueuedSaveKind } from "./db";
 
 export interface SyncApi {
@@ -38,7 +38,7 @@ export function createOfflineSync(deps: { db: OfflineDb; api: SyncApi }): Offlin
       if (rows[op.rowIdx] === undefined) continue;
       rows[op.rowIdx] = { ...rows[op.rowIdx], ...op.cols };
     }
-    const columns = FILE_TYPE_DEFS[fresh.file.type as FileType].columns;
+    const columns = fileTypeDef(fresh.file.type).columns;
     const dataCount = rows.filter((row) => columns.some((c) => row[c.key])).length;
     await deps.api.persist(record.fileId, { rows, logs: [], undo: [], redo: [], dataCount });
   }

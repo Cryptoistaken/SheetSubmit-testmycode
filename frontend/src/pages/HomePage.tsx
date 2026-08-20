@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { useConfirm } from "@/lib/confirm";
 import { useToast } from "@/lib/toast";
-import { FILE_TYPE_DEFS } from "@/lib/types";
+import { fileTypeDef } from "@/lib/types";
 import type { FileType, SheetFile } from "@/lib/types";
 import { downloadXlsx, genId, hydrateWaCache, importXlsx, todayStr } from "@/lib/xlsx";
 import { useBubbleStore } from "@/stores/bubbleStore";
@@ -109,7 +109,7 @@ export default function HomePage() {
       return;
     }
     try {
-      await downloadXlsx(rows, FILE_TYPE_DEFS[f.type].columns, f.name);
+      await downloadXlsx(rows, fileTypeDef(f.type).columns, f.name);
       showToast("Downloaded");
     } catch {
       showToast("Download failed");
@@ -214,7 +214,7 @@ export default function HomePage() {
   };
 
   const createFile = async (type: FileType) => {
-    const name = FILE_TYPE_DEFS[type].label + " " + todayStr();
+    const name = fileTypeDef(type).label + " " + todayStr();
     const current = files ?? (await api.getFiles());
     let finalName = name;
     if (current.some((f) => f.name === name)) {
@@ -230,7 +230,7 @@ export default function HomePage() {
       showToast("Failed to create file");
       return;
     }
-    showToast(FILE_TYPE_DEFS[type].label + " file created");
+    showToast(fileTypeDef(type).label + " file created");
   };
 
   const uploadFile = async (file: File) => {

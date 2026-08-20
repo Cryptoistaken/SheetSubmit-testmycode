@@ -1,7 +1,7 @@
 // Files & data routes — ported from the old server (API contract unchanged).
 import { Router } from "express";
 import type { Row, StoredFile } from "../lib/shared";
-import { MUTABLE_FILE_FIELDS } from "../lib/shared";
+import { FILE_TYPE_DEFS, MUTABLE_FILE_FIELDS } from "../lib/shared";
 import { genFileId } from "../lib/ids";
 import { getDedupKey, getUserFiles, updateUserFilesAtomic } from "../services/files";
 import { delHistoryKeys, deleteFilesHistory, pruneHistory, snapshotHistory } from "../services/history";
@@ -26,6 +26,9 @@ filesRouter.post("/", requireAuth, asyncRoute(async (req, res) => {
   const file = req.body as StoredFile;
   file.id = genFileId();
   file.userId = req.userId;
+  // Coerce unknown/missing types so the frontend never renders undefined (old
+  // builds / direct API callers could store anything or nothing here).
+  if (!(file.type && file.type in FILE_TYPE_DEFS)) file.type = "fb_cookie";
   file.createdAt = Date.now();
   file.updatedAt = Date.now();
   const created = await updateUserFilesAtomic(req.userId || "", (files) => {
