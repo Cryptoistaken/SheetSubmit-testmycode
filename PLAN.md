@@ -260,3 +260,8 @@ Telegram can hit `/webhook/tg` — backend auto-registers the webhook to
   - Latest commits: `d744714` (runCheck delta), `5b8e9d6` (proxy + wa delta + api suite), `6bc4c96` +
     `adee957` + `f3e3d2f` (proxy hop-by-hop / buffering / identity encoding fixes), `3bd2ebf` (rate-limit
     tolerant suite).
+  - **wa/cache latency fix (committed `620a599`, deployed):** `GET /api/wa/cache?uids=<N>` did one
+    sequential `redis.get` per uid → 59 uids ≈ 11s even when all keys were empty. Now a single
+    `mgetJSON` (one `MGET` round-trip) → **~0.5s** for the same 59 uids (verified live, direct + proxy).
+    Note: browsers may keep calling the API at the direct `sealbackend` URL until the service worker
+    revalidates `/config.js` (stale-while-revalidate) — hard refresh picks up the `apiBase:""` proxy path.
