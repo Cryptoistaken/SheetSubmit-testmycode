@@ -2090,9 +2090,8 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     const s = get();
     const idx = s.bubbleActiveRow >= 0 ? s.bubbleActiveRow : s.bubbleGetActiveRow();
     const row = s.rows[idx];
-    const hadCookie = !!(row?.cookies);
-    const alreadySkipped = isNo2FAMark("twofakey", row?.twofakey);
-    if (row?.cookies && !row.twofakey && !alreadySkipped) {
+    const canSkip = !!(row?.cookies && row.cookies.trim()) && !row.twofakey;
+    if (canSkip) {
       const rows = s.rows.slice();
       rows[idx] = { ...rows[idx], twofakey: NO_2FA_MARK };
       const newInvalid = new Set(s.invalidCells);
@@ -2106,10 +2105,11 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         ...recomputeMarksForRow(rows, s.crossDups, s.columns, idx),
       });
       get().persist("bubble");
+      vibrate(15);
+      toast("2FA skipped");
+      // The marked row is complete — move to the next one that needs a cookie.
+      get().bubbleAdvanceActiveRow();
     }
-    vibrate(15);
-    toast(hadCookie ? "2FA skipped" : row?.twofakey ? "Skipped" : "Nothing to skip");
-    get().bubbleAdvanceActiveRow();
   },
 }));
 

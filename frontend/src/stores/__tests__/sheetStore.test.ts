@@ -771,7 +771,7 @@ describe("bubble user flow (as a user uses it)", () => {
     expect(s.bubbleActiveRow).toBe(1);
   });
 
-  it("skip with no cookie does not write a marker", () => {
+  it("long-press skip does nothing when the row has no cookie", () => {
     useSheetStore.setState({
       rows: [{ cookies: "", uid: "", twofakey: "" }],
       bubbleActiveRow: 0,
@@ -779,7 +779,21 @@ describe("bubble user flow (as a user uses it)", () => {
     useSheetStore.getState().bubbleSkipNo2FA();
     const s = useSheetStore.getState();
     expect(s.rows[0].twofakey).toBe("");
-    expect(s.bubbleActiveRow).toBe(1);
+    // A row that isn't "cookie present, no 2fa" must not be advanced or marked.
+    expect(s.bubbleActiveRow).toBe(0);
+    expect(s.isDirty).toBeFalsy();
+  });
+
+  it("long-press skip does nothing when the row already has a 2FA key", () => {
+    useSheetStore.setState({
+      rows: [{ cookies: "c_user=1; x=y", uid: "1", twofakey: "JBSWY3DPEHPK3PXP" }],
+      bubbleActiveRow: 0,
+    });
+    useSheetStore.getState().bubbleSkipNo2FA();
+    const s = useSheetStore.getState();
+    // Already complete — the active row must stay put and the key must remain.
+    expect(s.rows[0].twofakey).toBe("JBSWY3DPEHPK3PXP");
+    expect(s.bubbleActiveRow).toBe(0);
   });
 
   it("download strips the No_2Fa marker from the 2fa column", async () => {

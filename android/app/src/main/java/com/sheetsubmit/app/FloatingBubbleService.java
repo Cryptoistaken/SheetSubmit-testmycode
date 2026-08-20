@@ -64,6 +64,7 @@ public class FloatingBubbleService extends Service {
     private int initialBubbleY;
     private boolean dragging;
     private boolean longPressFired;
+    private boolean panelSuppressPaste;
     private long panelShownAt;
     private boolean panelShowing;
     private long downAt;
@@ -225,17 +226,21 @@ public class FloatingBubbleService extends Service {
         @Override
         public void run() {
             // Fired while the finger is STILL DOWN after LONG_PRESS_MS.
-            // Long-press is a pure "skip 2FA" action: haptic + marker. It must
-            // NOT open the panel, capture the clipboard, or run paste automation
-            // (those belong to a short tap), so it never touches a cookie.
+            // Long-press = skip 2FA (only applies when the row has a cookie and
+            // no key — decided in JS) AND open the mini sheet so the user can
+            // see the rows. The panel must NOT capture the clipboard or run
+            // paste automation, or it would immediately fill the just-skipped
+            // row with an unrelated clip.
             if (bubbleView == null) return;
             longPressFired = true;
             bubbleView.performClick();
             hapticFeedback();
+            panelSuppressPaste = true; // panel opens read-only-ish, no paste
             if (miniWebView != null) {
                 miniWebView.evaluateJavascript(
                     "window.__ss&&window.__ss.bubbleSkipNo2FA&&window.__ss.bubbleSkipNo2FA();", null);
             }
+            if (!panelShowing) showPanel();
         }
     };
 
@@ -367,43 +372,48 @@ public class FloatingBubbleService extends Service {
                 miniWebView.onResume();
                 panelRoot.requestFocus();
                 if (miniWebView != null) miniWebView.requestFocus();
-                try {
-                    Intent cap = new Intent(this, ClipboardCaptureActivity.class);
-                    cap.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(cap);
-                } catch (Exception e) {
-                    Log.w(TAG, "ClipboardCaptureActivity failed, using fallback", e);
+                if (!panelSuppressPaste) {
+                    // Tap-opened panel: capture the clipboard and auto-paste.
                     try {
-                        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                        if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip() != null && cm.getPrimaryClip().getItemCount() > 0) {
-                            CharSequence cs = cm.getPrimaryClip().getItemAt(0).getText();
-                            String text = cs != null ? cs.toString() : "";
-                            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                                .edit()
-                                .putString(KEY_CLIP, text)
-                                .putLong(KEY_CLIP_AT, System.currentTimeMillis())
-                                .apply();
-                        }
-                    } catch (Exception ignored) {}
-                }
-            final int[] pollCount = {0};
-            final Runnable pollRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    pollCount[0]++;
-                    SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                    long clipAt = prefs.getLong(KEY_CLIP_AT, 0);
-                    boolean captured = clipAt > 0 && System.currentTimeMillis() - clipAt < 2000;
-                    if (captured || pollCount[0] >= 10) {
+                        Intent cap = new Intent(this, ClipboardCaptureActivity.class);
+                        cap.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(cap);
+                    } catch (Exception e) {
+                        Log.w(TAG, "ClipboardCaptureActivity failed, using fallback", e);
                         try {
-                            miniWebView.evaluateJavascript("window.__ss&&window.__ss.bubbleAutomate&&window.__ss.bubbleAutomate();", null);
+                            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                            if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip() != null && cm.getPrimaryClip().getItemCount() > 0) {
+                                CharSequence cs = cm.getPrimaryClip().getItemAt(0).getText();
+                                String text = cs != null ? cs.toString() : "";
+                                getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                                    .edit()
+                                    .putString(KEY_CLIP, text)
+                                    .putLong(KEY_CLIP_AT, System.currentTimeMillis())
+                                    .apply();
+                            }
                         } catch (Exception ignored) {}
-                    } else {
-                        panelRoot.postDelayed(this, 200);
                     }
                 }
-            };
-            panelRoot.postDelayed(pollRunnable, 200);
+                if (!panelSuppressPaste) {
+                    final int[] pollCount = {0};
+                    final Runnable pollRunnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            pollCount[0]++;
+                            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                            long clipAt = prefs.getLong(KEY_CLIP_AT, 0);
+                            boolean captured = clipAt > 0 && System.currentTimeMillis() - clipAt < 2000;
+                            if (captured || pollCount[0] >= 10) {
+                                try {
+                                    miniWebView.evaluateJavascript("window.__ss&&window.__ss.bubbleAutomate&&window.__ss.bubbleAutomate();", null);
+                                } catch (Exception ignored) {}
+                            } else {
+                                panelRoot.postDelayed(this, 200);
+                            }
+                        }
+                    };
+                    panelRoot.postDelayed(pollRunnable, 200);
+                }
             }
 
             panelRoot.addView(card);
@@ -533,6 +543,9 @@ public class FloatingBubbleService extends Service {
         // MUST reset — otherwise togglePanel() never opens the panel again
         // after the first close (panelShowing remains true forever).
         panelShowing = false;
+        // Clear the long-press "no paste" flag — the next TAP opens a normal
+        // panel that captures the clipboard and auto-pastes again.
+        panelSuppressPaste = false;
     }
 
     // ── Foreground notification ──
