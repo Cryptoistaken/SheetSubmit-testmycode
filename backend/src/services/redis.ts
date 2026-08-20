@@ -43,6 +43,26 @@ export async function getJSON<T>(k: string): Promise<T | null> {
   }
 }
 
+// Batch getJSON — single MGET round-trip instead of N sequential GETs.
+export async function mgetJSON<T>(keys: string[]): Promise<(T | null)[]> {
+  if (!keys.length) return [];
+  let raws: (string | null)[] = [];
+  try {
+    raws = await redis.mget(keys.map(key));
+  } catch {
+    return keys.map(() => null);
+  }
+  return raws.map((raw, i) => {
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as T;
+    } catch (e) {
+      console.error("[Redis] getJSON parse error key=" + key(keys[i]) + ":", (e as Error).message);
+      return null;
+    }
+  });
+}
+
 export async function setJSON(k: string, val: unknown): Promise<boolean> {
   try {
     await redis.set(key(k), JSON.stringify(val));

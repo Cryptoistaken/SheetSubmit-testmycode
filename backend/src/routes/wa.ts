@@ -1,7 +1,7 @@
 // Facebook/WhatsApp check routes — ported from the old server (API contract unchanged).
 import { Router } from "express";
 import { WA_CACHE_TTL_MS } from "../config/env";
-import { delKey, getJSON, setJSON } from "../services/redis";
+import { delKey, mgetJSON, redis, setJSON } from "../services/redis";
 import { requireAuth } from "../middleware/auth";
 import { asyncRoute } from "../middleware/asyncRoute";
 
@@ -417,21 +417,34 @@ waRouter.get("/wa/cache", requireAuth, asyncRoute(async (req, res) => {
     const uids = String(req.query.uids || "")
       .split(",")
       .map((s) => s.trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .slice(0, 1000);
     const cache: Record<string, unknown> = {};
-    for (const uid of uids) {
-      const val = await getJSON<{ status?: string | null; banReason?: string | null; error?: string | null; pageName?: string | null; linkedNumber?: string | null; ts?: number }>("wa:" + req.userId + ":" + uid);
-      if (!val) continue;
-      if (WA_CACHE_TTL_MS > 0 && val.ts && Date.now() - val.ts > WA_CACHE_TTL_MS) {
-        await delKey("wa:" + req.userId + ":" + uid);
-        continue;
-      }
-      if (val.status !== "eligible") {
-        // stale legacy entry (old server cached ineligible/error) — purge, never serve
-        await delKey("wa:" + req.userId + ":" + uid);
-        continue;
-      }
-      cache[uid] = { status: val.status || null, banReason: val.banReason || null, error: val.error || null, pageName: val.pageName || null, linkedNumber: val.linkedNumber || null, ts: val.ts || null };
+    if (uids.length) {
+      const vals = await mgetJSON<{
+        status?: string | null;
+        banReason?: string | null;
+        error?: string | null;
+        pageName?: string | null;
+        linkedNumber?: string | null;
+        ts?: number;
+      }>(uids.map((u) => "wa:" + req.userId + ":" + u));
+      const stale: string[] = [];
+      uids.forEach((uid, i) => {
+        const val = vals[i];
+        if (!val) return;
+        if (WA_CACHE_TTL_MS > 0 && val.ts && Date.now() - val.ts > WA_CACHE_TTL_MS) {
+          stale.push("wa:" + req.userId + ":" + uid);
+          return;
+        }
+        if (val.status !== "eligible") {
+          // stale legacy entry (old server cached ineligible/error) — purge, never serve
+          stale.push("wa:" + req.userId + ":" + uid);
+          return;
+        }
+        cache[uid] = { status: val.status || null, banReason: val.banReason || null, error: val.error || null, pageName: val.pageName || null, linkedNumber: val.linkedNumber || null, ts: val.ts || null };
+      });
+      if (stale.length) await redis.del(stale.map((k) => "ss:" + k));
     }
     res.json({ cache });
   } catch (e) {
