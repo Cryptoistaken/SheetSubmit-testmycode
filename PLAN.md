@@ -269,3 +269,9 @@ Telegram can hit `/webhook/tg` — backend auto-registers the webhook to
     deleting each file's history sequentially (`delHistoryKeys` = 1 get + 1 pipeline + orphan GC per file).
     Now parallelized via `deleteFilesHistory` (bounded concurrency 4). Verified: 8-file batch-delete ≈ 595ms.
     Rest of backend already pipelined (admin lists, cross-dups row reads, history prune, persist/append).
+  - **FileCard crash fix (committed `0409077`, deployed):** `Cannot read properties of undefined
+    (reading 'badge')` — backend stores whatever `type` a client sends (old builds / direct API calls
+    could store missing/invalid types), and 16 frontend sites did unguarded `FILE_TYPE_DEFS[file.type]`.
+    Fix: `fileTypeDef(type)` safe lookup (falls back to `fb_cookie`) used everywhere + backend `POST
+    /files` coerces invalid/missing type to `fb_cookie`. Verified live: new bundle served
+    (`index-U14UgSov.js`), user created a file without crash.
