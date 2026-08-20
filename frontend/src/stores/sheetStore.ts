@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { api, type AppendOp, type AppendPayload } from "@/lib/api";
 import {
   fileTypeDef,
+  isNo2FAMark,
   NO_2FA_MARK,
   type ColumnDef,
   type CrossDupEntry,
@@ -82,7 +83,9 @@ function recomputeMarks(
     const valMap = new Map<string, number[]>();
     rows.forEach((row, rowIdx) => {
       const val = (row[col.key] ?? "").trim();
-      if (!val) return;
+      // The bubble's "No 2FA" placeholder is display-only — never treat
+      // two skipped rows as duplicates of each other.
+      if (!val || isNo2FAMark(col.key, val)) return;
       const list = valMap.get(val);
       if (list) list.push(rowIdx);
       else valMap.set(val, [rowIdx]);
@@ -145,11 +148,12 @@ function recomputeMarksForRow(
 
     for (const col of columns) {
       const val = (row[col.key] ?? "").trim();
-      if (!val) continue;
+      if (!val || isNo2FAMark(col.key, val)) continue;
       const collisions: number[] = [];
       for (let i = 0; i < rows.length; i++) {
         if (i === rowIdx) continue;
-        if ((rows[i][col.key] ?? "").trim() === val) collisions.push(i);
+        const other = (rows[i][col.key] ?? "").trim();
+        if (other === val && !isNo2FAMark(col.key, other)) collisions.push(i);
       }
       if (collisions.length > 0) {
         dupCells.add(`${rowIdx}:${col.key}`);
@@ -2027,8 +2031,12 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
   bubbleSaveKey: async (text) => {
     const key = normalizeBubbleKey(text);
     const s = get();
+    // A skipped row's "No_2Fa" marker is a display placeholder, not a real
+    // key — it never counts as a duplicate of (or a block against) a real key.
     for (let i = 0; i < s.rows.length; i++) {
-      const k = s.rows[i].twofakey ? normalizeBubbleKey(s.rows[i].twofakey) : "";
+      const val = s.rows[i].twofakey ?? "";
+      if (isNo2FAMark("twofakey", val)) continue;
+      const k = val ? normalizeBubbleKey(val) : "";
       if (k === key) {
         toast("Duplicate 2FA");
         return;
@@ -2083,7 +2091,8 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     const idx = s.bubbleActiveRow >= 0 ? s.bubbleActiveRow : s.bubbleGetActiveRow();
     const row = s.rows[idx];
     const hadCookie = !!(row?.cookies);
-    if (row?.cookies && !row.twofakey) {
+    const alreadySkipped = isNo2FAMark("twofakey", row?.twofakey);
+    if (row?.cookies && !row.twofakey && !alreadySkipped) {
       const rows = s.rows.slice();
       rows[idx] = { ...rows[idx], twofakey: NO_2FA_MARK };
       const newInvalid = new Set(s.invalidCells);

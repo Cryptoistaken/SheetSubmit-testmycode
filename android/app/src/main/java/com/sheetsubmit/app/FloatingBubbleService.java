@@ -63,6 +63,7 @@ public class FloatingBubbleService extends Service {
     private int initialBubbleX;
     private int initialBubbleY;
     private boolean dragging;
+    private boolean longPressFired;
     private long panelShownAt;
     private boolean panelShowing;
     private long downAt;
@@ -220,6 +221,28 @@ public class FloatingBubbleService extends Service {
         } catch (Exception ignored) {}
     }
 
+    private final Runnable longPressRunnable = new Runnable() {
+        @Override
+        public void run() {
+            // Fired while the finger is STILL DOWN after LONG_PRESS_MS.
+            // Long-press is a pure "skip 2FA" action: haptic + marker. It must
+            // NOT open the panel, capture the clipboard, or run paste automation
+            // (those belong to a short tap), so it never touches a cookie.
+            if (bubbleView == null) return;
+            longPressFired = true;
+            bubbleView.performClick();
+            hapticFeedback();
+            if (miniWebView != null) {
+                miniWebView.evaluateJavascript(
+                    "window.__ss&&window.__ss.bubbleSkipNo2FA&&window.__ss.bubbleSkipNo2FA();", null);
+            }
+        }
+    };
+
+    private void cancelLongPress() {
+        bubbleView.removeCallbacks(longPressRunnable);
+    }
+
     private final View.OnTouchListener bubbleTouchListener = new View.OnTouchListener() {
         @Override
         public boolean onTouch(View v, MotionEvent ev) {
@@ -230,12 +253,18 @@ public class FloatingBubbleService extends Service {
                     initialBubbleX = bubbleParams.x;
                     initialBubbleY = bubbleParams.y;
                     dragging = false;
+                    longPressFired = false;
                     downAt = SystemClock.elapsedRealtime();
                     v.animate().scaleX(0.92f).scaleY(0.92f).setDuration(120).start();
+                    // Arm the long-press NOW — it fires after LONG_PRESS_MS while
+                    // still held, not on release.
+                    v.postDelayed(longPressRunnable, LONG_PRESS_MS);
                     return true;
                 case MotionEvent.ACTION_MOVE:
                     if (Math.abs(ev.getRawX() - initialRawX) > touchSlop
                             || Math.abs(ev.getRawY() - initialRawY) > touchSlop) {
+                        // A drag is not a long-press — disarm it.
+                        cancelLongPress();
                         hidePanel();
                         dragging = true;
                         int nx = Math.round(initialBubbleX + (ev.getRawX() - initialRawX));
@@ -246,29 +275,24 @@ public class FloatingBubbleService extends Service {
                     }
                     return true;
                 case MotionEvent.ACTION_UP:
+                    cancelLongPress();
                     v.animate().scaleX(1f).scaleY(1f).setDuration(150).start();
                     getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                             .putInt(KEY_BUBBLE_X, bubbleParams.x)
                             .putInt(KEY_BUBBLE_Y, bubbleParams.y)
                             .apply();
-                    if (!dragging) {
-                        long now = SystemClock.elapsedRealtime();
-                        if (now - downAt >= LONG_PRESS_MS) {
-                            v.performClick();
-                            hapticFeedback();
-                            if (miniWebView != null) {
-                                miniWebView.evaluateJavascript(
-                                    "window.__ss&&window.__ss.bubbleSkipNo2FA&&window.__ss.bubbleSkipNo2FA();", null);
-                            }
-                            if (!panelShowing) togglePanel();
-                        } else {
-                            v.performClick();
-                            togglePanel();
-                        }
+                    if (!dragging && !longPressFired) {
+                        // Short tap only — a long-press already ran its skip while
+                        // held and consumed this gesture, so release does NOT open
+                        // the panel or paste anything.
+                        v.performClick();
+                        togglePanel();
                     }
                     return true;
                 case MotionEvent.ACTION_CANCEL:
+                    cancelLongPress();
                     dragging = false;
+                    longPressFired = false;
                     v.animate().scaleX(1f).scaleY(1f).setDuration(150).start();
                     return true;
             }

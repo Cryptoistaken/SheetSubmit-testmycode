@@ -708,6 +708,69 @@ describe("bubble user flow (as a user uses it)", () => {
     expect(useSheetStore.getState().bubbleGetActiveRow()).toBe(1);
   });
 
+  it("No_2Fa marker rows are not flagged as duplicates of each other", async () => {
+    await openTestFile();
+    // Skip 2FA on two accounts via long-press — both get the No_2Fa marker.
+    useSheetStore.setState({
+      rows: [
+        { cookies: "c_user=1; a=b", uid: "1", twofakey: "" },
+        { cookies: "c_user=2; a=b", uid: "2", twofakey: "" },
+      ],
+      bubbleActiveRow: 0,
+      dupCells: new Set(),
+      dupRows: new Set(),
+      crossDupRows: new Set(),
+      hasDuplicates: false,
+    });
+    useSheetStore.getState().bubbleSkipNo2FA(); // row 0 → marker, advances to 1
+    useSheetStore.getState().bubbleSkipNo2FA(); // row 1 → marker, advances to 2
+    let s = useSheetStore.getState();
+    expect(s.rows[0].twofakey).toBe(NO_2FA_MARK);
+    expect(s.rows[1].twofakey).toBe(NO_2FA_MARK);
+    // Two identical "No_2Fa" placeholders must NOT be a duplicate pair.
+    expect(s.dupCells).toEqual(new Set());
+    expect(s.dupRows).toEqual(new Set());
+    expect(s.hasDuplicates).toBe(false);
+
+    // A second run of long-presses on the same marker rows must not re-add any
+    // stale marks either (alreadySkipped guard — no reset into a dirty state).
+    useSheetStore.setState({ bubbleActiveRow: 0 });
+    useSheetStore.getState().bubbleSkipNo2FA();
+    s = useSheetStore.getState();
+    expect(s.rows[0].twofakey).toBe(NO_2FA_MARK);
+    expect(s.dupCells.has("0:twofakey")).toBe(false);
+  });
+
+  it("pasting a key alongside a No_2Fa marker is not a duplicate & saves", async () => {
+    await openTestFile();
+    useSheetStore.setState({
+      rows: [
+        { cookies: "c_user=2; a=b", uid: "2", twofakey: NO_2FA_MARK },
+        { cookies: "", uid: "0", twofakey: "" },
+      ],
+      bubbleActiveRow: 1,
+    });
+    useSheetStore.getState().bubbleSaveKey("JBSWY3DPEHPK3PXP");
+    const s = useSheetStore.getState();
+    expect(s.rows[1].twofakey).toBe("JBSWY3DPEHPK3PXP");
+    expect(s.dupCells.has("1:twofakey")).toBe(false);
+    expect(s.dupCells.has("0:twofakey")).toBe(false);
+  });
+
+  it("pasting a key equal to another row's real key still blocks as duplicate", () => {
+    useSheetStore.setState({
+      rows: [
+        { cookies: "c_user=1; a=b", uid: "1", twofakey: "ABCDEFGHJKLM2345" },
+        { cookies: "", uid: "0", twofakey: "" },
+      ],
+      bubbleActiveRow: 1,
+    });
+    useSheetStore.getState().bubbleSaveKey("ABCDEFGHJKLM2345");
+    const s = useSheetStore.getState();
+    expect(s.rows[1].twofakey).toBe("");
+    expect(s.bubbleActiveRow).toBe(1);
+  });
+
   it("skip with no cookie does not write a marker", () => {
     useSheetStore.setState({
       rows: [{ cookies: "", uid: "", twofakey: "" }],

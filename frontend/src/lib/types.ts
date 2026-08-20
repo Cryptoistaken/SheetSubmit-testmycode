@@ -56,6 +56,13 @@ export function fileTypeDef(type?: string): FileTypeDef {
  * 2FA ("set empty by the bubble action"). Display-only — never exported. */
 export const NO_2FA_MARK = "No_2Fa";
 
+/** True when a column value is a bubble bookkeeping placeholder that must not
+ * participate in duplicate detection — two accounts skipped as "No 2FA" are
+ * not duplicates of each other, and must never block a real key from saving. */
+export function isNo2FAMark(colKey: string, value: string | null | undefined): boolean {
+  return colKey === "twofakey" && value === NO_2FA_MARK;
+}
+
 /** Value to write into a cell on export. Strips the bubble's No_2Fa marker so
  * skipped rows download with an empty 2fa cell. */
 export function exportCellValue(colKey: string, value: string | null | undefined): string {
