@@ -246,6 +246,51 @@ export async function downloadSheetRows(
   return true;
 }
 
+/** Custom admin download rows: 4 columns uid, password, cookies, 2fakey — no
+ * header. Only-cookie accounts export with an empty 2fa cell. */
+export function buildCustomRows(
+  rows: Row[],
+  password: string,
+  filter?: (row: Row) => boolean,
+): string[][] {
+  const data: string[][] = [];
+  rows.forEach((row) => {
+    if (filter && !filter(row)) return;
+    data.push([
+      row.uid ?? "",
+      password,
+      exportCellValue("cookies", row.cookies),
+      exportCellValue("twofakey", row.twofakey),
+    ]);
+  });
+  return data;
+}
+
+/** Custom admin download as xlsx (no header row), filename "<name><suffix> [N].xlsx". */
+export async function downloadCustomRows(
+  rows: Row[],
+  name: string,
+  password: string,
+  filter?: (row: Row) => boolean,
+  suffix?: string,
+): Promise<boolean> {
+  const data = buildCustomRows(rows, password, filter);
+  if (!data.length) return false;
+  const XLSX = await import("xlsx");
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+  const filename = name + (suffix || "") + " [" + data.length + "].xlsx";
+  if (isNativeWebView()) {
+    const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer;
+    (window as unknown as { Android: { download: (n: string, d: string) => void } })
+      .Android.download(filename, arrBufToDataUrl(buf, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+    return true;
+  }
+  XLSX.writeFile(wb, filename);
+  return true;
+}
+
 /** Pre-fill wa_status/wa_ban_reason from the ss:wa: cache (old hydrateWaCache,
  * used on home xlsx import so imported rows show WA state without re-checking). */
 export async function hydrateWaCache(rows: Row[]): Promise<void> {

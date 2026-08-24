@@ -2391,6 +2391,10 @@ body.is-touch table.grid td.dc { overflow: visible; }
     letter-spacing: -0.01em;
 }
 
+.download-opt-pw {
+    margin-bottom: 6px;
+}
+
 .download-opt-btn {
     padding: 8px 12px;
     border-radius: var(--r);
