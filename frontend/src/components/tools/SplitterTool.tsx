@@ -9,9 +9,9 @@ import { downloadXlsx, importXlsx, splitRows } from "@/lib/xlsx";
 
 function SplitIcon({ n }: { n: number }) {
   const c = "currentColor";
-  if (n === 2) return <svg width="22" height="14" viewBox="0 0 22 14" fill="none"><rect x="0.5" y="0.5" width="9" height="13" rx="1.5" stroke={c} strokeWidth="1.2" /><rect x="12.5" y="0.5" width="9" height="13" rx="1.5" stroke={c} strokeWidth="1.2" /></svg>;
-  if (n === 3) return <svg width="24" height="14" viewBox="0 0 24 14" fill="none"><rect x="0.5" y="0.5" width="6.4" height="13" rx="1.5" stroke={c} strokeWidth="1.2" /><rect x="8.8" y="0.5" width="6.4" height="13" rx="1.5" stroke={c} strokeWidth="1.2" /><rect x="17.1" y="0.5" width="6.4" height="13" rx="1.5" stroke={c} strokeWidth="1.2" /></svg>;
-  return <svg width="22" height="14" viewBox="0 0 22 14" fill="none"><rect x="0.5" y="0.5" width="9" height="5.8" rx="1.2" stroke={c} strokeWidth="1.1" /><rect x="12.5" y="0.5" width="9" height="5.8" rx="1.2" stroke={c} strokeWidth="1.1" /><rect x="0.5" y="7.7" width="9" height="5.8" rx="1.2" stroke={c} strokeWidth="1.1" /><rect x="12.5" y="7.7" width="9" height="5.8" rx="1.2" stroke={c} strokeWidth="1.1" /></svg>;
+  if (n === 2) return <svg width="28" height="14" viewBox="0 0 28 14" fill="none"><rect x="0.5" y="0.5" width="12" height="13" rx="1.6" stroke={c} strokeWidth="1.4" /><rect x="15.5" y="0.5" width="12" height="13" rx="1.6" stroke={c} strokeWidth="1.4" /></svg>;
+  if (n === 3) return <svg width="28" height="14" viewBox="0 0 28 14" fill="none"><rect x="0.5" y="0.5" width="8" height="13" rx="1.5" stroke={c} strokeWidth="1.4" /><rect x="10" y="0.5" width="8" height="13" rx="1.5" stroke={c} strokeWidth="1.4" /><rect x="19.5" y="0.5" width="8" height="13" rx="1.5" stroke={c} strokeWidth="1.4" /></svg>;
+  return <svg width="28" height="14" viewBox="0 0 28 14" fill="none"><rect x="0.5" y="0.5" width="12" height="5.8" rx="1.3" stroke={c} strokeWidth="1.4" /><rect x="15.5" y="0.5" width="12" height="5.8" rx="1.3" stroke={c} strokeWidth="1.4" /><rect x="0.5" y="7.7" width="12" height="5.8" rx="1.3" stroke={c} strokeWidth="1.4" /><rect x="15.5" y="7.7" width="12" height="5.8" rx="1.3" stroke={c} strokeWidth="1.4" /></svg>;
 }
 
 export default function SplitterTool() {
@@ -57,8 +57,12 @@ export default function SplitterTool() {
     try {
       const r = await api.getRows(id);
       if (!r || !r.length) throw new Error("No data");
-      setRows(r);
-      setCols(fileTypeDef(file.type).columns);
+      const c = fileTypeDef(file.type).columns;
+      const dl = c.filter((x) => x.key !== "uid");
+      const filtered = r.filter((row) => dl.some((col) => row[col.key]));
+      if (!filtered.length) throw new Error("No data");
+      setRows(filtered);
+      setCols(c);
       setName(file.name);
     } catch (e) {
       showToast((e as Error).message || "Failed to load");
@@ -71,16 +75,18 @@ export default function SplitterTool() {
     const parts = effectiveN;
     if (!Number.isFinite(parts) || parts < 1 || parts > 100) { showToast("Pick 1-100 parts"); return; }
     if (parts === 1) { showToast("Pick at least 2"); return; }
-    if (!rows.length) { showToast("Empty file"); return; }
-    const clamped = Math.min(parts, rows.length);
-    if (clamped !== parts) showToast(`Only ${rows.length} rows — splitting into ${clamped}`);
-    const chunks = splitRows(rows, clamped);
+    const dlCols = source === "existing" ? cols.filter((c) => c.key !== "uid") : cols;
+    const dataRows = rows.filter((r) => dlCols.some((c) => r[c.key]));
+    if (!dataRows.length) { showToast("Empty file"); return; }
+    const clamped = Math.min(parts, dataRows.length);
+    if (clamped !== parts) showToast(`Only ${dataRows.length} rows — splitting into ${clamped}`);
+    const chunks = splitRows(dataRows, clamped);
     const base = name.replace(/\.xlsx?$/i, "");
     try {
       for (let i = 0; i < chunks.length; i++) {
         const ch = chunks[i];
         // downloadXlsx adds .xlsx, name includes part + count
-        await downloadXlsx(ch, cols, `${base} - Part ${i + 1} [${ch.length}]`);
+        await downloadXlsx(ch, dlCols, `${base} - Part ${i + 1} [${ch.length}]`);
       }
       showToast(`Downloaded ${chunks.length} files`);
     } catch {
@@ -112,43 +118,65 @@ export default function SplitterTool() {
       )}
 
       {loading ? <div style={{ fontSize: 13, color: "var(--text3)" }}>Loading…</div> : null}
-      {rows ? <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 12 }}>{name} — {rows.length} rows</div> : null}
+      {rows ? <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text2)", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "var(--r)", padding: "6px 10px", marginBottom: 12, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--green)", flexShrink: 0, display: "inline-block" }} />{name} — {rows.length} rows</div> : null}
 
       {rows && cols ? (
         <div style={{ border: "1px solid var(--border)", borderRadius: "var(--rl)", padding: 16, background: "var(--bg)" }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Split into</div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-            {[2, 3, 4].map((v) => (
-              <button
-                key={v}
-                className="btn"
-                aria-label={`Split into ${v}`}
-                onClick={() => { setN(v); setCustom(""); }}
-                style={{
-                  borderColor: !custom && n === v ? "var(--blue)" : undefined,
-                  background: !custom && n === v ? "var(--blue-light)" : undefined,
-                  color: !custom && n === v ? "var(--blue)" : undefined,
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                }}
-              >
-                <SplitIcon n={v} /> {v}
-              </button>
-            ))}
-            <span style={{ fontSize: 12, color: "var(--text3)" }}>or</span>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>Split into</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "stretch", flexWrap: "wrap", marginBottom: 12 }}>
+            {[2, 3, 4].map((v) => {
+              const sel = !custom.trim() && n === v;
+              return (
+                <button
+                  key={v}
+                  className="btn"
+                  aria-label={`Split into ${v}`}
+                  aria-pressed={sel}
+                  onClick={() => { setN(v); setCustom(""); }}
+                  style={{
+                    flex: "1 1 72px",
+                    minWidth: 72,
+                    justifyContent: "center",
+                    padding: "10px 12px",
+                    fontWeight: 600,
+                    borderColor: sel ? "var(--blue)" : undefined,
+                    background: sel ? "var(--blue-light)" : undefined,
+                    color: sel ? "var(--blue)" : undefined,
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                  }}
+                >
+                  <SplitIcon n={v} /> {v}
+                </button>
+              );
+            })}
             <input
               className="modal-input"
               type="number"
-              min={1}
+              min={2}
               max={100}
-              placeholder="custom"
+              placeholder="Custom"
               aria-label="Custom parts"
               value={custom}
               onChange={(e) => setCustom(e.target.value)}
-              style={{ width: 90 }}
+              style={{ flex: "1 1 96px", minWidth: 96, width: 96, textAlign: "center", fontWeight: 600, height: 38, alignSelf: "stretch", borderColor: custom.trim() ? "var(--blue)" : undefined, background: custom.trim() ? "var(--blue-light)" : undefined, color: custom.trim() ? "var(--blue)" : undefined }}
             />
           </div>
-          <button className="btn btn-primary" onClick={doSplit}>Split &amp; download</button>
-          <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 8 }}>Files: “{name.replace(/\.xlsx?$/i, "")} - Part 1 [{rows.length ? Math.ceil(rows.length / (effectiveN || 2)) : 0}].xlsx” …</div>
+          {rows.length > 0 && effectiveN >= 2 ? (
+            <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "nowrap", overflow: "hidden" }}>
+              {Array.from({ length: Math.min(effectiveN, Math.min(rows.length, 6)) }).map((_, i, arr) => {
+                const total = Math.min(effectiveN, rows.length);
+                const per = Math.ceil(rows.length / total);
+                const extra = arr.length < total ? ` +${total - arr.length}` : "";
+                return (
+                  <div key={i} style={{ flex: 1, minWidth: 0, height: 30, borderRadius: "var(--r)", border: "1px solid var(--blue)", background: "var(--blue-light)", color: "var(--blue)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", padding: "0 4px" }}>
+                    {per}{i === arr.length - 1 ? extra : ""}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+          <button className="btn btn-primary" onClick={doSplit} style={{ width: "100%", justifyContent: "center", padding: "10px 14px", fontSize: 14, fontWeight: 600 }}>Split &amp; download</button>
+          <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Files: “{name.replace(/\.xlsx?$/i, "")} - Part 1 [{rows.length ? Math.ceil(rows.length / (effectiveN || 2)) : 0}].xlsx” …</div>
         </div>
       ) : null}
     </div>

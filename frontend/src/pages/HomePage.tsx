@@ -45,9 +45,12 @@ function ToolsList({ onOpenSplitter }: { onOpenSplitter: () => void }) {
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenSplitter(); } }}
         >
           <div className="file-card-icon" style={{ background: "var(--blue-light)", color: "var(--blue)" }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            {/* icon: allsvgicons.com/lucide/scissors.svg */}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="6" cy="6" r="3" />
+              <path d="M8.12 8.12L12 12m8-8L8.12 15.88" />
+              <circle cx="6" cy="18" r="3" />
+              <path d="M14.8 14.8L20 20" />
             </svg>
           </div>
           <div className="file-card-name">Splitter</div>
