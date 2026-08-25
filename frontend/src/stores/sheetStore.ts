@@ -1649,6 +1649,15 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       }
       return true;
     });
+    const pushInstant = (idx: number, newRow: Row) => {
+      const cur = get();
+      if (cur.fileId !== s.fileId) return;
+      const curRow = cur.rows[idx];
+      if (!curRow) return;
+      const out = cur.rows.slice();
+      out[idx] = { ...curRow, wa_status: newRow.wa_status, wa_ban_reason: newRow.wa_ban_reason, wa_page_name: newRow.wa_page_name, wa_linked_number: newRow.wa_linked_number };
+      set({ rows: out });
+    };
     const concurrency = 3;
     let pos = 0;
     const nextBatch = async (): Promise<void> => {
@@ -1667,6 +1676,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
             if (wa_linked_number !== undefined) newRow.wa_linked_number = wa_linked_number;
             rows[w.idx] = newRow;
             live[i] = { ...w, row: newRow };
+            pushInstant(w.idx, newRow);
           };
           try {
             const wa = (await api.pageCheck(w.row.cookies ?? "")) as {
