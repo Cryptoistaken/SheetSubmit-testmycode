@@ -61,6 +61,8 @@ const router = createBrowserRouter([
       { path: "files", element: <HomePage /> },
       { path: "archive", element: <HomePage /> },
       { path: "admin", element: <HomePage /> },
+      { path: "tools", element: <HomePage /> },
+      { path: "tools/splitter", element: <HomePage /> },
       { path: "admin/user", element: <Navigate to="/admin" replace /> },
       { path: "admin/user/:userId", element: <HomePage /> },
       { path: "admin/user/:userId/file", element: <AdminFileFallback /> },

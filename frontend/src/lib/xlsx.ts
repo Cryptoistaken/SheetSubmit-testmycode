@@ -327,3 +327,15 @@ export async function hydrateWaCache(rows: Row[]): Promise<void> {
     // swallow — old app ignores cache errors
   }
 }
+
+export function splitRows<T>(rows: T[], n: number): T[][] {
+  if (!rows.length || n <= 1) return n <= 1 ? [rows.slice()] : [rows.slice()];
+  const parts = Math.min(Math.max(1, Math.floor(n)), rows.length);
+  const size = Math.ceil(rows.length / parts);
+  const out: T[][] = [];
+  for (let i = 0; i < parts; i++) {
+    const c = rows.slice(i * size, (i + 1) * size);
+    if (c.length) out.push(c);
+  }
+  return out;
+}

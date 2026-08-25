@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router";
 
 const AdminView = lazy(() => import("@/components/home/AdminView"));
 const ArchiveView = lazy(() => import("@/components/home/ArchiveView"));
+const SplitterTool = lazy(() => import("@/components/tools/SplitterTool"));
 import Fab from "@/components/home/Fab";
 import FileGrid from "@/components/home/FileGrid";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,7 +15,7 @@ import type { FileType, SheetFile } from "@/lib/types";
 import { downloadXlsx, genId, hydrateWaCache, importXlsx, todayStr } from "@/lib/xlsx";
 import { useBubbleStore } from "@/stores/bubbleStore";
 
-type Tab = "files" | "archive" | "admin";
+type Tab = "files" | "archive" | "admin" | "tools";
 
 interface AndroidBridge {
   getBubbleFile?: () => string;
@@ -30,6 +31,34 @@ function getAndroid(): AndroidBridge | null {
   }
 }
 
+function ToolsList({ onOpenSplitter }: { onOpenSplitter: () => void }) {
+  return (
+    <div>
+      <h2 style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 4 }}>Tools</h2>
+      <p style={{ fontSize: 13, color: "var(--text3)", marginBottom: 16 }}>Admin utilities</p>
+      <div className="files-grid">
+        <div
+          className="file-card"
+          role="button"
+          tabIndex={0}
+          onClick={onOpenSplitter}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenSplitter(); } }}
+        >
+          <div className="file-card-icon" style={{ background: "var(--blue-light)", color: "var(--blue)" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+          </div>
+          <div className="file-card-name">Splitter</div>
+          <div className="file-card-meta">Split xlsx into N parts</div>
+          <span className="file-type-badge" style={{ background: "var(--blue-light)", color: "var(--blue)" }}>Xlsx</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -42,8 +71,13 @@ export default function HomePage() {
   // /files, /archive, /admin, /admin/user/:id (admin user detail). The active
   // tab is derived from the pathname so every section is deep-linkable.
   const path = location.pathname;
-  const tab: Tab =
-    path.startsWith("/admin") ? "admin" : path === "/archive" ? "archive" : "files";
+  const tab: Tab = path.startsWith("/tools")
+    ? "tools"
+    : path.startsWith("/admin")
+      ? "admin"
+      : path === "/archive"
+        ? "archive"
+        : "files";
 
   const [files, setFiles] = useState<SheetFile[] | null>(null);
   const [dupCounts, setDupCounts] = useState<Record<string, number>>({});
@@ -73,7 +107,7 @@ export default function HomePage() {
   }, [showToast]);
 
   useEffect(() => {
-    if (tab === "admin" && !user?.isAdmin) {
+    if ((tab === "admin" || tab === "tools") && !user?.isAdmin) {
       navigate("/", { replace: true });
     }
   }, [tab, user, navigate]);
@@ -285,6 +319,14 @@ export default function HomePage() {
             Admin
           </button>
         ) : null}
+        {user?.isAdmin ? (
+          <button
+            className={`home-tab${tab === "tools" ? " active" : ""}`}
+            onClick={() => navigate("/tools")}
+          >
+            Tools
+          </button>
+        ) : null}
       </div>
 
       {tab === "files" ? (
@@ -338,7 +380,19 @@ export default function HomePage() {
         </div>
       ) : null}
 
-      <Fab onCreate={createFile} onUpload={uploadFile} />
+      {tab === "tools" && user?.isAdmin ? (
+        <div className="home-pane" id="homePaneTools" style={{ padding: "32px 24px", maxWidth: 960, margin: "0 auto", width: "100%" }}>
+          {path === "/tools/splitter" ? (
+            <Suspense fallback={null}>
+              <SplitterTool />
+            </Suspense>
+          ) : (
+            <ToolsList onOpenSplitter={() => navigate("/tools/splitter")} />
+          )}
+        </div>
+      ) : null}
+
+      {tab === "files" ? <Fab onCreate={createFile} onUpload={uploadFile} /> : null}
 
       <div className={`sel-bar${selectionMode ? " open" : ""}`}>
         <span className="sel-bar-count">{selected.size} selected</span>
