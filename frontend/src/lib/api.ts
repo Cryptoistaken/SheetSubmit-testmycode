@@ -116,6 +116,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ cookie }),
     }),
+  waCheck: (cookie: string) =>
+    request<{ eligible?: boolean; error?: string | null; banReason?: string | null; linkedNumber?: string | null }>("/fb/wa-check", {
+      method: "POST",
+      body: JSON.stringify({ cookie }),
+    }),
   fbCheck: (uids: string[]) =>
     request<{ valid: string[]; dead: string[]; uncertain: string[] }>("/fb/check", {
       method: "POST",
