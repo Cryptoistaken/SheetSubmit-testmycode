@@ -13,6 +13,7 @@ const VersionHistory = lazy(() => import("./VersionHistory"));
 const DownloadOverlay = lazy(() => import("./DownloadOverlay"));
 const CustomDownloadOverlay = lazy(() => import("./CustomDownloadOverlay"));
 const UploadOverlay = lazy(() => import("./UploadOverlay"));
+const WaCheckOverlay = lazy(() => import("./WaCheckOverlay"));
 
 interface MenuPos {
   top: number;
@@ -68,7 +69,9 @@ export default function SheetToolbar() {
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [customDlOpen, setCustomDlOpen] = useState(false);
+  const [waOpen, setWaOpen] = useState(false);
   const [uploadRows, setUploadRows] = useState<Row[] | null>(null);
+  const file = useSheetStore((s) => s.file);
   const pendingMerge = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -344,6 +347,22 @@ export default function SheetToolbar() {
             Download custom
           </button>
         ) : null}
+        {user?.isAdmin && file?.type === "fb_cookie" ? (
+          <button
+            className="sheet-more-item"
+            onClick={() => {
+              close();
+              setWaOpen(true);
+            }}
+          >
+            {/* shield-check icon — lucide */}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
+            WA Check
+          </button>
+        ) : null}
         <button className="sheet-more-item" onClick={() => startUpload(false)}>
           <svg
             width="14"
@@ -493,6 +512,11 @@ export default function SheetToolbar() {
       {uploadRows ? (
         <Suspense fallback={null}>
           <UploadOverlay rows={uploadRows} onClose={() => setUploadRows(null)} />
+        </Suspense>
+      ) : null}
+      {waOpen ? (
+        <Suspense fallback={null}>
+          <WaCheckOverlay open={waOpen} onClose={() => setWaOpen(false)} />
         </Suspense>
       ) : null}
     </>

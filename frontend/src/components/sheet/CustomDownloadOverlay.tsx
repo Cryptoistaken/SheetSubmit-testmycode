@@ -96,7 +96,8 @@ export default function CustomDownloadOverlay({
                 key={o.key}
                 className={"download-opt-btn " + o.className}
                 aria-pressed={selected}
-                style={selected ? { borderColor: "var(--blue)", background: "var(--blue-light)", color: "var(--blue)" } : undefined}
+                style={(selected ? { borderColor: "var(--blue)", background: "var(--blue-light)", color: "var(--blue)", userSelect: "none", WebkitUserSelect: "none" } : { userSelect: "none", WebkitUserSelect: "none" }) as React.CSSProperties}
+                onContextMenu={(e) => e.preventDefault()}
                 onTouchStart={() => start(o.key)}
                 onTouchEnd={cancel}
                 onTouchMove={cancel}
@@ -120,8 +121,7 @@ export default function CustomDownloadOverlay({
               </button>
             );})}
             {inMulti ? (
-              <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center" }}>
-                <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{sel!.size} selected</span>
+              <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "center", alignItems: "center" }}>
                 <button className="btn btn-primary btn-sm" onClick={downloadMulti}>Download {sel!.size}</button>
                 <button className="btn btn-sm" onClick={() => setSel(null)}>Cancel</button>
               </div>
