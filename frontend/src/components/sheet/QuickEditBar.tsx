@@ -72,14 +72,14 @@ export default function QuickEditBar() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M9 5H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" /><rect x="9" y="3" width="8" height="6" rx="1.5" /></svg>
         </button>
         <button ref={clearRef} className="qeb-icon-btn" title="Clear" onClick={() => { trigger(clearRef.current, "anim-clear"); useSheetStore.getState().quickEditClear(); }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 2v6" /><path d="M8 6a4 4 0 0 0 4 4 4 4 0 0 0 4-4H8" /><path d="M8 10c0 2 1.2 3.5 4 4 2.8-.5 4-2 4-4" /><path d="M8 14v3M12 14v6M16 14v3" /><path d="M8 20h8" /></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M20 20H7a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h9l7 7v7a2 2 0 0 1-2 2Z" /><path d="M17 8l5 5" /><path d="M9 14l4 4" /></svg>
         </button>
         <div className="qeb-divider" />
         <button ref={compactRef} className="qeb-icon-btn" title="Compact" onClick={() => { trigger(compactRef.current, "anim-clear"); useSheetStore.getState().removeEmptyRows(); }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 14h6v6" /><path d="M20 10V4h-6" /><path d="M14 10l6-6" /><path d="M10 14l-6 6" /></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="8 3 4 3 4 7" /><polyline points="16 3 20 3 20 7" /><polyline points="8 21 4 21 4 17" /><polyline points="16 21 20 21 20 17" /><line x1="4" y1="12" x2="20" y2="12" /></svg>
         </button>
         <button ref={deadRef} className="qeb-icon-btn" title="Delete dead" onClick={() => { trigger(deadRef.current, "anim-clear"); useSheetStore.getState().deleteDeadRows(); }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M9 13a3 3 0 1 0 6 0 3 3 0 0 0-6 0Z" /><path d="M2 17a5 5 0 0 1 10 0" /><path d="M16 17l5 5M21 17l-5 5" /></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
         </button>
       </div>
 
