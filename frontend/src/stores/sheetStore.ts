@@ -2386,13 +2386,15 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     if (Object.keys(cur).length === 0) delete map[colKey];
     else map[colKey] = cur;
     const json = Object.keys(map).length ? stringifyStyles(map) : "";
+    const prevVal = (row._cellStyles as string) ?? "";
     const newRows = s.rows.slice();
     newRows[rowIdx] = json ? { ...row, _cellStyles: json } : { ...row, _cellStyles: "" } as Row;
     if (!json) delete (newRows[rowIdx] as Record<string, unknown>)._cellStyles;
-    // mirror commitCell journal coalescing
+    const undoStack = [...s.undoStack, { rowIdx, colKey: "_cellStyles", prevVal } as CellDelta];
+    if (undoStack.length > 100) undoStack.shift();
     const changeJournal = [...s.changeJournal.filter((op) => op.rowIdx !== rowIdx), { rowIdx, cols: { _cellStyles: json } as Record<string, string> }];
     if (changeJournal.length > MAX_JOURNAL) changeJournal.splice(0, changeJournal.length - MAX_JOURNAL);
-    set({ rows: newRows, isDirty: true, changeJournal });
+    set({ rows: newRows, isDirty: true, changeJournal, undoStack, redoStack: [] });
     get().persist();
   },
 }));

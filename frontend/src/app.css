@@ -1636,16 +1636,18 @@ th.rh:hover {
 .qeb-formula-bar{display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:32px;padding:12px 18px}
 .qeb-input{flex:1;border:none;outline:none;width:100%;background:transparent;font-size:14px;font-family:var(--mono);color:var(--text);min-width:0;padding:0}
 .qeb-input::placeholder{color:var(--text3)}
-.qeb-toolbar{display:flex;align-items:center;gap:6px;padding:12px 4px 4px;flex-wrap:wrap}
-.qeb-icon-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;color:var(--text2);background:transparent;border:none;cursor:pointer;position:relative;transition:background .12s,color .12s}
+.qeb-toolbar{display:flex;align-items:center;gap:8px;padding:12px 4px 4px;flex-wrap:wrap}
+.qeb-icon-btn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;color:var(--text2);background:transparent;border:none;cursor:pointer;position:relative;transition:background .12s,color .12s}
 .qeb-icon-btn:hover{background:var(--bg3);color:var(--text)}
 .qeb-icon-btn.active{background:var(--blue-light);color:var(--blue)}
 .qeb-icon-btn:active{transform:scale(0.97)}
-.qeb-divider{width:1px;height:22px;background:var(--border);margin:0 4px;flex-shrink:0}
+.qeb-divider{width:1px;height:26px;background:var(--border);margin:0 4px;flex-shrink:0}
 .qeb-color-bar{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:16px;height:3px;border-radius:1px;pointer-events:none}
 .qeb-handle{width:72px;height:4px;border-radius:2px;background:var(--border2);margin:12px auto 0}
-.qeb-picker{display:none;position:absolute;top:0;left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:10px 12px 10px;box-shadow:var(--shadow-lg);z-index:20}
-.qeb-picker.open{display:block;animation:qebPickerIn .18s var(--ease-out) both;transform-origin:28% 32%}
+.qeb-picker{display:none;position:absolute;bottom:calc(100% + 10px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:10px 12px 10px;box-shadow:var(--shadow-lg);z-index:20}
+.qeb-picker.open{display:block;animation:qebPickerIn .18s var(--ease-out) both;transform-origin:28% 100%}
+.qeb-picker-close{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:6px;border:none;background:transparent;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.qeb-picker-close:hover{background:var(--bg3);color:var(--text)}
 @keyframes qebPickerIn{from{opacity:0;transform:scale(0.94) translateY(4px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .qeb-picker-title{font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
 .qeb-picker-tabs{display:flex;background:var(--bg3);border-radius:7px;padding:2px;gap:1px;margin-bottom:6px}
