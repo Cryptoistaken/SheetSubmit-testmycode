@@ -1661,7 +1661,7 @@ th.rh:hover {
 .qeb-swatch:hover{opacity:0.85}
 .qeb-swatch:last-child{border-right:none}
 .qeb-swatch.none{background:var(--bg);position:relative;display:flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;border-radius:50%;border:1px dashed var(--border2) !important}
-.qeb-swatch.none::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;border:1.5px solid var(--text3);left:50%;top:50%;transform:translate(-50%,-50%)}
+.qeb-swatch.none::after{display:none}
 .qeb-swatch.none::before{content:'';position:absolute;width:16px;height:1.5px;background:var(--text3);left:50%;top:50%;transform:translate(-50%,-50%) rotate(-45deg);border-radius:1px}
 .qeb-swatch.selected{outline:2.5px solid var(--text);outline-offset:-1px;box-shadow:0 0 0 3px var(--blue-light);z-index:2}
 .qeb-hex-input{display:none;flex:1;border:1px solid var(--border2);border-radius:7px;padding:5px 7px;font-size:11px;font-family:var(--mono);outline:none;color:var(--text);background:var(--bg)}
