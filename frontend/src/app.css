@@ -1645,7 +1645,7 @@ th.rh:hover {
 .qeb-icon-btn.active{background:var(--blue-light);color:var(--blue)}
 .qeb-icon-btn:active{transform:scale(0.97)}
 .qeb-divider{width:1px;height:26px;background:var(--border);margin:0 4px;flex-shrink:0}
-.qeb-color-bar{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:16px;height:3px;border-radius:1px;pointer-events:none}
+.qeb-color-bar{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:16px;height:3px;border-radius:1px;pointer-events:none}
 .qeb-handle{display:none}
 .qeb-picker{display:none;position:absolute;bottom:calc(100% + 10px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:10px 12px 10px;box-shadow:var(--shadow-lg);z-index:20}
 .qeb-picker.open{display:block;animation:qebPickerIn .18s var(--ease-out) both;transform-origin:28% 100%}
