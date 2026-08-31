@@ -25,17 +25,6 @@ export default function QuickEditBar() {
   const pasteRef = useRef<HTMLButtonElement>(null);
   const clearRef = useRef<HTMLButtonElement>(null);
 
-  if (!qebOpen || !selectedCell) return null;
-
-  const { rowIdx, colIdx } = selectedCell;
-  const styles = parseStyles(rows[rowIdx] ?? ({} as never))[colIdx] ?? {};
-  const bold = !!styles.bold;
-  const textColor = styles.color ?? "#000000";
-  const cellBg = styles.bg ?? "transparent";
-
-  const setStyle = (patch: { bg?: string | null; color?: string | null; bold?: boolean | null }) =>
-    (useSheetStore.getState().setCellStyle as (r:number,c:string,p: typeof patch)=>void)(rowIdx, colIdx, patch);
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setPicker(null); };
     const onDown = (e: MouseEvent) => {
@@ -46,6 +35,17 @@ export default function QuickEditBar() {
     document.addEventListener("mousedown", onDown);
     return () => { document.removeEventListener("keydown", onKey); document.removeEventListener("mousedown", onDown); };
   }, []);
+
+  if (!qebOpen || !selectedCell) return null;
+
+  const { rowIdx, colIdx } = selectedCell;
+  const styles = parseStyles(rows[rowIdx] ?? ({} as never))[colIdx] ?? {};
+  const bold = !!styles.bold;
+  const textColor = styles.color ?? "#000000";
+  const cellBg = styles.bg ?? "transparent";
+
+  const setStyle = (patch: { bg?: string | null; color?: string | null; bold?: boolean | null }) =>
+    (useSheetStore.getState().setCellStyle as (r:number,c:string,p: typeof patch)=>void)(rowIdx, colIdx, patch);
 
   return (
     <div className="qeb-bar open">
