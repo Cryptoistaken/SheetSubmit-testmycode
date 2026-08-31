@@ -96,7 +96,12 @@ export default function QuickEditBar() {
             <div className="qeb-picker-title" style={{ margin: 0 }}>Cell fill</div>
             <button className="qeb-picker-close" onClick={() => setPicker(null)} aria-label="Close"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg></button>
           </div>
-          <div className="qeb-swatch-grid"><button className={`qeb-swatch none${cellBg === "transparent" ? " selected" : ""}`} onClick={() => setStyle({ bg: null })} title="No fill" aria-label="No fill" /><>{PALETTE.map(c => <button key={c} className={`qeb-swatch${cellBg === c ? " selected" : ""}`} style={{ background: c }} onClick={() => setStyle({ bg: c })} aria-label={c} />)}</></div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button className={`qeb-swatch none${cellBg === "transparent" ? " selected" : ""}`} onClick={() => setStyle({ bg: null })} title="No fill" aria-label="No fill" style={{ flex: "none" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 2 20 20" /><path d="M8.35 2.69A10 10 0 0 1 21.3 15.65" /><path d="M19.08 19.08A10 10 0 1 1 4.92 4.92" /></svg>
+            </button>
+            <div className="qeb-swatch-grid" style={{ flex: 1 }}><>{PALETTE.map(c => <button key={c} className={`qeb-swatch${cellBg === c ? " selected" : ""}`} style={{ background: c }} onClick={() => setStyle({ bg: c })} aria-label={c} />)}</></div>
+          </div>
         </div>
       )}
     </div>
