@@ -59,7 +59,7 @@ export default function QuickEditBar() {
           <span className="qeb-color-bar" style={{ background: textColor }} />
         </button>
         <button className="qeb-icon-btn" title="Cell fill" onClick={() => { setPicker(p => p === "cell" ? null : "cell"); setTabCell("basic"); }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3l7 7-8 8-7-7 8-8Z" /><path d="M5 19l3-3" /><path d="M14 14l3 3 -1 1 -3 -3" /></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M12 3l7 7-8 8-7-7 8-8Z" /><path d="M5 19l3-3" /><path d="M14 14l3 3 -1 1 -3 -3" /><path d="M9.5 9.5l1.8 1.8" strokeWidth="1.2" opacity="0.6" /><path d="M10.8 7.2l1.2 1.2" strokeWidth="1" opacity="0.4" /></svg>
           <span className="qeb-color-bar" style={{ background: cellBg === "transparent" ? "transparent" : cellBg }} />
         </button>
         <div className="qeb-divider" />
