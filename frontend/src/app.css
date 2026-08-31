@@ -1660,7 +1660,7 @@ th.rh:hover {
 .qeb-swatch{flex:1;min-width:0;height:32px;border-radius:0;cursor:pointer;border:none;border-right:1px solid rgba(255,255,255,0.5);transition:opacity .08s}
 .qeb-swatch:hover{opacity:0.85}
 .qeb-swatch:last-child{border-right:none}
-.qeb-swatch.none{background:var(--bg);position:relative;display:flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;border-radius:50%;border:1px dashed var(--border2) !important}
+.qeb-swatch.none{background:transparent;position:relative;display:flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--text3) !important;margin-right:6px}
 .qeb-swatch.none::after{display:none}
 .qeb-swatch.none::before{content:'';position:absolute;width:16px;height:1.5px;background:var(--text3);left:50%;top:50%;transform:translate(-50%,-50%) rotate(-45deg);border-radius:1px}
 .qeb-swatch.selected{outline:2.5px solid var(--text);outline-offset:-1px;box-shadow:0 0 0 3px var(--blue-light);z-index:2}

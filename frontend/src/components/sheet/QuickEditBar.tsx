@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { parseStyles, useSheetStore } from "@/stores/sheetStore";
 import CellEditor from "./CellEditor";
 
-const PALETTE = ["#000000","#434343","#666666","#999999","#B7B7B7","#CCCCCC","#D9D9D9","#FFFFFF","#ee0000","#ff6d00","#fbbc04","#16a34a","#00acc1","#0070f3","#6366f1","#795548"];
+const PALETTE = ["#000000","#434343","#666666","#999999","#B7B7B7","#CCCCCC","#D9D9D9","#ee0000","#ff6d00","#fbbc04","#16a34a","#00acc1","#0070f3","#6366f1","#795548"];
 
 function trigger(el: HTMLElement | null, cls: string) {
   if (!el) return;
@@ -87,7 +87,7 @@ export default function QuickEditBar() {
             <div className="qeb-picker-title" style={{ margin: 0 }}>Text color</div>
             <button className="qeb-picker-close" onClick={() => setPicker(null)} aria-label="Close"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg></button>
           </div>
-          <div className="qeb-swatch-grid">{PALETTE.map(c => <button key={c} className={`qeb-swatch${textColor === c ? " selected" : ""}`} style={{ background: c }} onClick={() => { setStyle({ color: c }); setPicker(null); }} aria-label={c} />)}</div>
+          <div className="qeb-swatch-grid">{PALETTE.map(c => <button key={c} className={`qeb-swatch${textColor === c ? " selected" : ""}`} style={{ background: c }} onClick={() => setStyle({ color: c })} aria-label={c} />)}</div>
         </div>
       )}
       {picker === "cell" && (
@@ -96,7 +96,7 @@ export default function QuickEditBar() {
             <div className="qeb-picker-title" style={{ margin: 0 }}>Cell fill</div>
             <button className="qeb-picker-close" onClick={() => setPicker(null)} aria-label="Close"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg></button>
           </div>
-          <div className="qeb-swatch-grid"><button className={`qeb-swatch none${cellBg === "transparent" ? " selected" : ""}`} onClick={() => { setStyle({ bg: null }); setPicker(null); }} title="No fill" aria-label="No fill" /><>{PALETTE.map(c => <button key={c} className={`qeb-swatch${cellBg === c ? " selected" : ""}`} style={{ background: c }} onClick={() => { setStyle({ bg: c }); setPicker(null); }} aria-label={c} />)}</></div>
+          <div className="qeb-swatch-grid"><button className={`qeb-swatch none${cellBg === "transparent" ? " selected" : ""}`} onClick={() => setStyle({ bg: null })} title="No fill" aria-label="No fill" /><>{PALETTE.map(c => <button key={c} className={`qeb-swatch${cellBg === c ? " selected" : ""}`} style={{ background: c }} onClick={() => setStyle({ bg: c })} aria-label={c} />)}</></div>
         </div>
       )}
     </div>
