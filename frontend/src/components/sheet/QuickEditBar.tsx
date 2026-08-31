@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { parseStyles, useSheetStore } from "@/stores/sheetStore";
 import CellEditor from "./CellEditor";
 
@@ -24,6 +25,10 @@ export default function QuickEditBar() {
   const copyRef = useRef<HTMLButtonElement>(null);
   const pasteRef = useRef<HTMLButtonElement>(null);
   const clearRef = useRef<HTMLButtonElement>(null);
+  const compactRef = useRef<HTMLButtonElement>(null);
+  const waRef = useRef<HTMLButtonElement>(null);
+  const { user } = useAuth();
+  const isAdmin = !!user?.isAdmin;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setPicker(null); };
@@ -72,6 +77,15 @@ export default function QuickEditBar() {
         <button ref={clearRef} className="qeb-icon-btn" title="Clear" onClick={() => { trigger(clearRef.current, "anim-clear"); useSheetStore.getState().quickEditClear(); }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6l-1 12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg>
         </button>
+        <div className="qeb-divider" />
+        <button ref={compactRef} className="qeb-icon-btn" title="Compact" onClick={() => { trigger(compactRef.current, "anim-clear"); useSheetStore.getState().removeEmptyRows(); }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 14h6v6" /><path d="M20 10V4h-6" /><path d="M14 10l6-6" /><path d="M10 14l-6 6" /></svg>
+        </button>
+        {isAdmin && (
+          <button ref={waRef} className="qeb-icon-btn" title="WA Check" onClick={() => { trigger(waRef.current, "anim-copy"); void useSheetStore.getState().runWaChecksWaFiltered((_, idx) => idx === rowIdx); }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.32 7.13 19.79 19.79 0 0 1 8.08 2.03 2 2 0 0 1 10 4v3a2 2 0 0 1-.57 1.42l-1.27 1.27a16 16 0 0 0 6 6l1.27-1.27A2 2 0 0 1 17.14 14a12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.97 2.22z" /></svg>
+          </button>
+        )}
       </div>
 
       <div className="qeb-handle" />
