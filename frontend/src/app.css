@@ -1639,8 +1639,8 @@ th.rh:hover {
 .qeb-formula-bar{display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:32px;padding:10px 20px;width:100%;max-width:none;margin:0}
 .qeb-input{flex:1;border:none;outline:none;width:100%;background:transparent;font-size:16px;line-height:1.4;font-family:var(--mono);color:var(--text);min-width:0;padding:0}
 .qeb-input::placeholder{color:var(--text3)}
-.qeb-toolbar{display:flex;align-items:center;gap:4px;padding:10px 2px 0;flex-wrap:nowrap;overflow:hidden;max-width:720px;margin:0 auto;width:100%;justify-content:center}
-.qeb-icon-btn{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;color:var(--text2);background:transparent;border:none;cursor:pointer;position:relative;transition:background .12s,color .12s;flex-shrink:0}
+.qeb-toolbar{display:flex;align-items:center;gap:6px;padding:10px 2px 0;flex-wrap:nowrap;overflow:hidden;max-width:720px;margin:0 auto;width:100%;justify-content:center}
+.qeb-icon-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;color:var(--text2);background:transparent;border:none;cursor:pointer;position:relative;transition:background .12s,color .12s;flex-shrink:0}
 .qeb-icon-btn:hover{background:var(--bg3);color:var(--text)}
 .qeb-icon-btn.active{background:var(--blue-light);color:var(--blue)}
 .qeb-icon-btn:active{transform:scale(0.97)}

@@ -72,7 +72,7 @@ export default function QuickEditBar() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M9 5H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" /><rect x="9" y="3" width="8" height="6" rx="1.5" /></svg>
         </button>
         <button ref={clearRef} className="qeb-icon-btn" title="Clear" onClick={() => { trigger(clearRef.current, "anim-clear"); useSheetStore.getState().quickEditClear(); }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M20 20H7a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h9l7 7v7a2 2 0 0 1-2 2Z" /><path d="M17 8l5 5" /><path d="M9 14l4 4" /></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 2v6" /><path d="M8 6a4 4 0 0 0 4 4 4 4 0 0 0 4-4H8" /><path d="M8 10c0 2 1.2 3.5 4 4 2.8-.5 4-2 4-4" /><path d="M8 14v3M12 14v6M16 14v3" /><path d="M8 20h8" /></svg>
         </button>
         <div className="qeb-divider" />
         <button ref={compactRef} className="qeb-icon-btn" title="Compact" onClick={() => { trigger(compactRef.current, "anim-clear"); useSheetStore.getState().removeEmptyRows(); }}>
