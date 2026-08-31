@@ -16,6 +16,15 @@ export default function QuickEditBar() {
   const qebOpen = useSheetStore((s) => s.qebOpen);
   const selectedCell = useSheetStore((s) => s.selectedCell);
   const rows = useSheetStore((s) => s.rows);
+  const [picker, setPicker] = useState<"text"|"cell"|null>(null);
+  const [tabText, setTabText] = useState<"basic"|"custom">("basic");
+  const [tabCell, setTabCell] = useState<"basic"|"custom">("basic");
+  const [hexText, setHexText] = useState("#000000");
+  const [hexCell, setHexCell] = useState("#ffffff");
+  const copyRef = useRef<HTMLButtonElement>(null);
+  const pasteRef = useRef<HTMLButtonElement>(null);
+  const clearRef = useRef<HTMLButtonElement>(null);
+
   if (!qebOpen || !selectedCell) return null;
 
   const { rowIdx, colIdx } = selectedCell;
@@ -23,16 +32,6 @@ export default function QuickEditBar() {
   const bold = !!styles.bold;
   const textColor = styles.color ?? "#000000";
   const cellBg = styles.bg ?? "transparent";
-
-  const [picker, setPicker] = useState<"text"|"cell"|null>(null);
-  const [tabText, setTabText] = useState<"basic"|"custom">("basic");
-  const [tabCell, setTabCell] = useState<"basic"|"custom">("basic");
-  const [hexText, setHexText] = useState(textColor);
-  const [hexCell, setHexCell] = useState(cellBg === "transparent" ? "#ffffff" : cellBg);
-
-  const copyRef = useRef<HTMLButtonElement>(null);
-  const pasteRef = useRef<HTMLButtonElement>(null);
-  const clearRef = useRef<HTMLButtonElement>(null);
 
   const setStyle = (patch: { bg?: string | null; color?: string | null; bold?: boolean | null }) =>
     (useSheetStore.getState().setCellStyle as (r:number,c:string,p: typeof patch)=>void)(rowIdx, colIdx, patch);
