@@ -4,7 +4,7 @@ import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
-import { useSheetStore } from "@/stores/sheetStore";
+import { parseStyles, useSheetStore } from "@/stores/sheetStore";
 import { vibrate } from "@/lib/utils";
 import type { ColumnDef, CrossDupEntry } from "@/lib/types";
 import { Check, Phone, TriangleAlert } from "lucide-react";
@@ -641,7 +641,8 @@ const GridCell = memo(function GridCell({
   colKey: string;
   colIndex: number;
 }) {
-  const value = useSheetStore((s) => s.rows[rowIdx]?.[colKey] ?? "");
+  const row = useSheetStore((s) => s.rows[rowIdx]);
+  const value = (row?.[colKey] ?? "") as string;
   const sel = useSheetStore((s) => s.selectedItems.has(rowIdx + ":" + colKey));
   const dup = useSheetStore((s) => s.dupCells.has(rowIdx + ":" + colKey));
   const invalid = useSheetStore((s) => s.invalidCells.has(rowIdx + ":" + colKey));
@@ -663,6 +664,7 @@ const GridCell = memo(function GridCell({
       ? s.draft
       : null,
   );
+  const styles = parseStyles(row ?? ({} as never))[colKey];
 
   return (
     <td
@@ -679,12 +681,25 @@ const GridCell = memo(function GridCell({
       aria-colindex={colIndex + 1}
       tabIndex={active ? 0 : -1}
       aria-label={value + (dup ? " (duplicate)" : "")}
+      style={{
+        backgroundColor: styles?.bg || undefined,
+        color: styles?.color || undefined,
+        fontWeight: styles?.bold ? 700 : undefined,
+      }}
     >
       <div className="cell-inner">
         {inlineActive ? (
           <InlineEditInput />
         ) : (
-          <span className="cell-text">{draft ?? value}</span>
+          <span
+            className="cell-text"
+            style={{
+              color: styles?.color || undefined,
+              fontWeight: styles?.bold ? 700 : undefined,
+            }}
+          >
+            {draft ?? value}
+          </span>
         )}
       </div>
     </td>

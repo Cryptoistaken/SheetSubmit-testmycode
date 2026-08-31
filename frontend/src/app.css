@@ -1612,113 +1612,62 @@ th.rh:hover {
     cursor: not-allowed;
 }
 
-/* ── Quick edit bar (qeb) ── */
+/* ── Quick edit bar (qeb) — card ── */
 .qeb-bar {
     position: fixed;
     z-index: 600;
-    background: var(--bg);
+    background: var(--bg2);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 16px;
     display: none;
-    align-items: center;
-    padding: 4px 4px 4px 12px;
-    gap: 4px;
+    flex-direction: column;
+    padding: 14px 14px 10px;
+    gap: 0;
     box-shadow: var(--shadow-lg);
     min-width: 0;
     max-width: calc(100vw - 16px);
     left: 8px;
     bottom: 5vh;
     right: 8px;
+    animation: qebIn .22s var(--ease-out) both;
 }
-
-.qeb-bar.open {
-    display: flex;
-}
-
-.qeb-input {
-    flex: 1;
-    border: none;
-    outline: none;
-    font-family: var(--mono);
-    font-size: 13px;
-    color: var(--text);
-    background: transparent;
-    padding: 6px;
-    min-width: 0;
-}
-
-.qeb-input::placeholder {
-    color: var(--text3);
-}
-
-.qeb-right {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-}
-
-.qeb-chip {
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--blue);
-    background: var(--blue-light);
-    padding: 2px 6px;
-    border-radius: 4px;
-    white-space: nowrap;
-    flex-shrink: 0;
-    font-family: var(--mono);
-    text-transform: uppercase;
-    letter-spacing: -0.01em;
-}
-
-.qeb-paste-btn {
-    padding: 4px 10px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text2);
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: var(--r);
-    cursor: pointer;
-    transition: background 0.1s;
-    white-space: nowrap;
-}
-
-.qeb-paste-btn:hover {
-    background: var(--bg4);
-    color: var(--text);
-}
-
-.qeb-paste-btn:active {
-    transform: scale(0.98);
-}
-
-.qeb-icon-btn.save {
-    background: #000;
-    color: #fff;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: var(--r);
-    width: auto;
-    padding: 0 12px;
-    height: 28px;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.1s;
-}
-
-.dark .qeb-icon-btn.save {
-    background: #fff;
-    color: #000;
-}
-
-.qeb-icon-btn.save:active {
-    transform: scale(0.98);
-}
+@keyframes qebIn{from{opacity:0;transform:scale(0.96) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.qeb-bar.open { display: flex; }
+.qeb-formula-bar{display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:32px;padding:12px 18px}
+.qeb-input{flex:1;border:none;outline:none;width:100%;background:transparent;font-size:14px;font-family:var(--mono);color:var(--text);min-width:0;padding:0}
+.qeb-input::placeholder{color:var(--text3)}
+.qeb-toolbar{display:flex;align-items:center;gap:6px;padding:12px 4px 4px;flex-wrap:wrap}
+.qeb-icon-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;color:var(--text2);background:transparent;border:none;cursor:pointer;position:relative;transition:background .12s,color .12s}
+.qeb-icon-btn:hover{background:var(--bg3);color:var(--text)}
+.qeb-icon-btn.active{background:var(--blue-light);color:var(--blue)}
+.qeb-icon-btn:active{transform:scale(0.97)}
+.qeb-divider{width:1px;height:22px;background:var(--border);margin:0 4px;flex-shrink:0}
+.qeb-color-bar{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:16px;height:3px;border-radius:1px;pointer-events:none}
+.qeb-handle{width:72px;height:4px;border-radius:2px;background:var(--border2);margin:12px auto 0}
+.qeb-picker{display:none;position:absolute;top:0;left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:10px 12px 10px;box-shadow:var(--shadow-lg);z-index:20}
+.qeb-picker.open{display:block;animation:qebPickerIn .18s var(--ease-out) both;transform-origin:28% 32%}
+@keyframes qebPickerIn{from{opacity:0;transform:scale(0.94) translateY(4px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.qeb-picker-title{font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.qeb-picker-tabs{display:flex;background:var(--bg3);border-radius:7px;padding:2px;gap:1px;margin-bottom:6px}
+.qeb-picker-tab{flex:1;text-align:center;padding:4px 0;border-radius:5px;font-size:10px;font-weight:600;color:var(--text2);cursor:pointer;border:none;background:none;transition:all .12s;line-height:1}
+.qeb-picker-tab.active{background:var(--bg);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,0.08)}
+.qeb-swatch-grid{display:flex;gap:0;margin-bottom:6px;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.qeb-swatch{flex:1;min-width:0;height:32px;border-radius:0;cursor:pointer;border:none;border-right:1px solid rgba(255,255,255,0.5);transition:opacity .08s}
+.qeb-swatch:hover{opacity:0.85}
+.qeb-swatch:last-child{border-right:none}
+.qeb-swatch.none{background:var(--bg);position:relative;display:flex;align-items:center;justify-content:center}
+.qeb-swatch.none::after{content:'✕';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text2)}
+.qeb-swatch.selected{outline:2.5px solid var(--text);outline-offset:-1px;box-shadow:0 0 0 3px var(--blue-light);z-index:2}
+.qeb-hex-input{display:none;flex:1;border:1px solid var(--border2);border-radius:7px;padding:5px 7px;font-size:11px;font-family:var(--mono);outline:none;color:var(--text);background:var(--bg)}
+.qeb-hex-input.open{display:block}
+.qeb-hex-input:focus{border-color:var(--text)}
+@keyframes copyPop{0%{transform:scale(1)}30%{transform:scale(1.18)}60%{transform:scale(0.92)}100%{transform:scale(1)}}
+@keyframes pasteSlide{0%{transform:translateY(0)}30%{transform:translateY(3px)}60%{transform:translateY(-1px)}100%{transform:translateY(0)}}
+@keyframes shake{0%,100%{transform:translateX(0) rotate(0)}20%{transform:translateX(-2px) rotate(-6deg)}40%{transform:translateX(2px) rotate(6deg)}60%{transform:translateX(-1px) rotate(-3deg)}80%{transform:translateX(1px) rotate(3deg)}}
+.anim-copy{animation:copyPop .35s cubic-bezier(0.34,1.56,0.64,1)}
+.anim-paste{animation:pasteSlide .36s ease}
+.anim-clear{animation:shake .42s ease}
+.qeb-icon-btn.copied{color:var(--blue) !important;background:var(--blue-light) !important}
 
 .cell-editing {
     box-shadow: inset 0 0 0 2px var(--blue) !important;

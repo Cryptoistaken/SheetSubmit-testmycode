@@ -43,6 +43,24 @@ export interface SelectedCell {
 
 export type SheetStatus = "idle" | "loading" | "ready" | "error";
 
+export type CellStyle = { bg?: string; color?: string; bold?: boolean };
+export type CellStylesMap = Record<string, CellStyle>;
+
+export function parseStyles(row: Row): CellStylesMap {
+  const raw = row._cellStyles as string | undefined;
+  if (!raw) return {};
+  try {
+    const v = JSON.parse(raw);
+    return v && typeof v === "object" ? (v as CellStylesMap) : {};
+  } catch {
+    return {};
+  }
+}
+
+function stringifyStyles(map: CellStylesMap): string {
+  return JSON.stringify(map);
+}
+
 export function makeEmptyRow(columns: ColumnDef[]): Row {
   const nr: Row = {};
   columns.forEach((c) => {
@@ -337,6 +355,11 @@ export interface SheetState {
   bubbleSaveCookie: (text: string) => void;
   bubbleSaveKey: (text: string) => Promise<void>;
   bubbleSkipNo2FA: () => void;
+  setCellStyle: (
+    rowIdx: number,
+    colKey: string,
+    patch: { bg?: string | null; color?: string | null; bold?: boolean | null },
+  ) => void;
 }
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
@@ -2340,6 +2363,37 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       // The marked row is complete — move to the next one that needs a cookie.
       get().bubbleAdvanceActiveRow();
     }
+  },
+
+  setCellStyle: (rowIdx, colKey, patch) => {
+    const s = get();
+    const row = s.rows[rowIdx];
+    if (!row) return;
+    const map = parseStyles(row);
+    const cur = map[colKey] ? { ...map[colKey] } : ({} as CellStyle);
+    if (patch.bg !== undefined) {
+      if (patch.bg == null || patch.bg === "transparent" || patch.bg === "") delete cur.bg;
+      else cur.bg = patch.bg;
+    }
+    if (patch.color !== undefined) {
+      if (patch.color == null || patch.color === "transparent" || patch.color === "") delete cur.color;
+      else cur.color = patch.color;
+    }
+    if (patch.bold !== undefined) {
+      if (patch.bold == null || patch.bold === false) delete cur.bold;
+      else cur.bold = true;
+    }
+    if (Object.keys(cur).length === 0) delete map[colKey];
+    else map[colKey] = cur;
+    const json = Object.keys(map).length ? stringifyStyles(map) : "";
+    const newRows = s.rows.slice();
+    newRows[rowIdx] = json ? { ...row, _cellStyles: json } : { ...row, _cellStyles: "" } as Row;
+    if (!json) delete (newRows[rowIdx] as Record<string, unknown>)._cellStyles;
+    // mirror commitCell journal coalescing
+    const changeJournal = [...s.changeJournal.filter((op) => op.rowIdx !== rowIdx), { rowIdx, cols: { _cellStyles: json } as Record<string, string> }];
+    if (changeJournal.length > MAX_JOURNAL) changeJournal.splice(0, changeJournal.length - MAX_JOURNAL);
+    set({ rows: newRows, isDirty: true, changeJournal });
+    get().persist();
   },
 }));
 
