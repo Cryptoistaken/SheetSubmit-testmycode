@@ -1927,8 +1927,13 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
         try {
           const wa = (await api.waCheck(w.row.cookies ?? "")) as { eligible?: boolean; error?: string | null; banReason?: string | null; linkedNumber?: string | null } | null;
           if (wa && wa.eligible === true) apply("eligible", wa.banReason ?? null, undefined, wa.linkedNumber ?? null);
-          else apply(wa?.error ? "error" : "ineligible", wa ? wa.banReason ?? null : null, undefined, wa ? wa.linkedNumber ?? null : null);
+          else {
+            // WA check must only turn green, never downgrade an already-green dot
+            if (s.rows[w.idx]?.wa_status === "eligible") return;
+            apply(wa?.error ? "error" : "ineligible", wa ? wa.banReason ?? null : null, undefined, wa ? wa.linkedNumber ?? null : null);
+          }
         } catch {
+          if (s.rows[w.idx]?.wa_status === "eligible") return;
           apply("error");
         }
       }));

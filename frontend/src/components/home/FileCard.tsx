@@ -32,6 +32,8 @@ export default function FileCard({
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heldRef = useRef(false);
   const movedRef = useRef(false);
+  const startRef = useRef<{ x: number; y: number } | null>(null);
+  const suppressClickRef = useRef(false);
 
   const clearHold = () => {
     if (holdTimer.current) {
@@ -44,9 +46,11 @@ export default function FileCard({
     return () => clearHold();
   }, []);
 
-  const onPointerDown = () => {
+  const onPointerDown = (e: React.PointerEvent) => {
     heldRef.current = false;
     movedRef.current = false;
+    startRef.current = { x: e.clientX, y: e.clientY };
+    suppressClickRef.current = false;
     clearHold();
     holdTimer.current = setTimeout(() => {
       heldRef.current = true;
@@ -54,15 +58,34 @@ export default function FileCard({
     }, 500);
   };
 
-  const onPointerMove = () => {
-    movedRef.current = true;
-    clearHold();
+  const onPointerMove = (e: React.PointerEvent) => {
+    const s = startRef.current;
+    if (!s) {
+      movedRef.current = true;
+      clearHold();
+      return;
+    }
+    if (Math.hypot(e.clientX - s.x, e.clientY - s.y) > 8) {
+      movedRef.current = true;
+      clearHold();
+    }
   };
 
   const onPointerUp = () => {
     const held = heldRef.current;
     clearHold();
     if (held || movedRef.current) return;
+    if (selectionMode) onToggleSelect();
+    else onOpen();
+    suppressClickRef.current = true;
+    setTimeout(() => {
+      suppressClickRef.current = false;
+    }, 300);
+  };
+
+  const onClick = () => {
+    if (suppressClickRef.current) return;
+    if (heldRef.current || movedRef.current) return;
     if (selectionMode) onToggleSelect();
     else onOpen();
   };
@@ -75,11 +98,13 @@ export default function FileCard({
       className={`file-card${selected ? " selected" : ""}`}
       role="button"
       tabIndex={0}
+      style={{ touchAction: "manipulation" } as React.CSSProperties}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={clearHold}
       onPointerLeave={clearHold}
+      onClick={onClick}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
