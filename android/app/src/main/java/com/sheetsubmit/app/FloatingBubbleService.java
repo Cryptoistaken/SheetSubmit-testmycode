@@ -45,9 +45,9 @@ import android.widget.Toast;
 
 public class FloatingBubbleService extends Service {
 
-    private static final String TAG = "FloatingBubble";
-    private static final String CHANNEL_ID = "bubble";
-    private static final int NOTIFICATION_ID = 3;
+    private static final String TAG = "SheetSubmitBubble";
+    private static final String CHANNEL_ID = "sheetsubmit_bubble";
+    private static final int NOTIFICATION_ID = 103;
     private static final long LONG_PRESS_MS = 500L;
     private static final String PREFS_NAME = "sheetsubmit";
     private static final String KEY_FILE = "bubble_file";
@@ -96,8 +96,46 @@ public class FloatingBubbleService extends Service {
         });
     }
 
-private String claudeCodeHtml() {
-        return "<html><head><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>html,body{margin:0;background:transparent;overflow:hidden;width:100%;height:100%}#a{width:100%;height:100%;display:grid;place-items:center}</style></head><body><div id=\"a\" style=\"width:100%;height:100%;display:grid;place-items:center\"><svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 3 16 13\" width=\"100%\" height=\"100%\" style=\"display:block\"><defs><style>.action-body{transform-origin:7.5px 13px;animation:action-body 16s infinite ease-in-out}.breathe-anim{transform-origin:7.5px 13px;animation:breathe 3.2s infinite ease-in-out}.shadow-anim{transform-origin:7.5px 15.5px;animation:shadow-action 16s infinite ease-in-out}.arm-l{transform-origin:1px 10px;animation:arm-l-idle 16s infinite ease-in-out}.arm-r{transform-origin:14px 10px;animation:arm-r-idle 16s infinite ease-in-out}.eyes-look{animation:eye-track 16s infinite ease-in-out}.eyes-blink{transform-origin:7.5px 9px;animation:eye-blink 16s infinite linear}.yawn-mouth{transform-origin:7.5px 11px;animation:yawn-mouth-anim 16s infinite ease-in-out;opacity:0}.yawn-tear{animation:tear-fall 16s infinite ease-in-out;opacity:0}@keyframes breathe{0%,100%{transform:scale(1,1) translate(0,0)}50%{transform:scale(1.02,0.98) translate(0,0.5px)}}@keyframes action-body{0%,8%,26%,38%,55%,80%,100%{transform:scale(1,1) translate(0,0)}12%,22%{transform:scale(1,1) translate(1px,0)}42%,50%{transform:scale(1,1) translate(-1px,0)}30%,36%{transform:scale(1,1) translate(0.5px,0)}60%{transform:scale(0.95,1.05) translate(0px,-1px)}65%{transform:scale(0.9,1.1) translate(0px,-2px)}72%{transform:scale(1.05,0.95) translate(0px,1px)}76%{transform:scale(1,1) translate(0px,0px)}}@keyframes shadow-action{0%,8%,26%,38%,55%,80%,100%{transform:scaleX(1) translate(0,0);opacity:0.5}12%,22%{transform:scaleX(1) translate(1px,0);opacity:0.5}42%,50%{transform:scaleX(1) translate(-1px,0);opacity:0.5}30%,36%{transform:scaleX(1) translate(0.5px,0);opacity:0.5}60%{transform:scaleX(0.95) translate(0,0);opacity:0.45}65%{transform:scaleX(0.9) translate(0,0);opacity:0.4}72%{transform:scaleX(1.05) translate(0,0);opacity:0.55}76%{transform:scaleX(1) translate(0,0);opacity:0.5}}@keyframes eye-track{0%,10%,25%,38%,52%,58%,80%,100%{transform:translate(0px,0px)}12%,22%{transform:translate(3px,0px)}42%,50%{transform:translate(-3px,0px)}60%,75%{transform:translate(0px,-1px)}}@keyframes eye-blink{0%,3%,7%,18%,22%,43%,47%,56%,83%,87%,100%{transform:scaleY(1)}5%,20%,45%,85%{transform:scaleY(0.1)}60%{transform:scaleY(1)}62%,72%{transform:scaleY(0.1)}75%{transform:scaleY(1)}}@keyframes arm-l-idle{0%,28%{transform:translate(0,0) rotate(0deg)}30%{transform:translate(1px,-3px) rotate(15deg)}31%{transform:translate(1.5px,-4px) rotate(35deg)}32%{transform:translate(0.5px,-2.5px) rotate(0deg)}33%{transform:translate(1.5px,-4px) rotate(35deg)}34%{transform:translate(0.5px,-2.5px) rotate(0deg)}35%{transform:translate(1.5px,-4px) rotate(35deg)}36%{transform:translate(0.5px,-2.5px) rotate(0deg)}38%,58%{transform:translate(0,0) rotate(0deg)}62%{transform:translate(-1px,-2px) rotate(45deg)}65%{transform:translate(-2px,-3px) rotate(80deg)}72%{transform:translate(0px,1px) rotate(-15deg)}76%,100%{transform:translate(0,0) rotate(0deg)}}@keyframes arm-r-idle{0%,58%{transform:translate(0,0) rotate(0deg)}62%{transform:translate(1px,-2px) rotate(-45deg)}65%{transform:translate(2px,-3px) rotate(-80deg)}72%{transform:translate(0px,1px) rotate(15deg)}76%,100%{transform:translate(0,0) rotate(0deg)}}@keyframes yawn-mouth-anim{0%,58%,76%,100%{opacity:0;transform:scale(0.1)}60%{opacity:1;transform:scale(0.5,0.2)}65%{opacity:1;transform:scale(1.1,1.4)}72%{opacity:1;transform:scale(0.6,0.4)}75%{opacity:0;transform:scale(0.1)}}@keyframes tear-fall{0%,64%,80%,100%{opacity:0;transform:translateY(0)}66%{opacity:1;transform:translateY(0)}72%{opacity:1;transform:translateY(2.5px)}75%{opacity:0;transform:translateY(3px)}}</style></defs><rect class=\"shadow-anim\" x=\"3\" y=\"15\" width=\"9\" height=\"1\" fill=\"#000000\" opacity=\"0.5\"/><g fill=\"currentColor\"><rect x=\"3\" y=\"13\" width=\"1\" height=\"2\"/><rect x=\"5\" y=\"13\" width=\"1\" height=\"2\"/><rect x=\"9\" y=\"13\" width=\"1\" height=\"2\"/><rect x=\"11\" y=\"13\" width=\"1\" height=\"2\"/></g><g class=\"action-body\"><g class=\"breathe-anim\"><rect x=\"2\" y=\"6\" width=\"11\" height=\"7\" fill=\"currentColor\"/><g class=\"arm-l\"><rect x=\"0\" y=\"9\" width=\"2\" height=\"2\" fill=\"currentColor\"/></g><g class=\"arm-r\"><rect x=\"13\" y=\"9\" width=\"2\" height=\"2\" fill=\"currentColor\"/></g><rect class=\"yawn-mouth\" x=\"6\" y=\"10\" width=\"3\" height=\"2\" fill=\"#000\"/><g class=\"eyes-look\" fill=\"#000\"><g class=\"eyes-blink\"><rect x=\"4\" y=\"8\" width=\"1\" height=\"2\"/><rect x=\"10\" y=\"8\" width=\"1\" height=\"2\"/></g></g><rect class=\"yawn-tear\" x=\"3.5\" y=\"10\" width=\"1\" height=\"1\" fill=\"#40C4FF\"/></g></g></svg></div></body></html>";
+private String claudeCodeHtml(String color) {
+        String c = color != null ? color : "#000000";
+        String safe = c.replace("\"","").replace("'","").replace("<","").replace(">","");
+        return "<html><head><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>html,body{margin:0;background:transparent;overflow:hidden;width:100%;height:100%}#a{width:100%;height:100%;display:grid;place-items:center}</style></head><body><div id=\"a\" style=\"color:" + safe + ";width:100%;height:100%;display:grid;place-items:center\"><svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 3 16 13\" width=\"100%\" height=\"100%\" style=\"display:block\"><defs><style>.action-body{transform-origin:7.5px 13px;animation:action-body 16s infinite ease-in-out}.breathe-anim{transform-origin:7.5px 13px;animation:breathe 3.2s infinite ease-in-out}.shadow-anim{transform-origin:7.5px 15.5px;animation:shadow-action 16s infinite ease-in-out}.arm-l{transform-origin:1px 10px;animation:arm-l-idle 16s infinite ease-in-out}.arm-r{transform-origin:14px 10px;animation:arm-r-idle 16s infinite ease-in-out}.eyes-look{animation:eye-track 16s infinite ease-in-out}.eyes-blink{transform-origin:7.5px 9px;animation:eye-blink 16s infinite linear}.yawn-mouth{transform-origin:7.5px 11px;animation:yawn-mouth-anim 16s infinite ease-in-out;opacity:0}.yawn-tear{animation:tear-fall 16s infinite ease-in-out;opacity:0}@keyframes breathe{0%,100%{transform:scale(1,1) translate(0,0)}50%{transform:scale(1.02,0.98) translate(0,0.5px)}}@keyframes action-body{0%,8%,26%,38%,55%,80%,100%{transform:scale(1,1) translate(0,0)}12%,22%{transform:scale(1,1) translate(1px,0)}42%,50%{transform:scale(1,1) translate(-1px,0)}30%,36%{transform:scale(1,1) translate(0.5px,0)}60%{transform:scale(0.95,1.05) translate(0px,-1px)}65%{transform:scale(0.9,1.1) translate(0px,-2px)}72%{transform:scale(1.05,0.95) translate(0px,1px)}76%{transform:scale(1,1) translate(0px,0px)}}@keyframes shadow-action{0%,8%,26%,38%,55%,80%,100%{transform:scaleX(1) translate(0,0);opacity:0.5}12%,22%{transform:scaleX(1) translate(1px,0);opacity:0.5}42%,50%{transform:scaleX(1) translate(-1px,0);opacity:0.5}30%,36%{transform:scaleX(1) translate(0.5px,0);opacity:0.5}60%{transform:scaleX(0.95) translate(0,0);opacity:0.45}65%{transform:scaleX(0.9) translate(0,0);opacity:0.4}72%{transform:scaleX(1.05) translate(0,0);opacity:0.55}76%{transform:scaleX(1) translate(0,0);opacity:0.5}}@keyframes eye-track{0%,10%,25%,38%,52%,58%,80%,100%{transform:translate(0px,0px)}12%,22%{transform:translate(3px,0px)}42%,50%{transform:translate(-3px,0px)}60%,75%{transform:translate(0px,-1px)}}@keyframes eye-blink{0%,3%,7%,18%,22%,43%,47%,56%,83%,87%,100%{transform:scaleY(1)}5%,20%,45%,85%{transform:scaleY(0.1)}60%{transform:scaleY(1)}62%,72%{transform:scaleY(0.1)}75%{transform:scaleY(1)}}@keyframes arm-l-idle{0%,28%{transform:translate(0,0) rotate(0deg)}30%{transform:translate(1px,-3px) rotate(15deg)}31%{transform:translate(1.5px,-4px) rotate(35deg)}32%{transform:translate(0.5px,-2.5px) rotate(0deg)}33%{transform:translate(1.5px,-4px) rotate(35deg)}34%{transform:translate(0.5px,-2.5px) rotate(0deg)}35%{transform:translate(1.5px,-4px) rotate(35deg)}36%{transform:translate(0.5px,-2.5px) rotate(0deg)}38%,58%{transform:translate(0,0) rotate(0deg)}62%{transform:translate(-1px,-2px) rotate(45deg)}65%{transform:translate(-2px,-3px) rotate(80deg)}72%{transform:translate(0px,1px) rotate(-15deg)}76%,100%{transform:translate(0,0) rotate(0deg)}}@keyframes arm-r-idle{0%,58%{transform:translate(0,0) rotate(0deg)}62%{transform:translate(1px,-2px) rotate(-45deg)}65%{transform:translate(2px,-3px) rotate(-80deg)}72%{transform:translate(0px,1px) rotate(15deg)}76%,100%{transform:translate(0,0) rotate(0deg)}}@keyframes yawn-mouth-anim{0%,58%,76%,100%{opacity:0;transform:scale(0.1)}60%{opacity:1;transform:scale(0.5,0.2)}65%{opacity:1;transform:scale(1.1,1.4)}72%{opacity:1;transform:scale(0.6,0.4)}75%{opacity:0;transform:scale(0.1)}}@keyframes tear-fall{0%,64%,80%,100%{opacity:0;transform:translateY(0)}66%{opacity:1;transform:translateY(0)}72%{opacity:1;transform:translateY(2.5px)}75%{opacity:0;transform:translateY(3px)}}</style></defs><rect class=\"shadow-anim\" x=\"3\" y=\"15\" width=\"9\" height=\"1\" fill=\"#000000\" opacity=\"0.5\"/><g fill=\"currentColor\"><rect x=\"3\" y=\"13\" width=\"1\" height=\"2\"/><rect x=\"5\" y=\"13\" width=\"1\" height=\"2\"/><rect x=\"9\" y=\"13\" width=\"1\" height=\"2\"/><rect x=\"11\" y=\"13\" width=\"1\" height=\"2\"/></g><g class=\"action-body\"><g class=\"breathe-anim\"><rect x=\"2\" y=\"6\" width=\"11\" height=\"7\" fill=\"currentColor\"/><g class=\"arm-l\"><rect x=\"0\" y=\"9\" width=\"2\" height=\"2\" fill=\"currentColor\"/></g><g class=\"arm-r\"><rect x=\"13\" y=\"9\" width=\"2\" height=\"2\" fill=\"currentColor\"/></g><rect class=\"yawn-mouth\" x=\"6\" y=\"10\" width=\"3\" height=\"2\" fill=\"#000\"/><g class=\"eyes-look\" fill=\"#000\"><g class=\"eyes-blink\"><rect x=\"4\" y=\"8\" width=\"1\" height=\"2\"/><rect x=\"10\" y=\"8\" width=\"1\" height=\"2\"/></g></g><rect class=\"yawn-tear\" x=\"3.5\" y=\"10\" width=\"1\" height=\"1\" fill=\"#40C4FF\"/></g></g></svg></div></body></html>";
+    }
+    private String claudeCodeHtml() { return claudeCodeHtml("#000000"); }
+    private View buildClaudeFace(int iconPx, int col) {
+        FrameLayout wrap = new FrameLayout(this);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(col);
+        bg.setCornerRadius(iconPx * 230f / 1024f);
+        wrap.setBackground(bg);
+        FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
+        wrap.setLayoutParams(wlp);
+        wrap.setClipChildren(false);
+        int eyeW = Math.round(iconPx * 120f / 1024f);
+        int eyeH = Math.round(iconPx * 240f / 1024f);
+        int eyeR = Math.round(iconPx * 20f / 1024f);
+        int hlW = Math.round(iconPx * 40f / 1024f);
+        int hlH = Math.round(iconPx * 60f / 1024f);
+        int hlR = Math.round(iconPx * 10f / 1024f);
+        int lx = Math.round(iconPx * 250f / 1024f);
+        int ly = Math.round(iconPx * 350f / 1024f);
+        int rx = Math.round(iconPx * 650f / 1024f);
+        int hlLx = Math.round(iconPx * 270f / 1024f);
+        int hlLy = Math.round(iconPx * 380f / 1024f);
+        int hlRx = Math.round(iconPx * 670f / 1024f);
+        View eyeL = new View(this);
+        GradientDrawable dL = new GradientDrawable(); dL.setColor(0xFF111111); dL.setCornerRadius(eyeR); eyeL.setBackground(dL);
+        FrameLayout.LayoutParams lpL = new FrameLayout.LayoutParams(eyeW, eyeH); lpL.gravity = Gravity.TOP | Gravity.START; lpL.leftMargin = lx; lpL.topMargin = ly; eyeL.setLayoutParams(lpL); wrap.addView(eyeL);
+        View eyeR2 = new View(this);
+        GradientDrawable dR = new GradientDrawable(); dR.setColor(0xFF111111); dR.setCornerRadius(eyeR); eyeR2.setBackground(dR);
+        FrameLayout.LayoutParams lpR = new FrameLayout.LayoutParams(eyeW, eyeH); lpR.gravity = Gravity.TOP | Gravity.START; lpR.leftMargin = rx; lpR.topMargin = ly; eyeR2.setLayoutParams(lpR); wrap.addView(eyeR2);
+        View hlL = new View(this);
+        GradientDrawable dHL = new GradientDrawable(); dHL.setColor(0xFFFFFFFF); dHL.setCornerRadius(hlR); hlL.setBackground(dHL);
+        FrameLayout.LayoutParams lpHL = new FrameLayout.LayoutParams(hlW, hlH); lpHL.gravity = Gravity.TOP | Gravity.START; lpHL.leftMargin = hlLx; lpHL.topMargin = hlLy; hlL.setLayoutParams(lpHL); wrap.addView(hlL);
+        View hlR2 = new View(this);
+        GradientDrawable dHR = new GradientDrawable(); dHR.setColor(0xFFFFFFFF); dHR.setCornerRadius(hlR); hlR2.setBackground(dHR);
+        FrameLayout.LayoutParams lpHR = new FrameLayout.LayoutParams(hlW, hlH); lpHR.gravity = Gravity.TOP | Gravity.START; lpHR.leftMargin = hlRx; lpHR.topMargin = hlLy; hlR2.setLayoutParams(lpHR); wrap.addView(hlR2);
+        return wrap;
     }
     private void playClaudeCode(String name) {
         try { if (claudeCodeView != null) claudeCodeView.evaluateJavascript("window.playClaude('" + name + "')", null); } catch (Exception ignored) {}
@@ -157,12 +195,17 @@ private String claudeCodeHtml() {
                     ws.setJavaScriptEnabled(true);
                     wv.setVerticalScrollBarEnabled(false);
                     wv.setHorizontalScrollBarEnabled(false);
+                    wv.setClickable(false);
+                    wv.setFocusable(false);
+                    wv.setFocusableInTouchMode(false);
                     wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ return false; }});
                     FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
                     wv.setLayoutParams(wlp);
-                    wv.loadDataWithBaseURL(null, claudeCodeHtml(), "text/html", "utf-8", null);
+                    wv.loadDataWithBaseURL(null, claudeCodeHtml(color), "text/html", "utf-8", null);
                     claudeCodeView = wv;
                     root.addView(wv);
+                } else if ("claude".equals(icon)) {
+                    root.addView(buildClaudeFace(iconPx, col));
                 } else {
                     ImageView iv = new ImageView(this);
                     int res = R.drawable.bubble_icon;
@@ -319,12 +362,18 @@ private String claudeCodeHtml() {
             ws.setJavaScriptEnabled(true);
             wv.setVerticalScrollBarEnabled(false);
             wv.setHorizontalScrollBarEnabled(false);
+            wv.setClickable(false);
+            wv.setFocusable(false);
+            wv.setFocusableInTouchMode(false);
             wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ return false; }});
             FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
             wv.setLayoutParams(wlp);
-            wv.loadDataWithBaseURL(null, claudeCodeHtml(), "text/html", "utf-8", null);
+            wv.loadDataWithBaseURL(null, claudeCodeHtml(cfgColor), "text/html", "utf-8", null);
             claudeCodeView = wv;
             root.addView(wv);
+        } else if ("claude".equals(cfgIcon)) {
+            int col2; try { col2 = Color.parseColor(cfgColor); } catch (Exception ignored) { col2 = 0xFF000000; }
+            root.addView(buildClaudeFace(iconPx, col2));
         } else {
             ImageView icon = new ImageView(this);
             int res = R.drawable.bubble_icon;
