@@ -125,7 +125,28 @@ public class MainActivity extends Activity {
                     if (newUrl.contains("start=login") && !newUrl.contains("login_")) {
                         newUrl = newUrl.replace("start=login", "start=login_" + did);
                     }
-                    openExternal(newUrl);
+                    // tg:// needs Telegram app; if not installed fallback to https://t.me
+                    if (newUrl.startsWith("tg:")) {
+                        try {
+                            Uri tgUri = Uri.parse(newUrl);
+                            String domain = tgUri.getQueryParameter("domain");
+                            String start = tgUri.getQueryParameter("start");
+                            String httpsFallback = null;
+                            if (domain != null) {
+                                httpsFallback = "https://t.me/" + domain + (start != null ? "?start=" + Uri.encode(start) : "");
+                            }
+                            Intent test = new Intent(Intent.ACTION_VIEW, Uri.parse(newUrl));
+                            if (test.resolveActivity(getPackageManager()) != null) {
+                                openExternal(newUrl);
+                            } else if (httpsFallback != null) {
+                                openExternal(httpsFallback);
+                            } else {
+                                view.loadUrl(newUrl);
+                            }
+                        } catch (Exception e) { openExternal(newUrl); }
+                    } else {
+                        openExternal(newUrl);
+                    }
                     return true;
                 }
                 if (host.equals(Config.APP_HOST)) {
