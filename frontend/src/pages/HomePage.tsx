@@ -271,14 +271,16 @@ export default function HomePage() {
       finalName = name + " (" + suffix + ")";
     }
     const id = genId();
+    let created: import("@/lib/types").SheetFile;
     try {
-      const created = await api.createFile({ id, name: finalName, type, password, poolEnabled });
-      navigate("/file/" + created.id);
+      created = await api.createFile({ id, name: finalName, type, password, poolEnabled });
     } catch {
       showToast("Failed to create file");
       return;
     }
     showToast(fileTypeDef(type).label + " file created");
+    if (useBubbleStore.getState().pickMode) { loadFiles(); return; }
+    navigate("/file/" + created.id);
   };
 
   const createFile = async (type: FileType) => openCreatePw(type);
@@ -306,6 +308,7 @@ export default function HomePage() {
       return;
     }
     showToast("Imported " + dataCount + " rows");
+    if (useBubbleStore.getState().pickMode) { loadFiles(); return; }
     navigate("/file/" + created.id);
   };
 
