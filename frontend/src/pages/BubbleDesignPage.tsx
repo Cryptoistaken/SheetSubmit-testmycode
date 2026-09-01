@@ -101,7 +101,7 @@ export default function BubbleDesignPage(){
 
         <div className="bd-card">
           <h3><i>◉</i> Color</h3>
-          <div style={{display:"flex",gap:1,flexWrap:"nowrap",overflowX:"auto",overflowY:"hidden",marginTop:10,paddingBottom:4,scrollbarWidth:"none"}}>
+          <div style={{display:"flex",gap:0,flexWrap:"nowrap",overflowX:"auto",overflowY:"hidden",marginTop:10,paddingBottom:4,scrollbarWidth:"none"}}>
             <button className="bd-sw" aria-label="Custom" title="Custom" onClick={()=>{ setCustomOpen(o=>!o); setCpText(state.color); }} style={{width:20,height:30,padding:0,display:"grid",placeItems:"center",background:"#fff",border:"1px solid var(--border,#e2e8f0)",borderRadius:0,flexShrink:0}}>
               <span style={{width:10,height:10,borderRadius:0,background:"conic-gradient(from 0deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#8b5cf6,#ef4444)",border:"1px solid rgba(0,0,0,.15)",display:"block"}}/>
             </button>
