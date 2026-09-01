@@ -27,6 +27,7 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
   const [search, setSearch] = useState("");
   const [renameFileId, setRenameFileId] = useState<string | null>(null);
   const [renameName, setRenameName] = useState("");
+  const [userFileTab, setUserFileTab] = useState<"files" | "archive">("files");
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadList = useCallback(async () => {
@@ -42,25 +43,38 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
   }, []);
 
   const showList = useCallback(() => {
-    navigate("/admin");
+    // Use navigate to keep browser history correct: detail -> list.
+    // If we arrived via direct /admin/user/:id link, this returns to /admin.
+    if (detailUser) navigate("/admin");
+    else navigate("/admin");
+  }, [navigate, detailUser]);
+
+  const showDetail = useCallback((userId: string) => {
+    // Push route — HomePage's initialUserId + useEffect will load detail.
+    // This makes UI Back and system back (browser) both return to /admin list.
+    navigate(`/admin/user/${userId}`);
   }, [navigate]);
 
-  const showDetail = useCallback(async (userId: string) => {
-    const [u, a] = await Promise.all([api.adminUser(userId), api.adminUserArchive(userId)]);
-    setDetailUser(u);
-    setDetailArchived(a);
-  }, []);
-
-  // Deep-link sync: /admin/user/:id opens that user's detail; back on /admin resets.
+  // Deep-link sync: /admin/user/:id opens that user's detail; /admin resets to list.
+  // Fetch detail directly here (not via showDetail's navigate) to avoid loop.
   useEffect(() => {
     if (initialUserId) {
-      void showDetail(initialUserId);
+      void (async () => {
+        try {
+          const [u, a] = await Promise.all([api.adminUser(initialUserId), api.adminUserArchive(initialUserId)]);
+          setDetailUser(u);
+          setDetailArchived(a);
+        } catch {
+          // user not found — back to list
+          navigate("/admin");
+        }
+      })();
     } else {
       setDetailUser(null);
       setDetailArchived([]);
       loadList();
     }
-  }, [initialUserId, showDetail, loadList]);
+  }, [initialUserId, loadList, navigate]);
 
   const onSearch = (q: string) => {
     setSearch(q);
@@ -210,13 +224,18 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
         </button>
         <div className="admin-user-header">
           <div className="admin-detail-header">
-            {detailUser.photoUrl ? (
-              <img className="admin-detail-avatar" src={detailUser.photoUrl} alt="" />
-            ) : (
-              <div className="admin-detail-avatar admin-user-avatar-placeholder">
-                {userName(detailUser).charAt(0).toUpperCase()}
-              </div>
-            )}
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              {detailUser.photoUrl ? (
+                <img className="admin-detail-avatar" src={detailUser.photoUrl} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+              ) : (
+                <div className="admin-detail-avatar admin-user-avatar-placeholder">
+                  {userName(detailUser).charAt(0).toUpperCase()}
+                </div>
+              )}
+              {detailUser.isAdmin ? (
+                <span title="Admin" style={{ position: "absolute", right: -3, bottom: -3, width: 14, height: 14, borderRadius: "50%", background: "var(--blue)", border: "2px solid var(--bg)", display: "grid", placeItems: "center", color: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,.15)" }}><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7" /></svg></span>
+              ) : null}
+            </div>
             <div className="admin-detail-info">
               <div className="admin-detail-name">{userName(detailUser)}</div>
               <div className="admin-detail-meta">
@@ -233,7 +252,7 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
               </div>
             </div>
             <div className="admin-detail-actions">
-              {detailUser.id !== me?.id ? (
+              {!detailUser.isAdmin && detailUser.id !== me?.id ? (
                 <>
                   {detailUser.banned ? (
                     <button className="btn btn-sm" onClick={unbanUser}>
@@ -248,12 +267,23 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
                     Delete User
                   </button>
                 </>
+              ) : detailUser.isAdmin ? (
+                <span style={{ fontSize: 12, color: "var(--text3)", fontWeight: 600 }}>Admin — no delete/ban</span>
               ) : null}
             </div>
           </div>
         </div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          <div className="pool-switch">
+            <button className={userFileTab === "files" ? "active" : ""} onClick={() => setUserFileTab("files")}>Files <span style={{ marginLeft: 6, fontFamily: "var(--mono)", fontSize: 11, opacity: .7 }}>{files.length}</span></button>
+            <button className={userFileTab === "archive" ? "active" : ""} onClick={() => setUserFileTab("archive")}>Archive <span style={{ marginLeft: 6, fontFamily: "var(--mono)", fontSize: 11, opacity: .7 }}>{detailArchived.length}</span></button>
+          </div>
+        </div>
+
         <div className="admin-file-list">
-          {files.map((f) => {
+          {(userFileTab === "files" ? files : detailArchived).length === 0 && userFileTab === "files" ? <div style={{ gridColumn: "1/-1", padding: 16, textAlign: "center", color: "var(--text3)", fontSize: 13 }}>No files</div> : null}
+          {(userFileTab === "archive" && detailArchived.length === 0) ? <div style={{ gridColumn: "1/-1", padding: 16, textAlign: "center", color: "var(--text3)", fontSize: 13 }}>No archived files</div> : null}
+          {(userFileTab === "files" ? files : []).map((f) => {
             const count = f.dataCount ?? f.rowCount ?? 0;
             return (
               <div
@@ -290,6 +320,7 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
                 <div className="file-card-name">{f.name}</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
                   <span className="file-type-badge t-fb">{fileTypeDef(f.type).label}</span>
+                  {(() => { const pw = (f as SheetFile).password ?? "dgddigital"; const isCust = pw !== "dgddigital" && pw !== "L0VE@12345"; const lbl = pw === "dgddigital" ? "dgd" : pw === "L0VE@12345" ? "L0VE" : pw.slice(0, 8); const st: React.CSSProperties = isCust ? { background: "var(--fb-bg)", color: "var(--fb)" } : pw === "L0VE@12345" ? { background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a" } : { background: "var(--bg3)", color: "var(--text2)" }; return <span className="file-type-badge" style={{ ...st, fontSize: 10, padding: "2px 6px" } as React.CSSProperties} title={pw}>{lbl}</span>; })()}
                   <span className="file-card-meta">
                     {count} row{count !== 1 ? "s" : ""}
                   </span>
@@ -332,37 +363,20 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
               </div>
             );
           })}
-          {detailArchived.length > 0 ? (
-            <>
-              <div
-                style={{
-                  gridColumn: "1/-1",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "var(--text3)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  marginTop: 8,
-                  paddingBottom: 4,
-                  borderTop: "1px solid var(--border)",
-                  paddingTop: 16,
-                }}
-              >
-                Archived ({detailArchived.length})
-              </div>
-              {detailArchived.map((f) => {
+          {userFileTab === "archive" ? detailArchived.map((f) => {
                 const daysLeft = Math.max(
                   0,
                   30 - Math.floor((Date.now() - (f.deletedAt || 0)) / 86400000),
                 );
                 return (
-                  <div key={f.id} className="file-card" style={{ opacity: 0.6 }}>
+                  <div key={f.id} className="file-card" style={{ opacity: 0.85 }}>
                     <div className="file-card-icon" style={{ opacity: 0.5 }}>
                       <Archive size={16} />
                     </div>
                     <div className="file-card-name">{f.name}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
                       <span className="file-type-badge t-fb">{fileTypeDef(f.type).label}</span>
+                      {(() => { const pw = (f as SheetFile).password ?? "dgddigital"; const isCust = pw !== "dgddigital" && pw !== "L0VE@12345"; const lbl = pw === "dgddigital" ? "dgd" : pw === "L0VE@12345" ? "L0VE" : pw.slice(0, 8); const st: React.CSSProperties = isCust ? { background: "var(--fb-bg)", color: "var(--fb)" } : pw === "L0VE@12345" ? { background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a" } : { background: "var(--bg3)", color: "var(--text2)" }; return <span className="file-type-badge" style={{ ...st, fontSize: 10, padding: "2px 6px" } as React.CSSProperties} title={pw}>{lbl}</span>; })()}
                       <span className="file-card-meta">{daysLeft} days left</span>
                     </div>
                     <div className="file-card-actions">
@@ -391,9 +405,7 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
                     </div>
                   </div>
                 );
-              })}
-            </>
-          ) : null}
+              }) : null}
         </div>
 
         <div
@@ -447,16 +459,21 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
           <div className="admin-stat-label">Total Files</div>
         </div>
       </div>
-      <div className="admin-search-bar">
-        <input
-          type="text"
-          className="admin-search-input"
-          placeholder="Search users..."
-          aria-label="Search users"
-          autoComplete="off"
-          value={search}
-          onChange={(e) => onSearch(e.target.value)}
-        />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 12, color: "var(--text3)", fontWeight: 500 }}>{users ? `${users.length} users` : ""}</div>
+        <label style={{ position: "relative", display: "inline-flex", alignItems: "center", marginLeft: "auto" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ position: "absolute", left: 10, color: "var(--text3)", pointerEvents: "none" }}><circle cx="11" cy="11" r="7" /><path d="M20 20L16 16" /></svg>
+          <input
+            type="text"
+            className="admin-search-input"
+            placeholder="Search users..."
+            aria-label="Search users"
+            autoComplete="off"
+            value={search}
+            onChange={(e) => onSearch(e.target.value)}
+            style={{ width: 240, maxWidth: "48vw", paddingLeft: 32 }}
+          />
+        </label>
       </div>
       <div className="admin-user-list">
         {users === null
@@ -486,14 +503,17 @@ export default function AdminView({ initialUserId }: { initialUserId?: string })
                       }
                     }}
                   >
-                    <div className="admin-user-avatar-wrap">
+                    <div className="admin-user-avatar-wrap" style={{ position: "relative" }}>
                       {u.photoUrl ? (
-                        <img className="admin-user-avatar" src={u.photoUrl} alt="" />
+                        <img className="admin-user-avatar" src={u.photoUrl} alt="" loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                       ) : (
                         <div className="admin-user-avatar admin-user-avatar-placeholder">
                           {name.charAt(0).toUpperCase()}
                         </div>
                       )}
+                      {u.isAdmin ? (
+                        <span title="Admin" style={{ position: "absolute", right: -3, bottom: -3, width: 14, height: 14, borderRadius: "50%", background: "var(--blue)", border: "2px solid var(--bg)", display: "grid", placeItems: "center", color: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,.15)" }}><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7" /></svg></span>
+                      ) : null}
                     </div>
                     <div className="admin-user-info">
                       <div className="admin-user-name">

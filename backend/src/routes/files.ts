@@ -8,6 +8,7 @@ import { delHistoryKeys, deleteFilesHistory, pruneHistory, snapshotHistory } fro
 import { getJSON, key, redis, setJSON, setJSONex } from "../services/redis";
 import { migrateListKey, requireAuth, requireFileAccess } from "../middleware/auth";
 import { asyncRoute } from "../middleware/asyncRoute";
+import { handleFileSave, removeFileRowsFromPools } from "../services/pools";
 
 const MAX_ROW_IDX = 100_000;
 const MAX_OPS = 10_000;
@@ -26,11 +27,15 @@ filesRouter.post("/", requireAuth, asyncRoute(async (req, res) => {
   const file = req.body as StoredFile;
   file.id = genFileId();
   file.userId = req.userId;
-  // Coerce unknown/missing types so the frontend never renders undefined (old
-  // builds / direct API callers could store anything or nothing here).
   if (!(file.type && file.type in FILE_TYPE_DEFS)) file.type = "fb_cookie";
   file.createdAt = Date.now();
   file.updatedAt = Date.now();
+  // password dimension — dgddigital default, L0VE@12345 / custom stored; poolEnabled derived
+  const rawPwd = String((req.body as Record<string, unknown>).password || "dgddigital");
+  file.password = rawPwd;
+  const rawEnabled = (req.body as Record<string, unknown>).poolEnabled;
+  if (typeof rawEnabled === "boolean") file.poolEnabled = rawEnabled;
+  else file.poolEnabled = rawPwd === "dgddigital";
   const created = await updateUserFilesAtomic(req.userId || "", (files) => {
     files.unshift(file);
     return files;
@@ -53,6 +58,11 @@ filesRouter.put("/:id", requireAuth, requireFileAccess, asyncRoute(async (req, r
   });
   if (updated === null) { res.status(404).json({ error: "file not found" }); return; }
   await redis.set(key("meta:dirty"), String(Date.now()));
+  // pool toggle / password change -> reconcile pools
+  if (updates.password !== undefined || updates.poolEnabled !== undefined) {
+    const f = updated as StoredFile;
+    getJSON<Row[]>(`rows:${f.id}`).then(rows => handleFileSave(f, rows || [], req.userId || "").catch(()=>{})).catch(()=>{});
+  }
   res.json(updated);
 }));
 
@@ -63,6 +73,8 @@ filesRouter.delete("/:id", requireAuth, requireFileAccess, asyncRoute(async (req
     return files.splice(idx, 1)[0];
   });
   if (removed === null) { res.status(404).json({ error: "file not found" }); return; }
+  // remove from pools if not already taken
+  void removeFileRowsFromPools(removed as StoredFile, req.userId || "").catch(()=>{});
   removed.deletedAt = Date.now();
   const archived = (await getJSON<StoredFile[]>("archive:" + req.userId)) || [];
   archived.unshift(removed);
@@ -139,6 +151,10 @@ filesRouter.put("/:id/persist", requireAuth, requireFileAccess, asyncRoute(async
     res.status(500).json({ error: "Failed to persist data" });
     return;
   }
+  if (body.rows !== undefined) {
+    const f = (req.file as StoredFile) || null;
+    if (f) void handleFileSave(f, body.rows as Row[], req.userId || "").catch(()=>{});
+  }
   if (body.dataCount !== undefined) {
     persistedFile = await updateUserFilesAtomic(req.userId || "", (files) => {
       const idx = files.findIndex((f) => f.id === fileId);
@@ -191,6 +207,7 @@ filesRouter.put("/:id/append", requireAuth, requireFileAccess, asyncRoute(async 
   let curSeq = 0;
   let committed = false;
   let snapshotted = false;
+  let finalRows: Row[] | null = null;
   for (let attempt = 0; attempt < 5 && !committed; attempt++) {
     await redis.watch(key("seq:" + fileId));
     const seqRaw = await redis.get(key("seq:" + fileId));
@@ -222,6 +239,7 @@ filesRouter.put("/:id/append", requireAuth, requireFileAccess, asyncRoute(async 
       void pruneHistory(fileId);
       snapshotted = true;
     }
+    finalRows = rows.slice();
     const p = redis.pipeline();
     p.set(key("rows:" + fileId), JSON.stringify(rows));
     p.set(key("seq:" + fileId), String(curSeq + 1));
@@ -256,6 +274,10 @@ filesRouter.put("/:id/append", requireAuth, requireFileAccess, asyncRoute(async 
     }
     res.status(500).json({ error: "Failed to append" });
     return;
+  }
+  if (finalRows) {
+    const f = (req.file as StoredFile) || null;
+    if (f) void handleFileSave(f, finalRows, req.userId || "").catch(()=>{});
   }
   if (body.dataCount !== undefined) {
     updatedFile = await updateUserFilesAtomic(req.userId || "", (files) => {
@@ -396,14 +418,16 @@ archiveRouter.post("/batch-restore", requireAuth, asyncRoute(async (req, res) =>
 
 archiveRouter.delete("/:id", requireAuth, asyncRoute(async (req, res) => {
   let archived = (await getJSON<StoredFile[]>("archive:" + req.userId)) || [];
-  const existed = archived.some((f) => f.id === req.params.id);
-  if (!existed) {
+  const found = archived.find((f) => f.id === req.params.id);
+  if (!found) {
     res.status(404).json({ error: "not found" });
     return;
   }
   archived = archived.filter((f) => f.id !== req.params.id);
   await setJSON("archive:" + req.userId, archived);
   await redis.set(key("meta:dirty"), String(Date.now()));
+  // clean pool membership before deleting row data
+  void removeFileRowsFromPools(found as StoredFile, req.userId || "").catch(()=>{});
   const delPipeline = redis.pipeline();
   delPipeline.del(key("rows:" + req.params.id));
   delPipeline.del(key("undo:" + req.params.id));
@@ -428,10 +452,12 @@ archiveRouter.post("/batch-delete", requireAuth, asyncRoute(async (req, res) => 
   });
   // Security fix (kept from old server): only delete data keys for files that
   // actually exist in this user's archive (IDOR protection).
-  const ownedIds = archived.filter((f) => idSet[f.id]).map((f) => f.id);
+  const ownedFiles = archived.filter((f) => idSet[f.id]);
+  const ownedIds = ownedFiles.map((f) => f.id);
   archived = archived.filter((f) => !idSet[f.id]);
   await setJSON("archive:" + req.userId, archived);
   await redis.set(key("meta:dirty"), String(Date.now()));
+  ownedFiles.forEach((f) => { void removeFileRowsFromPools(f as StoredFile, req.userId || "").catch(()=>{}); });
   const delPipeline = redis.pipeline();
   ownedIds.forEach((id) => {
     delPipeline.del(key("rows:" + id));

@@ -1,293 +1,204 @@
-# SheetSubmit-testmycode — Master Plan & Handoff
+# PLAN.md — SheetSubmit-testmycode
 
-> **Read this first.** This is the single source of truth for the **test project** —
-> a separate, isolated deployment of the SheetSubmit app. Any person, session, or AI
-> model continuing this work starts here.
+> Source of truth for project state, phases, and handoff. Read §5 first every task.
 
----
+## 1. Project overview
+- **Test deployment** of SheetSubmit — isolated from production (`SheetSubmit-Shadcnui` + Railway prod).
+- Stack: React 19 + Vite + Tailwind v4 + shadcn/ui (frontend), Express + ioredis (backend), bun, 2 Docker images (`popyog/sheetsubmit-testmycode-*`), Redis.
+- Auth: Telegram login → `session=` cookie, `ss:userIds` / `ss:files:<userId>` / `ss:rows:<fileId>` etc.
 
-## 0. What this project is
-
-A **test/scratch deployment** of SheetSubmit, copied from the main repo
-(`B:\Studio\Tools\SheetSubmit-Shadcnui`). It exists so new backend/frontend work can be
-deployed and verified **without touching the live production app**.
-
-Key differences vs the main repo:
-
-| | Main repo | This test project |
-|---|---|---|
-| Location | `B:\Studio\Tools\SheetSubmit-Shadcnui` | `B:\Studio\Tools\SheetSubmit-testmycode` |
-| Deploy target | Single image `popyog/sheetsubmit-shadcnui:latest` (Railway, production) | **2 images** — `popyog/sheetsubmit-testmycode-backend:latest` + `popyog/sheetsubmit-testmycode-frontend:latest` (separate Railway project) |
-| Telegram bot | Production token | **TEST bot** token (in `.env`, gitignored) — never register the production bot here |
-| Data / users | Real Redis | Fresh, empty Redis — no real users, no data migration concerns |
-
-**Rule: nothing in this project may affect the production app.** Test bot token only, its
-own Docker images, its own Railway project. The old repo `B:\Studio\Tools\SheetSubmit` and
-the main repo remain protected.
-
----
-
-## 1. Stack (locked)
-
-- **Monorepo → isolated folders:** `frontend/` (React+Vite web), `backend/` (Express API),
-  `android/` (Gradle). **No npm workspaces, no shared package** — each folder is
-  self-contained with its own `package.json`, `bun.lock`, `Dockerfile`, `.dockerignore`,
-  and Docker build context. Deploy either independently.
-- **Frontend:** React 19 + TS + Vite + Tailwind v4 + shadcn/ui. Built with `vite build` →
-  `frontend/dist`.
-- **Backend:** TypeScript Express + ioredis (Redis). Serves the API only. Shared types are
-  inlined at `backend/src/lib/shared.ts`.
-- **Deploy shape (target):** 3 Railway services —
-  1. **web** (image from `frontend/Dockerfile`, nginx serving `frontend/dist`, proxies
-     `/api/*` + `/webhook/tg` to the API)
-  2. **api** (Express image, port 3000)
-  3. **database** (Redis)
-
----
-
-## 2. Phases & status
-
-| Phase | Status | Notes |
-|---|---|---|
-| **0 — Copy + test-project scaffold** (folder copy, test-bot `.env`, fresh PLAN.md, 2-image deploy files) | ✅ Done | Test bot token, deploy files, restructure to `frontend/` `backend/` `android/` + `packages/` |
-| **1 — 2-image split** (`backend/Dockerfile`, `frontend/Dockerfile` + nginx, redeploy.bat pushes both) | ✅ Done | Both images build clean (no-cache verified) + pushed to Docker Hub |
-| **2 — Railway separate project** (3 services: web, api, database; env wiring; test bot webhook) | ✅ Done | `REDIS_URL` = private URL; api has `FRONTEND_URL` + public domain (webhook registered); web static-only, no proxy |
-| **API efficiency plan** (6 tasks in `docs/superpowers/plans/2026-08-19-api-efficiency.md`) | ✅ Done + deployed | fbCheck fix, 9 dead wrappers removed, health poll 30s+hidden-pause, `GET /files/:id/full` single-trip open, gzip, cross-dup cache + no-op persist guard. Commits `7e5cbb7`→`e7fdc2d` |
-| **3 — Verify** (login via test bot, CRUD, checks, bubble) | ⬜ | Full smoke against the test deployment |
-
----
-
-## 3. Commands
-
-> **Docs:** full endpoint inventory in `API.md` (deleted — obsolete; endpoint list now lives in
-> `AUDIT-ISSUES.md` + `backend/src/routes/*`); API-efficiency work plan was in
-> `docs/superpowers/plans/2026-08-19-api-efficiency.md` (deleted after landing).
-
-```bash
-# Install/build per folder (each fully independent):
-bun install --cwd frontend        # frontend/bun.lock
-bun install --cwd backend         # backend/bun.lock
-bun run --cwd frontend dev        # Vite dev server
-bun run --cwd backend dev         # backend on :3000
-bun run --cwd frontend build      # typecheck + build web → frontend/dist
-bun run --cwd backend typecheck   # backend typecheck
-
-# Deploy (builds + pushes BOTH images, then calls each service's /__redeploy to redeploy)
-.\redeploy.bat   # needs deploy.env (gitignored): RAILWAY_TOKEN + FRONTEND_URL + BACKEND_URL
+## 2. Commands
+```bat
+bun install                          :: root + frontend + backend
+bun run dev:web     :: frontend vite
+bun run dev:server  :: backend watch
+bun run build       :: frontend build
+bun run typecheck   :: both
+bun test            :: backend + frontend
+redeploy.bat        :: build + push both images + POST /__redeploy (needs deploy.env)
 ```
 
-### Env files (3, inside their own folders)
-| File | Where it goes | Purpose |
-|---|---|---|
-| `backend/.env` | Local dev | Full local var set — test token + all defaults |
-| `backend/.env.api` | Railway **api** service → Variables | `TG_BOT_TOKEN`, `ADMIN_IDS`, `FRONTEND_URL` (= **web** URL), `REDIS_URL` (private), optional `WEBHOOK_URL`, history/backup knobs |
-| `frontend/.env.web` | Railway **web** service → Variables | `VITE_API_BASE` (api service public URL — read at container start, injected into the page via `/config.js`; not baked at build, not in code) |
+## 3. Deploy
+- Images: `popyog/sheetsubmit-testmycode-backend:latest`, `popyog/sheetsubmit-testmycode-frontend:latest`
+- Railway project has 3 services (web, api, db). No auto-deploy — `redeploy.bat` triggers it.
+- Frontend calls API via `VITE_API_BASE` → `/config.js` runtime.
 
-**No nginx proxy.** The api has its own public domain, so the SPA calls the api directly
-(cross-origin, `credentials: "include"`). The backend:
-- allows CORS for exactly `FRONTEND_URL` (origin), credentials enabled;
-- sets the session cookie as `SameSite=None; Secure` (HTTPS) or `SameSite=Lax` (local HTTP);
-- sends bot login links to the api's own public URL (`LOGIN_BASE` = `WEBHOOK_URL` → api
-  `RAILWAY_PUBLIC_DOMAIN` → `FRONTEND_URL`), then redirects login back to `FRONTEND_URL`.
+## 4. Phases
 
-`FRONTEND_URL` on the api **must be the web service's public URL** (redirect target after
-login + CORS allow-list). The api **must have a public domain** (`RAILWAY_PUBLIC_DOMAIN`) so
-Telegram can hit `/webhook/tg` — backend auto-registers the webhook to
-`RAILWAY_PUBLIC_DOMAIN + /webhook/tg`, or to `WEBHOOK_URL` if set.
+### Phase 0 — Pools spec & planning ✅  (2026-09-01)
+- **Goal:** Lock spec for the Pools feature before writing prod code.
+- **Deliverables:** this PLAN.md §4.1 + `pools-spec.html` (interactive spec with mock UI & flows).
+- **Done criteria:** Admin + user flows for 3 pools agreed, data model sketched, download/claim semantics defined, demo plan ready.
 
----
+### 4.1 Pools feature — spec summary
+> Full interactive spec: [`pools-spec.html`](./pools-spec.html) (open in browser). Summary below.
 
-## 4. Gotchas & decisions
+**Pools (3 types × 2 passwords = 6 logical pools, 2 shown):**
+| Pool type | Display label | Full rule | Badge | Eligibility (per password) |
+|-----------|---------------|-----------|-------|----------------------------|
+| `cookies_only` | **Cookies** | `cookies` valid, `twofakey` empty, page empty | `Cookies` | same for each password |
+| `cookies_2fa` | **2FA** | `cookies` + `twofakey`, page empty | `2FA` | same for each password |
+| `page` | **Page** | `cookies` + `twofakey` + `wa_status === "eligible"` (green dot) | `Page` | same for each password |
+| **Password dimension:** `dgddigital` (default, shown) / `L0VE@12345` (shown) / `custom` (exists in model + file creation but **hidden in Pools UI for now**). Each type exists per password, e.g. `pool:dgddigital:cookies_only`, `pool:L0VE@12345:cookies_only`. Only the 2 shown passwords have UI; custom is stored but not rendered.
 
-- **Test bot token only.** `TG_BOT_TOKEN` in `.env` is the TEST bot. Never point this
-  project at the production bot — registering its webhook here would hijack the live app.
-- **`.env` is gitignored** — the token stays local.
-- **No nginx / no same-origin proxy.** The SPA calls the api directly at
-  `VITE_API_BASE` (runtime-injected via `/config.js`). Cookies are cross-site-safe: `SameSite=None; Secure`
-  behind HTTPS (`auth.ts`), CORS allow-lists exactly `FRONTEND_URL` (`app.ts`).
-- **Self-redeploy endpoints:** Railway does **not** auto-deploy on image push. Each service
-  exposes `POST /__redeploy` (frontend in `server.js`, backend in `routes/deploy.ts`) which
-  calls the Railway GraphQL `serviceInstanceRedeploy` mutation for ITSELF using
-  `RAILWAY_TOKEN` (env var on the service) + Railway-injected `RAILWAY_SERVICE_ID` /
-  `RAILWAY_ENVIRONMENT_ID`. Requires `Authorization: Bearer <RAILWAY_TOKEN>` (else 401).
-  `redeploy.bat` builds+pushes both images, then hits both endpoints.
-- **`RAILWAY_TOKEN`** (account/workspace token, `Authorization: Bearer`) must be set as a
-  variable on **both** services, and in local `deploy.env` (gitignored; see
-  `deploy.env.example`) for redeploy.bat.
-  Frontend image is a tiny bun static server (`frontend/server.js`) — no env, no crash risk.
-- **`FRONTEND_URL` env var** on the Railway api service = the **web** service's public URL
-  (`https://<web>.up.railway.app`) — CORS origin + post-login redirect target. **The api
-  must have a public domain** so Telegram can hit the webhook: backend auto-registers to
-  `RAILWAY_PUBLIC_DOMAIN + /webhook/tg`, or to `WEBHOOK_URL` if set (`telegram.ts:199`).
-- **Env files live in their folders**: `backend/.env` (local), `backend/.env.api` (api svc),
-  `frontend/.env.web` (build-time `VITE_API_BASE`). All gitignored/dockerignored.
-- **Backend still references `STATIC_ROOT`** (serves `dist/` if present). In the api image
-  there is no web dist, so non-`/api` routes just 404 there — harmless, the web service owns
-  static. Removing the static middleware from the server is an optional cleanup.
-- **shadcn CLI caveat (if used):** in this monorepo it writes to a literal `frontend/@/`
-  folder — move files into `src/` and delete `@/`.
-- **Android:** not built in this project's scope; `Config.BASE_URL` unchanged.
+> Tooltip/full name: "Cookies without 2FA" / "Cookies with 2FA key" / "Cookies + 2FA + Page (green dot)". IDs stay `cookies_only` / `cookies_2fa` / `page`.
 
----
+> Pools are progressive: Page requires 2FA, 2FA requires cookies. Content is the same account row shape + eligibility filter. See "Filtering" below.
 
-## 5. Handoff — current state
+**What a "pool" is:** An **auto-classified** collection of **accounts (rows)** — every row a user creates is **auto-evaluated on save** and placed into the matching pool **for its file's password** if it passes filters. Pools are admin-only to view, but auto-populated from all users. Once in a pool, a row is visible to admin aggregated across users; admin can claim/download; claimed rows leave the pool and are marked taken (blue lock).
 
-- **Layout:** 3 top-level folders — `frontend/` (React+Vite web), `backend/` (Express API),
-  `android/` (Gradle). **Fully isolated deploy:** no npm workspaces, no shared package; each
-  folder has own `package.json`/`bun.lock`/`Dockerfile`/`.dockerignore` and Docker build
-  context. Backend inlines shared types (`backend/src/lib/shared.ts`). Git initialized,
-  all committed (125 files, `.env*` ignored). Backups: `SheetSubmit-testmycode-backup`,
-  `SheetSubmit-testmycode-backup2`.
-- **Theme fix:** light-by-default (pre-paint script in `index.html`, `theme.ts`), no OS-pref
-  fallback; saved dark choice respected.
-- **Env rename:** `APP_URL` → `FRONTEND_URL` (web URL — CORS origin + login redirect);
-  `WEBHOOK_URL` (optional webhook override); api's own `RAILWAY_PUBLIC_DOMAIN` auto-used for
-  webhook. Env files moved into folders: `backend/.env`, `backend/.env.api`, `frontend/.env.web`.
-- **No-nginx / cross-origin refactor (just done):**
-  - **Root cause found:** web service `BACKEND_URL` was set without `https://` →
-    `proxy_pass ;` → nginx `[emerg] invalid URL prefix` crash-loop. Fixed by setting the
-    scheme; then removed nginx entirely per decision.
-  - Frontend: nginx removed → `frontend/server.js` (bun static, SPA fallback); `api.ts`
-    now uses `VITE_API_BASE` (runtime-injected via `/config.js`) + `credentials: "include"`.
-  - Backend: CORS middleware (allow `FRONTEND_URL` only, credentials) + `trust proxy` in
-    `app.ts`; session cookie `SameSite=None; Secure` when HTTPS else `SameSite=Lax`
-    (`auth.ts`); login links use `LOGIN_BASE` (= `WEBHOOK_URL` → api public URL →
-    `FRONTEND_URL`) and post-login redirect → `FRONTEND_URL`; webhook → api public URL only.
-  - Railway vars: `BACKEND_URL` deleted from web service; api has `FRONTEND_URL`
-    `https://seal.up.railway.app`, `REDIS_URL` (private), `WEBHOOK_URL` empty (webhook =
-    `https://sealbackend.up.railway.app/webhook/tg`, verified registered).
-  - **Verified live:** SPA serves (200), cross-origin `/api/health` + `/api/auth/me` with
-    `credentials:include` → 200 from `seal.up.railway.app` → `sealbackend.up.railway.app`;
-    webhook registered to api direct URL.
-- Phase 0 + 1 done; both Docker images build clean + pushed.
-- **Runtime config + self-redeploy (just done):** no URLs hardcoded anywhere. Frontend
-  reads `VITE_API_BASE` at container start (`server.js` → `/config.js` → `window.APP_CONFIG`).
-  Both services expose `POST /__redeploy` (self-redeploy via `RAILWAY_TOKEN` +
-  `RAILWAY_SERVICE_ID`/`RAILWAY_ENVIRONMENT_ID`). `redeploy.bat` builds+pushes then calls
-  both endpoints. `RAILWAY_TOKEN` set on both services + in local `deploy.env`.
-  **Verified live:** `/config.js` serves the api base; cross-origin API 200; both
-  `/__redeploy` endpoints return `{"ok":true,...}` and 401 without the token.
-- **Not yet done:** end-to-end login smoke (click the test bot's login link → land on web,
-  cookie flows). That's the final Phase 3 item.
-- **API efficiency plan (done, deployed in the delta-persistence redeploy):** `7e5cbb7` fix: fb check
-  routed through `api.fbCheck()` (was hardcoded `/api/fb/check`); `c4c670f` refactor: dropped
-  9 dead `api.ts` wrappers (`getSync`, `setSync`, `updateCell`, `appendLog`, `cancelPending`,
-  `forkVersion`, `adminUpdateCell`, `adminAppendLog`, `waCheck`) + the `pending` AbortController
-  Set; `0612f98` perf: health poll 30s + paused when tab hidden; `997e367` perf: single
-  round-trip file open — new `GET /api/files/:id/full` (pipelined rows+logs+undo+redo), frontend
-  `openFile` now 2 round trips, deleted `api.getFile/getLogs/getUndo`; `a39292d` perf: gzip via
-  `compression` middleware; `e7fdc2d` perf: cross-dup counts cached 60s per user
-  (`crossdups:<userId>`, invalidated in persist pipeline) + `flushPersist` no-op when not dirty.
-- **Audit issues BE-1..21 + FE-1..19 (ALL resolved + deployed `c40607b` + follow-up `4d022b7`):**
-  - Backend security: `POST /files` ignores client id (server `genFileId()`), append/cell `rowIdx`
-    + `ops.length` caps (100k/10k), PUT whitelists (`MUTABLE_FILE_FIELDS`, `USER_MUTABLE_FIELDS`),
-    every handler wrapped in `asyncRoute` + process-level `unhandledRejection`/`uncaughtException`
-    net (`bootstrapProcessHandlers`), history snapshot `v` now collision-proof (WATCH/MULTI),
-    snapshot+prune serialized per file (`withFileLock`), 6s ban cache + invalidation, login token
-    consumed on failed login, `/__redeploy` token via `timingSafeEqual`, request logger redacts
-    `token|did|session|code|key|secret|auth|password`, `/photo/:userId` cached 24h, `ADMIN_IDS`
-    warns loudly when unset, `getJSON` logs parse errors (key only), 8 dead routes deleted
-    (user+admin sync/cell/log, GET /:id, GET undo, GET logs, GET admin-user-files, fb/wa-check).
-  - Backend robustness: restore/batch-restore TOCTOU → 409 + archive rollback, `/fb/check` capped
-    (500 uids, 3/min/user), `tg()` fetch timeouts (20s / 60s getUpdates) + webhook `.catch`,
-    backup copy now pipelined + non-overlapping, cross-dups `fileId` narrows the type scan, admin
-    persist bumps `seq`, batch deletes → single pipelines, `_migratedLogKeys` capped.
-  - Frontend perf: main chunk **834.8→103.9KB min / 263→30.1KB gzip** — `xlsx` lazy-imported,
-    VersionDiffPage/overlays/AdminView/ArchiveView/bones-registry code-split, `vendor-react`
-    chunk, VersionHistory fetch pool (4-wide), diff page fetches metadata only (no full `/full`).
-  - Frontend UX/a11y: grid keyboard nav (arrows/Enter, roving tabindex, ARIA roles), row status
-    labels (title/aria), modal focus-trap + Escape (`useModalA11y`), confirm resolver queue,
-    `changeJournal` coalesce+cap 200, `bubbleActiveRow` reset, incremental `recomputeMarksForRow`,
-    HomePage error toast + rename-only refresh, AdminView double-fetch/search/download fixes.
-  - Verification: 50 tests (34 backend + 16 frontend), both typechecks clean, build clean,
-    oxlint warnings-only. **Deployed `2026-08-19`** via redeploy.bat (backend digest
-    `f13ad5ae`, frontend `9b10b0e9`); live smoke: `/api/health` 200, web 200, `/config.js` OK.
-- **Delta persistence (deployed):** cell edits autosave as ops (`/append`, seq-versioned), structural saves fall back to full `/persist`. Both return `seq`; 409 → client refetches + re-applies journal. **Part 2:** logs/undo/redo are now Redis LISTS synced incrementally (`newLogs`/`undoNew`/`redoNew` + client sync bases), migrated from legacy JSON blobs; full-replace only on structural saves.
-- **Data-integrity hardening (deployed):** audit found data-loss bugs; fixed in
-  `0bc9cbb` (autosaves serialized via `saveChain`, dirty cleared only when rows unchanged,
-  `closeFile` commits draft + awaits final flush, `refreshSheet` skips when dirty, keepalive
-  flush on beforeunload/pagehide/visibilitychange), `4611e2e` (confirm before delete-selected /
-  compact-empty; versionCache no longer caches failed fetches), `232e0c6` (try/catch + toasts +
-  xlsx-import rollback on home/archive/admin views; ban/unban confirm),
-  `ea56835` (admin persist single pipeline + error check, admin DELETE /file now true archive —
-  data keys kept, restore aborts 500 if pre-snapshot fails), `b836fb0` (persist only replaces
-  logs when client list not stale, restore snapshot-check, `wa:` cache scoped per user
-  `wa:<userId>:<c_user>`, meta:dirty backup triggers on create/rename/delete/archive ops).
-  **Residual risk:** `files:<userId>` list RMW race eliminated via `updateUserFilesAtomic`
-  (WATCH/MULTI, 5 retries) on every files-list write (files.ts, admin.ts, history.ts,
-  createForkFile). pruneHistory now aborts if the oldest retained delta cannot be materialized
-  (`44663d9`). Sessions tracked in `ss:userSessions:<userId>`; admin user-delete kills every live
-  session + cache entry (`7d34a67`). **Still open:** undo/redo stacks remain device-local
-  last-write-wins across devices; beforeunload keepalive flush capped at 64KB (very large sheets
-  can still drop on hard tab-kill); `archive:` list itself still non-atomic (archive-vs-archive
-  races are user-initiated single-action, accepted); session index accumulates stale tokens until
-  next logout/user-delete (harmless).
-- **Offline support (committed `0a0488f`, NOT deployed yet):** SPA loads + edits survive going offline.
-  - `frontend/public/sw.js` + registration in `main.tsx` (prod only): install-time asset discovery + cache (`/`, `/config.js`, `/assets/*`); navigate = network-first→cached `/`; assets = cache-first; `/config.js` = stale-while-revalidate. API is cross-origin → never intercepted.
-  - `frontend/src/offline/db.ts`: IndexedDB (`sheetsubmit-offline`/`queue`, auto-increment id) — enqueue/list/remove/count/clear/available; graceful no-op when IndexedDB missing (private mode / tests).
-  - `frontend/src/offline/sync.ts`: `createOfflineSync({db, api})` + singleton `offlineSync`. `queueSave` on network failure, `flush` drains oldest→newest via `api.append`/`api.persist`; append 409 → refetch `getFileFull` + re-apply ops + full `persist` (reuses the seq-conflict idea); network error stops the drain; `online` event auto-flushes; `typeof window` guard for bun tests.
-  - `sheetStore.ts`: `offlineDirty` state; `flushPersist` catch → on network error (`TypeError` or `!navigator.onLine`) queues the payload instead of swallowing; 409 merge path unchanged; success clears `offlineDirty`; subscribe → on reconnect drains journal + IDB queue.
-  - `OfflineBanner.tsx` (in Layout): fixed pill — offline = "changes saved locally"; online+pending = "Syncing… N" + Sync now. Token-only CSS.
-  - Tests: 7 new sync tests (fake db + fake api, no mocking) → **23 frontend pass**. Backend untouched (append/persist/seq already replay-friendly). Verdict vs estimate: backend change = 0 (was the highest-risk item).
-  - **Known v1 limits:** full `persist` queue entries replay as whole-sheet replaces; only cell ops (append) get merge-on-409; pending count poll is 5s; login still needs network.
-- Resume: run Phase 3 smoke (login via test bot, CRUD, checks, bubble), then deploy offline work, updating this file.
-- **Login fix + delta checks + API suite (deployed, all green):**
-  - **Login bug (fixed + verified live):** SPA (`seal.up.railway.app`) and API (`sealbackend.up.railway.app`)
-    are different sites (`up.railway.app` is on the public suffix list) → the session cookie written by the
-    cross-site `fetch('/api/auth/device/claim')` was a 3rd-party cookie and got dropped under browser
-    3P-cookie blocking → after approving in Telegram, the reload landed back on login. Fix = same-origin
-    reverse proxy in `frontend/server.js` (`/api/*` + `/webhook/tg` → `BACKEND_URL`), SPA now calls relative
-    `/api` (`config.js` sets `apiBase:""`), `backend` reads `LOGIN_BASE` env (now `https://seal.up.railway.app`)
-    for login links. Railway env: Frontend `BACKEND_URL=https://sealbackend.up.railway.app`, Backend
-    `LOGIN_BASE=https://seal.up.railway.app`.
-  - **Proxy gotchas (fixed in server.js):** (1) forwarding hop-by-hop headers (`Transfer-Encoding`,
-    `Connection`) made Bun treat the body as pre-chunked → empty 200 responses — strip them; (2) Bun's
-    `fetch` decompresses the upstream body but keeps the stale `content-encoding: gzip` header, and
-    Railway's edge re-injects `Transfer-Encoding` on the way out — forward `Accept-Encoding: identity` to
-    the backend, strip `content-encoding`, buffer the body, and set an explicit `Content-Length`.
-  - **Delta appends:** `runCheck` (commit `d744714`) + `runWaChecks` now snapshot rows pre-check, diff the
-    checked fields (`WA_FIELDS = wa_status/wa_ban_reason/wa_page_name/wa_linked_number` for WA), and flush
-    only the changed rows as one cell-op journal (no `dirtyStructural`, no per-account `set`) — `runWaChecks`
-    flushes only after ALL accounts finish; zero changed rows → no persist call at all.
-  - **Live API test suite:** `scripts/api-live.mjs` exercises all endpoints incl. admin, reading the session
-    token from `scripts/.env.live` (gitignored) or `SESSION_COOKIE`. `scripts/test-data.json` = SCRUBBED fake
-    cookies (repo is public!); real data stays in gitignored `scripts/test-data.real.json` (from
-    `test.xlsx`: col A cookie, col B code, no header). **48/48 pass** against both direct backend and the
-    proxy. Gotcha: `/fb/check` has a per-user rate limiter (3/min) → re-running the suite inside 60s yields
-    429; the script accepts 400/429. `POST /files` returns 200 (not 201); history versions only recorded
-    when the persist payload includes `action`.
-  - Verified live: `GET /api/auth/me` with the session cookie returns the full admin user through the proxy.
-  - Latest commits: `d744714` (runCheck delta), `5b8e9d6` (proxy + wa delta + api suite), `6bc4c96` +
-    `adee957` + `f3e3d2f` (proxy hop-by-hop / buffering / identity encoding fixes), `3bd2ebf` (rate-limit
-    tolerant suite).
-  - **wa/cache latency fix (committed `620a599`, deployed):** `GET /api/wa/cache?uids=<N>` did one
-    sequential `redis.get` per uid → 59 uids ≈ 11s even when all keys were empty. Now a single
-    `mgetJSON` (one `MGET` round-trip) → **~0.5s** for the same 59 uids (verified live, direct + proxy).
-    Note: browsers may keep calling the API at the direct `sealbackend` URL until the service worker
-    revalidates `/config.js` (stale-while-revalidate) — hard refresh picks up the `apiBase:""` proxy path.
-  - **More N+1 fixes (committed `d5f1649`, deployed):** audit found `batch-delete` + admin `user-delete`
-    deleting each file's history sequentially (`delHistoryKeys` = 1 get + 1 pipeline + orphan GC per file).
-    Now parallelized via `deleteFilesHistory` (bounded concurrency 4). Verified: 8-file batch-delete ≈ 595ms.
-    Rest of backend already pipelined (admin lists, cross-dups row reads, history prune, persist/append).
-  - **FileCard crash fix (committed `0409077`, deployed):** `Cannot read properties of undefined
-    (reading 'badge')` — backend stores whatever `type` a client sends (old builds / direct API calls
-    could store missing/invalid types), and 16 frontend sites did unguarded `FILE_TYPE_DEFS[file.type]`.
-    Fix: `fileTypeDef(type)` safe lookup (falls back to `fb_cookie`) used everywhere + backend `POST
-    /files` coerces invalid/missing type to `fb_cookie`. Verified live: new bundle served
-    (`index-U14UgSov.js`), user created a file without crash.
-  - **Bubble fixes (committed `575fd08`, deployed):** user reported bubble issues on the phone:
-    1. **Saved 2FA key "vanished"** (and cookies too) — root cause: `refreshSheet` checked
-       `isDirty` only BEFORE the fetch, so a 6s poll that started while clean could apply stale
-       server rows AFTER a local bubble save, wiping it. Fix: re-check `isDirty` after the await
-       before applying. 2. **No TOTP auto-copy:** `bubbleSaveKey` saved the key but never copied
-       the generated code — now generates the code and copies it + toast `Code copied`.
-       3. **Long-press skip: no vibration + no feedback** — Android bubble long-press now uses a
-       haptic helper (`performHapticFeedback(..., FLAG_IGNORE_VIEW_SETTING)` + `Vibrator`
-       fallback, since `FLAG_NOT_FOCUSABLE` overlay windows often swallow haptics) and the skip
-       writes a `No_2Fa` marker into the 2fa cell (`bubbleSkipNo2FA`) so the row visibly shows it
-       was set empty by the bubble action. 4. **Marker never exported:** `No_2Fa` is stripped from
-       all xlsx exports (`buildXlsx`/`downloadSheetRows` via `exportCellValue`); validation accepts
-       it as a placeholder (not flagged invalid). New tests (30 frontend / 34 backend, all green):
-       bubble user-flow (cookie→key→code copy→advance), skip marker + persist + advance, no-cookie
-       skip, download-strip. Re-ran full API suite: **48/48 pass**. Deployed; live bundle served
-       (contains `No_2Fa`/`Code copied`/`bubbleSkipNo2FA` + the refreshSheet isDirty re-check).
+**Auto-pooling + live promotion + password dimension (from your answers):**
+- On `POST /api/files`, `PUT /:id/persist`, `PUT /:id/append` (any save/modify) server runs `classifyRow(row, file.password)` → decides pool `cookies_only / cookies_2fa / page` **within that password's namespace** or none (invalid/ineligible/taken). Example: `pool:dgddigital:cookies_only:available` vs `pool:L0VE@12345:cookies_only:available` (custom password namespace exists but hidden in UI). No manual "Add to Pool" — it's automatic.
+- **Passwords shown in Pools UI:** `dgddigital` / `L0VE@12345` — simple **password switch** at top of Pools page (two pills, default `dgddigital`). `Custom` password files are stored (flexible) but **not shown** in Pools UI for now (hidden). File creation dialog offers `dgddigital` (default) / `L0VE@12345` / `Custom…` (hidden input, still creates file with custom string).
+- **Page is derived from Page Check (green dot / WA `eligible`)**, not a new column. So `page` eligibility = `cookies` valid + `twofakey` present + `wa_status === "eligible"` (green dot). Page without 2FA is ineligible.
+- **Row updates auto-transfer:** if user edits a row (adds 2FA → Cookies→2FA, green dot → Page, or becomes dead/bad/invalid), server **removes it from old pool's `available` (within its password)** and **inserts into new pool's `available`** (or removes from pools entirely if invalid/dead/taken). Same on `wa_status` change. If dedup key in `taken:global:<password>` (now per-password global), it is `skippedTaken` and never re-enters that password's pools.
+- **No cross-password mixing:** `dgddigital` rows never appear in `L0VE@12345` pools and vice versa. Global taken is per-password (`taken:global:dgddigital` vs `taken:global:L0VE@12345`).
+
+**Core states for a pooled account (row):**
+```
+available  →  claimed (takenBy admin, claimedAt)  →  taken (blue locked row)
+```
+- `available`: in pool, admin can still claim.
+- `claimed`: removed from pool's available set; stays in audit log + user's file shows **blue cell + white text + blue dot**, row locked (unmodifiable, can't edit). No "Taken" text in cell — long-press dot shows "Taken on 2026-09-01" + existing dot info (status, page, etc).
+- **No re-entry ever:** once taken, that account's dedup key (`uid`/`c_user`) is added to a **global permanent blocklist** (`taken:global` + per-pool `taken` set). Even if owner deletes row/file and re-adds same cookies, or any other user uploads same account, it is rejected as `skippedTaken` and never re-enters any pool. No expiry.
+
+**Filtering (applies on every save — auto-pooling):**
+- **Invalid/dead filter:** empty row, `cookies` missing/empty, `cookies` doesn't contain `c_user=`, `uid` missing, whitespace-only, or `status === "bad"` / dead (Page Check fails) — **dead rows are auto-removed from any pool they were in** and never re-enter (reported as `skippedInvalid` on add, `removedDead` on promotion cleanup).
+- **Password filter (now: pools per password, 2 shown):** file has `password` (`dgddigital` default / `L0VE@12345` / custom string) + `poolEnabled` toggle (default ON). Each password has its own 3 pools (e.g. `dgddigital:Cookies`, `L0VE:Cookies`). Pools UI shows only `dgddigital` + `L0VE@12345` via simple switch; **custom password pools exist in model but are hidden in UI for now**. If `poolEnabled === false`, file's rows are `skippedFiltered` (never enter its password's pools) regardless of password. Previously filtered L0VE/Custom entirely — now they have their own pools (you asked for 2 passworded pools).
+- **Global Taken blocklist per password (checked first, permanent, cross-pool, cross-user within same password):** if dedup key exists in `taken:global:<password>` (e.g. `taken:global:dgddigital`), skip as `skippedTaken` — never re-enters that password's pools, even after delete/re-upload or by another user. Cross-password re-entry is still allowed (same cookies with different password is considered different pool namespace).
+- **Duplicate filter (per-pool dedup):** key = `uid || c_user` via `getDedupKey`. If key already in that pool's `available`/`claimed`, `skippedDuplicate`. Cross-pool dup allowed only via promotion (row moves pools on update, not duplicate insertion).
+- **Pool eligibility filter:** row must match pool's content rule (see table). **Page = `cookies` + `twofakey` + `wa_status === "eligible"` (green dot) — page without 2FA is `skippedIneligible` for Page. If row matches none (e.g. no cookies), it stays outside pools.
+- All filters run server-side on every persist/append/Check; bulk adds return `{added, skippedDuplicate, skippedInvalid, skippedIneligible, skippedTaken, skippedFiltered}`. Promotion (Cookies→2FA→Page) removes from old pool + adds to new; dead/invalid removes from pools entirely; delete removes from pools if not yet taken.
+- **Delete → remove if not taken:** if user deletes a row or whole file (archive) and that row is still `available` (not yet claimed), it is **removed from its pool's `available`** (and `dedup` set). If already `taken`/`claimed`, it stays in `taken:global` + ledger forever (not resurrected).
+- **No manual unpool except:** pool opt-out toggle / password filter / delete — otherwise **claim is the only removal** from Available. `taken:global` is the permanent exit otherwise.
+- **Backfill disabled (per your last answer):** **no migration for old files** — files already created **without password on create time** are left as-is (no password assigned, never enter pools, `skippedFiltered`). Only **files created from now** (with password picked via 2-card selector `dgddigital` / `L0VE@12345`) are auto-pooled. Previously planned name-based backfill (`L0VE@12345` in name → L0VE else dgddigital) is **not executed**.
+
+**Navigation (proposed — see spec HTML):**
+```
+My Files | Archive | Pools ▾(admin-only) | Admin | Tools
+            password switch: [dgddigital | L0VE@12345]  ← simple pill, default dgddigital; Custom hidden
+            pool tabs:       [Cookies | 2FA | Page]     (within selected password)
+```
+> No "All Pools" — pools open directly to one password+pool. `/pools` redirects to `/pools/dgddigital/cookies_only` (default).
+- **Pools is admin-only** (`requireAdmin`). Non-admin never sees Pools.
+- **Password switch (simple, as you requested):** top of Pools page has two pills `dgddigital` / `L0VE@12345` (Custom hidden). Switching password swaps the 3 pools data (counts, user tables) without page reload. URL reflects password: `/pools/:password/:poolId`.
+- Admin: per-pool dashboard: users in pool, per-user counts (`Available / Claimed`), **⋯ menu per user: View file / Download** (no horizontal scroll), pool-wide Download with quantity selector (primary). All actions scoped to selected password+pool.
+- **⋯ View file** opens the file exactly like **Admin → User → File** (`/admin/user/:userId/file/:fileId`), not inline — same sheet grid (`cookies / 2fa key / uid / dot`), read-only view. Taken rows inside file are blue-locked with whole-row white cut; long-press dot shows date (per-password global).
+- Non-admin visibility: taken rows in own file are **blue cell + white text + blue dot, whole-row cut, locked (can't edit)**. No "Taken" text in cell — long-press dot shows "Taken on <date>" + dot info (via `_taken`/`_takenAt` on `rows:<fileId>`). No pool browsing for users.
+- **Admin guard everywhere:** any user list (Pools, Admin panel, etc) shows **Admin badge** for admin users and **never shows Delete/Ban** for them (`isAdmin(userId)` hides those buttons).
+
+**User flows (auto-pooling + password filter):**
+1. *Create file (user):* Dialog asks **Select password: `dgddigital` (default) / `L0VE@12345` / `Custom…`** (flexible). `dgddigital` = pools enabled (default ON). `L0VE@12345` or any **Custom** password → pools **disabled by default** (all rows `skippedFiltered`, never enter any pool). Custom input is free-text password (no validation beyond non-empty). Shows **"Include in Pools" toggle** (default ON for dgddigital, OFF for others; user can flip). If filtered or toggle OFF, file never pools.
+2. *Upload/Edit/Promote (user):* Any save → server **auto-classifies each row** into `Cookies / 2FA / Page` (or none if invalid/taken/dead/filtered). If user later edits row (adds 2FA → Cookies→2FA, green dot → Page) row **auto-moves** between pools; if account dies → auto-removed. `L0VE@12345` files never move. If user deletes a row/file while still `available`, it is **removed from pool** (dedup + available). If already `taken`, stays in `taken:global` forever.
+3. *Toggle pooling after creation:* In file header, **"Include in Pools" switch** (file-level). Flipping OFF → bulk-remove all its `available` rows from pools; flipping ON → re-evaluate and bulk-add eligible rows (still blocked by `taken:global` + dup/invalid).
+4. *View as user:* No Pools page. User only sees taken rows as **blue lock** (white text + whole-row cut + blue dot, locked). Long-press dot reveals "Taken on <date>". Controls file's password/toggle at creation and the Include switch.
+5. *View as admin:* Pools → Pool detail: header stats, table `User | Available | Claimed | ⋯ (View file / Download)` (Admin badge, no Delete/Ban for admins). Pool-wide Download (primary). View file opens `/admin/user/:userId/file/:fileId` read-only sheet. Admin sees password for file but does not change it.
+6. *Download as admin:* Admin picks `N` or All (pool-wide or per-user `⋯ → Download` → modal). Atomically claims N FIFO rows, adds to `taken:global`, marks source rows `_taken` (blue lock), generates XLSX per pool cols (`Cookies 1-col: cookies`, `2FA/Page 2-col: cookies+2fa`, file name differs), returns file. Download is primary action.
+7. *Download as user (own data):* No change — existing per-file download still works. Pool download is admin-only.
+
+**Suggested improvements (from your answers):**
+- **Auto-pooling on every save** — no manual Add to Pool; row promotion (Cookies→2FA→Page) and demotion/removal (dead/invalid) are automatic on edit/Check.
+- **Page = Page Check green dot (`wa_status === "eligible"`)**, not a new sheet column. So Page pool = `cookies` + `twofakey` + `wa_status === "eligible"` (you noted we already have it).
+- **Download columns per pool (as you specified):** `Cookies` → **1 column** (e.g. `cookies` only); `2FA` → **2 columns** (`cookies, 2fa key`); `Page` → **2 columns** (same as 2FA, `cookies, 2fa key`) **but file name differs** (`cookies_pool.xlsx` / `2fa_pool.xlsx` / `page_pool.xlsx`). UID is implicit in cookies (`c_user`) so not separate column in exports.
+- Quantity selector: stepper + presets [10, 50, 100, All] + live preview "You will claim 50 of 1,243 available".
+- Claim is **atomic + idempotent**: Lua/WATCH; two admins cannot claim same row; also blocked by `taken:global`.
+- Audit: `pool:<id>:ledger` (append-only claimed records) for admin export; auto-transfer of promoted rows is logged as remove+add.
+- Don't delete claimed rows — hide from Available, keep in ledger and mark in source file for user visibility (blue lock).
+- Server validated filters: duplicates + invalids + taken-ever + pool eligibility + dead check — all server-side.
+- Rate-limit admin downloads; log `adminId + poolId + count + timestamp`.
+
+**Data model (Redis — proposed):**
+```
+pool:meta              Hash  { cookies_only, cookies_2fa, page } → {name, label, badge, rule, cols}
+  cookies_only: cols=[cookies]          filename=cookies_pool.xlsx (1-col)
+  cookies_2fa:  cols=[cookies, twofakey] filename=2fa_pool.xlsx (2-col)
+  page:         cols=[cookies, twofakey] filename=page_pool.xlsx (2-col, name differs)
+password dimension: dgddigital | L0VE@12345 | custom (custom hidden in UI)
+pool:<password>:<id>:available  List/Set — JSON {uid, dedupKey, cookies, twofakey, wa_status, password, srcUserId, srcFileId, srcRowIdx, addedAt}
+pool:<password>:<id>:claimed    List — same + {claimedBy, claimedAt}
+pool:<password>:<id>:ledger     List — audit (promotions + deletes + filtered + toggle)
+pool:<password>:<id>:users      Hash  userId → {available, claimed}
+pool:<password>:<id>:dedup      Set — per-pool dedup keys (per password)
+taken:global:<password>         Set — dedup keys ever claimed for that password (permanent, cross-pool/user within password)
+taken:pool:<password>:<id>      Set — per-pool taken mirror
+files:<userId>         StoredFile[] — includes {password: string ("dgddigital" default | "L0VE@12345" | custom), poolEnabled: boolean} (default true; L0VE/custom pools into their own password namespace when enabled)
+rows:<fileId>          JSON array — enriched with {_pool, _taken:boolean, _takenAt:number, wa_status} (drives blue lock + long-press popup + auto-eligibility + password guard)
+```
+- Enrich `rows:<fileId>` JSON rows with `_pool` + `_taken` + `_takenAt` + `wa_status` — drives pools + taken lock + Page eligibility (wa_status). No manual pool keys needed; auto-classify keeps it minimal.
+
+**API (proposed):**
+```
+POST   /api/files                          body {name, type, password: string ("dgddigital" default | "L0VE@12345" | custom), poolEnabled?: boolean} → StoredFile (default dgddigital/true; Custom hidden in UI but stored; L0VE/Custom pools into own password namespace when enabled)
+PUT    /api/files/:id                      body {poolEnabled?: boolean, password?: string} → toggle include / change password (triggers bulk add/remove across its password pools)
+GET    /api/pools                          → list pools with totals + per-pool cols/filename (admin only, totals per password)
+GET    /api/pools/:password/:poolId        → pool detail + per-user breakdown (admin only, password-scoped; e.g. /api/pools/dgddigital/cookies_only) — also supports legacy /api/pools/:poolId as alias for dgddigital
+GET    /api/pools/:password/:poolId/rows   → paginated available rows ?userId=&limit=&offset= (admin only, password-scoped)
+POST   /api/pools/:password/:poolId/claim  → body {count: number | "all", userId?: string}  (admin only, password-scoped) → {claimed, xlsxUrl} (1-col vs 2-col per pool type)
+GET    /api/pools/:password/:poolId/ledger → admin audit log (admin only, includes auto-promotions + deletes + filtered)
+GET    /api/pools/:password/:poolId/download → alias for claim+download (streams xlsx, password-scoped)
+— No manual Add-to-Pool: pooling is auto on Files persist/append (server classifies each row, respects file password/poolEnabled + wa_status). Delete of row/file auto-removes from its password's pools if still available.
+```
+- All pool routes behind `requireAuth + requireAdmin`.
+- File rows enrichment on `GET /api/files/:id/rows` & `/full` adds `_taken`/`_takenAt` for the `Taken ✓` badge — visible to the row's owner (non-admin sees only own taken state, not pool internals).
+
+**Frontend routes + file password badge (locked):**
+```
+/pools                                      → redirect to /pools/dgddigital/cookies_only (default password+pool) — admin only
+/pools/:password/:poolId                    → Pool detail — per-user table + quantity download (⋯ View file / Download) + password switch [dgddigital | L0VE@12345] + pool tabs [Cookies | 2FA | Page] — admin only (Custom password route exists but not linked in UI)
+Create file dialog: password selector [dgddigital | L0VE@12345 | Custom…] (Custom input hidden until picked; default dgddigital; Custom not shown in Pools UI, only stored)
+File card badge (My Files / Archive / Admin file list): tiny password pill next to file type badge — `dgd` (gray, var(--bg3)), `L0VE` (amber #fffbeb/#b45309), `custom:<value>` (violet var(--fb-bg)/var(--fb), truncated). Also shown in file header when opened (`Facebook 2026-09-01 • dgd`). Tooltip shows full password. Optional filter chips [All | dgd | L0VE | Custom] above grid (one-click filter).
+/pools/:password/:poolId/user/:userId      → admin drilling into one user's rows in that pool (optional modal) — admin only, password-scoped
+```
+> Pools user list **never shows Delete/Ban for admin users**; admin users show **Admin badge** everywhere (Pools, Admin panel, Tools). Guard: `isAdmin(userId)` hides those actions.
+Topbar tabs: add `Pools` between Archive and Admin. `Pools` tab is admin-only (hidden for non-admin, like Admin/Tools). Route guard redirects non-admin to `/`.
+
+**Claim atomicity:** Lua script `CLAIM_N password poolId N [userId]` — pops N entries from `pool:<password>:<id>:available` filtered by userId if given, pushes to `claimed`, adds dedup keys to `taken:global:<password>` + `taken:pool:<password>:<id>`, updates counters, writes `_taken`/`_takenAt` onto source rows (blue lock + whole-row cut + blue dot). Returns claimed entries. Prevents double-claim. No re-entry path — even WATCH+MULTI re-add is rejected by `taken:global:<password>` check (per-password permanent).
+
+**UI badges / row lock:** Available = default cell. Taken = **blue cell + white text + whole-row white cut (single line across row, ::after) + blue dot (white ring), pointer-events none (locked, can't edit)**. No "Taken" text in cell — long-press dot shows popup: "Taken on 2026-09-01" + existing dot info. `⋯ → View file` opens `/admin/user/:userId/file/:fileId` (same grid, not inline pool rows). Claimed rows stay in pool detail under "Claimed" tab, not in "Available".
+
+**File grid long-press (My Files / Archive / any file cards):** long-press = enter multi-select, **must not** select/highlight file name text. Fix: `user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;` on card + name, `touch-action: manipulation`, suppress `selectstart` during hold.
+
+### Phase 1 — Mini demo: pools overview (no backend) ⬜
+- Static `pools-demo.html` / route with mocked data: 3 pool cards, totals, per-user table, taken badges. Validate UX with stakeholder.
+- Done: spec signed off visually.
+
+### Phase 2 — Backend: auto-pooling ⬜
+- Redis keys (`pool:meta`, `pool:<password>:<id>:available/dedup`, `taken:global:<password>`, `rows:<fileId>` enrichment), auto-classify on `persist`/`append`/`wa_check`, dead/invalid filtering (dead auto-removed), promotion (Cookies→2FA→Page) + per-password global taken guard, **no backfill for old files** (files without `password` on create time are never pooled, as you just specified).
+- No manual add/remove — **claim is the only removal** from pools (plus delete/toggle/password-filter). Old files stay outside pools entirely.
+- Done: only new files (2-card password picker `dgddigital`/`L0VE@12345`) auto-pool; dead rows auto-removed; admin sees pools in `GET /api/pools/:password/:poolId`; promotion moves rows automatically.
+
+### Phase 3 — Admin claim & download ⬜
+- `POST /api/pools/:poolId/claim` (atomic Lua), XLSX gen, ledger, `_taken` marking, per-user + pool-wide quantity selector wired.
+- Done: admin can download N or All; claimed rows disappear from available and show Taken badge to user; double-claim returns 0.
+
+### Phase 4 — Polish & integrate ⬜
+- Frontend pools pages (real data), Topbar nav, pagination, search, presets [10/50/100/All], audit view, empty states, tests, race-condition test.
+- **UX fix (all file grids):** My Files / Archive / Pools user list long-press = multi-select file — must **not** select text (file name). Add `user-select: none; -webkit-user-select: none; touch-action: manipulation; -webkit-touch-callout: none;` on `.file-card` + name element, prevent `selectstart` during hold. Applies to My Files, Archive, and any file card list (including pool detail if file cards reused).
+- Done: typecheck + `bun test` green, manual QA: contribute → admin claim → user sees Taken (blue lock + long-press dot) → admin re-claim doesn't duplicate → long-press file selects file, no text highlight.
+
+### Phase 5 — Ship ⬜
+- `redeploy.bat` (both images), verify prod isolation (test bot token only), docs.
+
+## 5. Handoff
+- **Current state (2026-09-01):** Pools spec drafted (PLAN.md §4.1 + `pools-spec.html`). No code changed yet. No git init. `backend/.env` has test bot token (do not use prod token).
+- **Next step:** Review `pools-spec.html` in browser, confirm pool names/tiers and quantity UX, then Phase 1 demo.
+- **Gotchas:**
+  - `npx shadcn add` writes to `frontend/@/` — move to `src/` and delete `@/`.
+  - Long-press on `.file-card` was selecting name text — ensure `user-select: none` + `touch-action: manipulation` + prevent selection, for My Files / Archive / any file grid (Pools user list uses `⋯` menu so not affected, but same rule if file cards appear there).
+  - Colors via CSS variables only.
+  - Android CI only — never build locally.
+  - Existing file type is single `fb_cookie` — pools will need either new FileTypes or treat pools as orthogonal to FileType (row-level pool tag). Spec proposes orthogonal tagging (simpler, no FileType explosion).
+  - `getDedupKey` currently only for `fb_cookie` by `uid`/`c_user` — reuse for pool dedup.
+
+## 6. Decisions log
+| Date | Decision | Why |
+|------|----------|-----|
+| 2026-09-01 | Pools are row-level, not file-level | Admin needs N-of-many across users; file-level too coarse |
+| 2026-09-01 | Claimed rows removed from available, not deleted | Audit + user visibility ("Taken") |
+| 2026-09-01 | Orthogonal `poolId` tag on rows vs new FileTypes | Keeps FileType simple; pools can accept any row shape |
+| 2026-09-01 | Lua/transaction for claim | Prevent double-claim under concurrent admin downloads |
+| 2026-09-01 | Pools admin-only | Per user request — pools tab/pages gated by requireAdmin; users only see Taken badge on own rows |
+| 2026-09-01 | 3 pools = Cookies Only / Cookies+2FA / Page (green dot) | User clarified: pools map to download options; progressive eligibility |
+| 2026-09-01 | Per-pool dedup + invalid + eligibility filter | Prevent garbage/duplicate accounts in pools; report skip counts |
+| 2026-09-01 | Taken = blue lock + global permanent blocklist | User requested: taken rows blue/white/blue-dot, locked, long-press dot shows date, never re-enter pool even after delete/re-add by any user |
+| 2026-09-01 | Dead→remove, backfill existing rows, claim-only removal | 9) dead auto-removed from pools 10) rollout backfills existing rows 11) no unpool, claim is only removal |

@@ -19,6 +19,7 @@ import {
   findFileAcrossUsers,
   invalidateBanCache,
   invalidateSession,
+  isAdmin,
   migrateListKey,
   requireAdmin,
   requireAuth,
@@ -99,6 +100,7 @@ adminRouter.get("/users", requireAuth, requireAdmin, asyncRoute(async (_req, res
         user.fileCount = files.length;
         user.archivedCount = archived.length;
         user.banned = !!banData;
+        user.isAdmin = isAdmin(String(user.id));
         user.photoUrl = user.fileId ? (BACKEND_PUBLIC_URL || "") + "/api/auth/photo/" + user.id : null;
         users.push(user);
       }
@@ -151,6 +153,7 @@ adminRouter.get("/users/search", requireAuth, requireAdmin, asyncRoute(async (re
         const banData = results[i * 3 + 2][1];
         user.fileCount = files.length;
         user.banned = !!banData;
+        user.isAdmin = isAdmin(String(user.id));
         user.photoUrl = user.fileId ? (BACKEND_PUBLIC_URL || "") + "/api/auth/photo/" + user.id : null;
         users.push(user);
       }
@@ -175,6 +178,7 @@ adminRouter.get("/user/:userId", requireAuth, requireAdmin, asyncRoute(async (re
   user.fileCount = files.length;
   user.archivedCount = archived.length;
   user.banned = !!(await getJSON("ban:" + req.params.userId));
+  user.isAdmin = isAdmin(String(user.id));
   user.files = files;
   res.json(user);
 }));
@@ -215,6 +219,8 @@ adminRouter.delete("/user/:userId/archive/:fileId", requireAuth, requireAdmin, a
   }
   const file = archived.splice(idx, 1)[0];
   await setJSON("archive:" + req.params.userId, archived);
+  const { removeFileRowsFromPools } = await import("../services/pools");
+  void removeFileRowsFromPools(file as unknown as import("../lib/shared").StoredFile, req.params.userId).catch(()=>{});
   await redis.pipeline()
     .del(key("rows:" + file.id))
     .del(key("undo:" + file.id))
@@ -464,6 +470,8 @@ adminRouter.post("/file/:fileId/history/:v/fork", requireAuth, requireAdmin, asy
 }));
 
 adminRouter.put("/file/:fileId/persist", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
+  const found = await findFileAcrossUsers(req.params.fileId);
+  if (!found) { res.status(404).json({ error: "file not found" }); return; }
   const body = req.body as {
     rows?: Row[];
     action?: string;
@@ -493,7 +501,7 @@ adminRouter.put("/file/:fileId/persist", requireAuth, requireAdmin, asyncRoute(a
   }
   pipeline.set(key("seq:" + req.params.fileId), String(newSeq));
   pipeline.set(key("meta:dirty"), String(Date.now()));
-  if (body.userId) pipeline.del(key("crossdups:" + body.userId));
+  if (found.userId) pipeline.del(key("crossdups:" + found.userId));
   if (body.logs !== undefined) {
     const logKey = key("logs:" + req.params.fileId);
     pipeline.del(logKey);
@@ -529,8 +537,8 @@ adminRouter.put("/file/:fileId/persist", requireAuth, requireAdmin, asyncRoute(a
     res.status(500).json({ error: "Failed to persist" });
     return;
   }
-  if (body.dataCount !== undefined && body.userId) {
-    const updated = await updateUserFilesAtomic(body.userId, (files) => {
+  if (body.dataCount !== undefined && found.userId) {
+    const updated = await updateUserFilesAtomic(found.userId, (files) => {
       const idx = files.findIndex((f) => f.id === req.params.fileId);
       if (idx === -1) return null;
       files[idx].dataCount = body.dataCount;
@@ -567,6 +575,7 @@ adminRouter.delete("/user/:userId", requireAuth, requireAdmin, asyncRoute(async 
     res.status(400).json({ error: "cannot delete your own account" });
     return;
   }
+  if (isAdmin(String(req.params.userId))) { res.status(403).json({ error: "cannot act on admin" }); return; }
   const user = await getJSON("user:" + req.params.userId);
   if (!user) {
     res.status(404).json({ error: "user not found" });
@@ -599,6 +608,7 @@ adminRouter.delete("/user/:userId", requireAuth, requireAdmin, asyncRoute(async 
 }));
 
 adminRouter.put("/user/:userId", requireAuth, requireAdmin, asyncRoute(async (req, res) => {
+  if (isAdmin(String(req.params.userId)) && String(req.params.userId) !== String(req.userId)) { res.status(403).json({ error: "cannot edit admin" }); return; }
   const user = await getJSON<Record<string, any>>("user:" + req.params.userId);
   if (!user) {
     res.status(404).json({ error: "user not found" });
@@ -618,6 +628,7 @@ adminRouter.post("/user/:userId/ban", requireAuth, requireAdmin, asyncRoute(asyn
     res.status(400).json({ error: "cannot ban your own account" });
     return;
   }
+  if (isAdmin(String(req.params.userId))) { res.status(403).json({ error: "cannot act on admin" }); return; }
   const user = await getJSON("user:" + req.params.userId);
   if (!user) {
     res.status(404).json({ error: "user not found" });

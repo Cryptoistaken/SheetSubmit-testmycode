@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams } from "react-router";
 const AdminView = lazy(() => import("@/components/home/AdminView"));
 const ArchiveView = lazy(() => import("@/components/home/ArchiveView"));
 const SplitterTool = lazy(() => import("@/components/tools/SplitterTool"));
+const PoolsView = lazy(() => import("@/components/home/PoolsView"));
 import Fab from "@/components/home/Fab";
 import FileGrid from "@/components/home/FileGrid";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,7 +16,7 @@ import type { FileType, SheetFile } from "@/lib/types";
 import { downloadXlsx, genId, hydrateWaCache, importXlsx, todayStr } from "@/lib/xlsx";
 import { useBubbleStore } from "@/stores/bubbleStore";
 
-type Tab = "files" | "archive" | "admin" | "tools";
+type Tab = "files" | "archive" | "pools" | "admin" | "tools";
 
 interface AndroidBridge {
   getBubbleFile?: () => string;
@@ -74,13 +75,15 @@ export default function HomePage() {
   // /files, /archive, /admin, /admin/user/:id (admin user detail). The active
   // tab is derived from the pathname so every section is deep-linkable.
   const path = location.pathname;
-  const tab: Tab = path.startsWith("/tools")
-    ? "tools"
-    : path.startsWith("/admin")
-      ? "admin"
-      : path === "/archive"
-        ? "archive"
-        : "files";
+  const tab: Tab = path.startsWith("/pools")
+    ? "pools"
+    : path.startsWith("/tools")
+      ? "tools"
+      : path.startsWith("/admin")
+        ? "admin"
+        : path === "/archive"
+          ? "archive"
+          : "files";
 
   const [files, setFiles] = useState<SheetFile[] | null>(null);
   const [dupCounts, setDupCounts] = useState<Record<string, number>>({});
@@ -110,7 +113,7 @@ export default function HomePage() {
   }, [showToast]);
 
   useEffect(() => {
-    if ((tab === "admin" || tab === "tools") && !user?.isAdmin) {
+    if ((tab === "admin" || tab === "tools" || tab === "pools") && !user?.isAdmin) {
       navigate("/", { replace: true });
     }
   }, [tab, user, navigate]);
@@ -250,7 +253,15 @@ export default function HomePage() {
     showToast(ids.length + " file" + (ids.length > 1 ? "s" : "") + " archived");
   };
 
-  const createFile = async (type: FileType) => {
+  const [pwModal, setPwModal] = useState<null | { type: FileType; choice: string; custom: string }>(null);
+
+  const openCreatePw = (type: FileType) => setPwModal({ type, choice: "dgddigital", custom: "" });
+
+  const createWithPassword = async (password: string) => {
+    if (!pwModal) return;
+    const type = pwModal.type;
+    const poolEnabled = password === "dgddigital";
+    setPwModal(null);
     const name = fileTypeDef(type).label + " " + todayStr();
     const current = files ?? (await api.getFiles());
     let finalName = name;
@@ -261,7 +272,7 @@ export default function HomePage() {
     }
     const id = genId();
     try {
-      const created = await api.createFile({ id, name: finalName, type });
+      const created = await api.createFile({ id, name: finalName, type, password, poolEnabled });
       navigate("/file/" + created.id);
     } catch {
       showToast("Failed to create file");
@@ -270,30 +281,43 @@ export default function HomePage() {
     showToast(fileTypeDef(type).label + " file created");
   };
 
+  const createFile = async (type: FileType) => openCreatePw(type);
+
+  const [uploadPending, setUploadPending] = useState<null | { id: string; name: string; type: FileType; rows: import("@/lib/types").Row[]; dataCount: number }>(null);
+
+  const doUploadWithPassword = async (password: string) => {
+    if (!uploadPending) return;
+    const { id, name, type, rows, dataCount } = uploadPending;
+    setUploadPending(null);
+    setPwModal(null);
+    await hydrateWaCache(rows);
+    let created: import("@/lib/types").SheetFile;
+    try {
+      created = await api.createFile({ id, name, type, password, poolEnabled: password === "dgddigital" });
+    } catch {
+      showToast("Import failed");
+      return;
+    }
+    try {
+      await api.persist(created.id, { rows, dataCount, action: "import" });
+    } catch {
+      try { await api.deleteFile(created.id); } catch {}
+      showToast("Import failed — rolled back");
+      return;
+    }
+    showToast("Imported " + dataCount + " rows");
+    navigate("/file/" + created.id);
+  };
+
   const uploadFile = async (file: File) => {
     try {
       const buf = await file.arrayBuffer();
       const current = files ?? (await api.getFiles());
       const result = await importXlsx(buf, file.name, current);
-      await hydrateWaCache(result.rows);
-      const created = await api.createFile({ id: result.id, name: result.name, type: result.type });
-      try {
-        await api.persist(created.id, {
-          rows: result.rows,
-          dataCount: result.dataCount,
-          action: "import",
-        });
-      } catch {
-        try {
-          await api.deleteFile(created.id);
-        } catch {
-          // rollback best-effort
-        }
-        showToast("Import failed — rolled back");
-        return;
-      }
-      showToast("Imported " + result.dataCount + " rows");
-      navigate("/file/" + created.id);
+      const isLoveName = result.name.toLowerCase().includes("love");
+      // ask password before creating uploaded file — 2 cards, auto-pick L0VE if name contains Love
+      setUploadPending({ id: result.id, name: result.name, type: result.type, rows: result.rows, dataCount: result.dataCount });
+      setPwModal({ type: result.type, choice: isLoveName ? "L0VE@12345" : "dgddigital", custom: "" });
     } catch {
       showToast("Import failed");
     }
@@ -314,6 +338,14 @@ export default function HomePage() {
         >
           Archive
         </button>
+        {user?.isAdmin ? (
+          <button
+            className={`home-tab${tab === "pools" ? " active" : ""}`}
+            onClick={() => navigate("/pools/dgddigital/cookies_only")}
+          >
+            Pools
+          </button>
+        ) : null}
         {user?.isAdmin ? (
           <button
             className={`home-tab${tab === "admin" ? " active" : ""}`}
@@ -371,6 +403,14 @@ export default function HomePage() {
         <div className="home-pane" id="homePaneArchive">
           <Suspense fallback={null}>
             <ArchiveView />
+          </Suspense>
+        </div>
+      ) : null}
+
+      {tab === "pools" && user?.isAdmin ? (
+        <div className="home-pane" id="homePanePools" style={{ padding: "24px", maxWidth: 960, margin: "0 auto", width: "100%" }}>
+          <Suspense fallback={null}>
+            <PoolsView />
           </Suspense>
         </div>
       ) : null}
@@ -444,6 +484,27 @@ export default function HomePage() {
             <button className="btn btn-primary" onClick={commitRename}>
               Rename
             </button>
+          </div>
+        </div>
+      </div>
+
+      <div className={`modal-overlay${pwModal ? " open" : ""}`} onClick={(e) => { if (e.target === e.currentTarget) { setPwModal(null); setUploadPending(null); } }}>
+        <div className="modal-box" role="dialog" aria-modal="true" aria-label="Pick a password" style={{ width: 340 }}>
+          <div className="modal-title">Pick a password</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10, marginTop: 12 }}>
+            {[
+              { id: "dgddigital" },
+              { id: "L0VE@12345" },
+            ].map((c) => (
+              <button
+                key={c.id}
+                className="file-card"
+                style={{ textAlign: "center", padding: 14, minHeight: 56, justifyContent: "center", alignItems: "center", borderColor: "var(--border2)" }}
+                onClick={() => { if (uploadPending) doUploadWithPassword(c.id); else createWithPassword(c.id); }}
+              >
+                <span className="file-card-name" style={{ fontSize: 13, fontWeight: 600 }}>{c.id}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>

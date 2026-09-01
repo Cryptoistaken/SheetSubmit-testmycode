@@ -1,4 +1,4 @@
-import { Download, MessageCircle, RefreshCw } from "lucide-react";
+import { Download, MessageCircle, Palette, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 
@@ -276,6 +276,29 @@ export default function Topbar() {
                   />
                   <span className="toggle-track"></span>
                 </label>
+              </div>
+              <div
+                className="gear-toggle-row"
+                style={{ cursor: "pointer" }}
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setPanelOpen(false);
+                  navigate("/bubble-design");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setPanelOpen(false);
+                    navigate("/bubble-design");
+                  }
+                }}
+              >
+                <div>
+                  <div className="gear-toggle-label">Bubble design</div>
+                  <div className="gear-toggle-sub">Icon, color and size</div>
+                </div>
+                <Palette size={18} />
               </div>
               <div className="gear-divider"></div>
               <div

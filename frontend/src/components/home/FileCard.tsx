@@ -92,13 +92,22 @@ export default function FileCard({
 
   const count = file.dataCount ?? file.rowCount ?? 0;
   const badge = fileTypeDef(file.type).badge;
+  const pw = file.password ?? "dgddigital";
+  const isCustom = pw !== "dgddigital" && pw !== "L0VE@12345";
+  const pwLabel = pw === "dgddigital" ? "dgd" : pw === "L0VE@12345" ? "L0VE" : pw.slice(0, 8);
+  const pwTitle = pw;
+  const pwStyle: React.CSSProperties = isCustom
+    ? { background: "var(--fb-bg)", color: "var(--fb)" }
+    : pw === "L0VE@12345"
+      ? { background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a" }
+      : { background: "var(--bg3)", color: "var(--text2)" };
 
   return (
     <div
       className={`file-card${selected ? " selected" : ""}`}
       role="button"
       tabIndex={0}
-      style={{ touchAction: "manipulation" } as React.CSSProperties}
+      style={{ touchAction: "manipulation", userSelect: "none", WebkitUserSelect: "none" } as React.CSSProperties}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -126,6 +135,7 @@ export default function FileCard({
       <div className="file-card-name">{file.name}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
         <span className="file-type-badge t-fb">{badge}</span>
+        <span className="file-type-badge" style={{ ...pwStyle, fontSize: 10, padding: "2px 6px", maxWidth: 80, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={pwTitle}>{pwLabel}</span>
         <span className="file-card-meta">
           {count} row{count !== 1 ? "s" : ""}
           {crossDupCount ? (

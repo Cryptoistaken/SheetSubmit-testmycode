@@ -25,10 +25,13 @@ export interface SheetFile {
   createdAt?: number;
   updatedAt?: number;
   deletedAt?: number;
+  password?: string;
+  poolEnabled?: boolean;
 }
 
-/** A grid row — cookie cells are plain string keys. */
-export type Row = Record<string, string | null | undefined>;
+/** A grid row — cookie cells are plain string keys.
+ * Augmentations: _pool?: string; _taken?: boolean; _takenAt?: number; wa_status?: string */
+export type Row = Record<string, any>;
 
 export const FILE_TYPE_DEFS: Record<FileType, FileTypeDef> = {
   fb_cookie: {

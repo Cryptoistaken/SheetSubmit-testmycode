@@ -23,6 +23,22 @@ declare global {
 }
 
 const BASE = RUNTIME_BASE + "/api";
+export const API_BASE = BASE;
+
+async function requestBlob(path: string): Promise<Blob> {
+  const res = await fetch(BASE + path, { credentials: "include" });
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const body = await res.json();
+      detail = body?.error ?? JSON.stringify(body);
+    } catch {
+      detail = await res.text().catch(() => "");
+    }
+    throw new Error(`${res.status} ${res.statusText}${detail ? ` — ${detail}` : ""}`);
+  }
+  return res.blob();
+}
 
 async function request<T>(path: string, init?: RequestInit, opts?: { keepalive?: boolean }): Promise<T> {
   const controller = new AbortController();
@@ -78,6 +94,45 @@ interface VersionResult {
   ts: number | null;
 }
 
+export interface PoolSummary {
+  id: string;
+  label: string;
+  badge: string;
+  cols: string[];
+  filename: string;
+  password: string;
+  available: number;
+  claimed: number;
+  users: number;
+}
+export interface PoolUser {
+  userId: string;
+  displayName: string;
+  username?: string | null;
+  photoUrl?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  isAdmin?: boolean;
+  available: number;
+  claimed: number;
+}
+export interface PoolDetail {
+  pool: { id: string; label: string; badge: string; cols: string[]; filename: string; rule?: string };
+  password: string;
+  totals: { available: number; claimed: number; users: number };
+  users: PoolUser[];
+}
+export interface PoolRowsResult {
+  password: string;
+  poolId: string;
+  total: number;
+  offset: number;
+  limit: number;
+  rows: Record<string, unknown>[];
+}
+export type PoolClaimResult = { password: string; poolId: string; claimed: number; rows: unknown[]; downloadId?: string; filename?: string };
+export type PoolClaimResultWithMeta = PoolClaimResult;
+
 export const api = {
   // ── Files ──
   getFiles: () => request<SheetFile[]>("/files"),
@@ -85,7 +140,7 @@ export const api = {
     request<{ file: SheetFile; rows: Row[]; logs: unknown[]; undo: unknown[]; redo: unknown[]; seq?: number }>(
       `/files/${id}/full`,
     ),
-  createFile: (data: { id: string; name: string; type: FileType }) =>
+  createFile: (data: { id: string; name: string; type: FileType; password?: string; poolEnabled?: boolean }) =>
     request<SheetFile>("/files", { method: "POST", body: JSON.stringify(data) }),
   updateFile: (id: string, data: Record<string, unknown>) =>
     request<SheetFile>(`/files/${id}`, { method: "PUT", body: JSON.stringify(data) }),
@@ -178,6 +233,66 @@ export const api = {
   adminDeleteUser: (userId: string) => request<{ ok: boolean }>(`/admin/user/${userId}`, { method: "DELETE" }),
   adminBanUser: (userId: string) => request<{ ok: boolean }>(`/admin/user/${userId}/ban`, { method: "POST" }),
   adminUnbanUser: (userId: string) => request<{ ok: boolean }>(`/admin/user/${userId}/unban`, { method: "POST" }),
+
+  // ── Pools (admin-only, password-scoped with legacy alias for dgddigital) ──
+  getPools: () => request<{ pools: PoolSummary[] }>("/pools"),
+  getPoolDetail: async (password: string, poolId: string): Promise<PoolDetail> => {
+    const enc = (s: string) => encodeURIComponent(s);
+    try {
+      return await request<PoolDetail>(`/pools/${enc(password)}/${enc(poolId)}`);
+    } catch (e) {
+      if (password === "dgddigital" && String(e).includes("404")) {
+        return request<PoolDetail>(`/pools/${enc(poolId)}`);
+      }
+      throw e;
+    }
+  },
+  getPoolRows: async (password: string, poolId: string, opts?: { userId?: string; limit?: number; offset?: number }): Promise<PoolRowsResult> => {
+    const enc = (s: string) => encodeURIComponent(s);
+    const q = new URLSearchParams();
+    if (opts?.userId) q.set("userId", opts.userId);
+    if (opts?.limit) q.set("limit", String(opts.limit));
+    if (opts?.offset) q.set("offset", String(opts.offset));
+    const qs = q.toString() ? `?${q}` : "";
+    try {
+      return await request<PoolRowsResult>(`/pools/${enc(password)}/${enc(poolId)}/rows${qs}`);
+    } catch (e) {
+      if (password === "dgddigital" && String(e).includes("404")) {
+        return request<PoolRowsResult>(`/pools/${enc(poolId)}/rows${qs}`);
+      }
+      throw e;
+    }
+  },
+  claimPool: async (password: string, poolId: string, body: { count: number | "all"; userId?: string }): Promise<PoolClaimResult> => {
+    const enc = (s: string) => encodeURIComponent(s);
+    try {
+      return await request<PoolClaimResult>(`/pools/${enc(password)}/${enc(poolId)}/claim`, { method: "POST", body: JSON.stringify(body) });
+    } catch (e) {
+      if (password === "dgddigital" && String(e).includes("404")) {
+        return request<PoolClaimResult>(`/pools/${enc(poolId)}/claim`, { method: "POST", body: JSON.stringify(body) });
+      }
+      throw e;
+    }
+  },
+  getPoolLedger: async (password: string, poolId: string): Promise<{ ledger: unknown[] }> => {
+    const enc = (s: string) => encodeURIComponent(s);
+    try {
+      return await request<{ ledger: unknown[] }>(`/pools/${enc(password)}/${enc(poolId)}/ledger`);
+    } catch (e) {
+      if (password === "dgddigital" && String(e).includes("404")) {
+        return request<{ ledger: unknown[] }>(`/pools/${enc(poolId)}/ledger`);
+      }
+      throw e;
+    }
+  },
+  getDownloads: () => request<unknown[]>("/pools/downloads"),
+  getDownloadBlob: (id: string) => requestBlob(`/pools/downloads/${encodeURIComponent(id)}`),
+  revertDownload: (id: string) => request<{ ok: boolean; reverted: number }>(`/pools/downloads/${encodeURIComponent(id)}/revert`, { method: "POST" }),
+  // aliases for spec compatibility
+  downloadHistory: () => request<{ downloads: unknown[] } | unknown[]>("/pools/downloads" as string) as Promise<{ downloads: unknown[] } | unknown[]>,
+  redownload: (id: string) => requestBlob(`/pools/downloads/${encodeURIComponent(id)}`),
+  downloadById: (id: string) => requestBlob(`/pools/downloads/${encodeURIComponent(id)}`),
+  downloadByIdBlob: (id: string) => requestBlob(`/pools/downloads/${encodeURIComponent(id)}`),
 
   // ── Auth & bot (not in old api.js; used directly by the UI) ──
   me: () => request<User | null>("/auth/me"),

@@ -25,6 +25,7 @@ interface LogPopupState {
   label: string;
   crossInfo: CrossDupEntry[];
   wa: { status: string; banReason?: string | null; pageName?: string | null; linkedNumber?: string | null } | null;
+  taken?: { at: number; pool?: string } | null;
   x: number;
   y: number;
 }
@@ -185,6 +186,8 @@ export default function SheetGrid() {
     if (td) {
       const rowIdx = Number(td.dataset.row);
       const colKey = td.dataset.col ?? "";
+      const row = useSheetStore.getState().rows[rowIdx] as Record<string, unknown> | undefined;
+      if (row && (row as Record<string, unknown>)._taken) return;
       if (useSheetStore.getState().isDesktop) {
         if (e.ctrlKey || e.metaKey) {
           useSheetStore.getState().toggleSelection("cell", rowIdx, colKey);
@@ -262,13 +265,16 @@ export default function SheetGrid() {
           holdTimer.current = null;
           holdActive.current = true;
           const result = useSheetStore.getState().onDotHold(rowIdx);
-          if (result) {
+          const row = useSheetStore.getState().rows[rowIdx] as Record<string, unknown> | undefined;
+          const taken = row && (row as Record<string, unknown>)._taken ? { at: (row as Record<string, unknown>)._takenAt as number, pool: (row as Record<string, unknown>)._pool as string | undefined } : null;
+          if (result || taken) {
             const rect = dot.getBoundingClientRect();
             setLogPopup({
-              logs: result.logs,
-              label: result.label,
-              crossInfo: result.crossInfo,
-              wa: result.wa,
+              logs: result?.logs ?? [],
+              label: result?.label ?? String(rowIdx + 1),
+              crossInfo: result?.crossInfo ?? [],
+              wa: result?.wa ?? null,
+              taken,
               x: Math.max(4, rect.right - 340),
               y: rect.bottom + 4,
             });
@@ -281,6 +287,8 @@ export default function SheetGrid() {
     if (td && !store.selectionMode && !isBubble) {
       const rowIdx = Number(td.dataset.row);
       const colKey = td.dataset.col ?? "";
+      const row = useSheetStore.getState().rows[rowIdx] as Record<string, unknown> | undefined;
+      if (row && (row as Record<string, unknown>)._taken) return;
       holdTimer.current = setTimeout(() => {
         holdTimer.current = null;
         holdActive.current = true;
@@ -298,13 +306,16 @@ export default function SheetGrid() {
         holdActive.current = true;
         vibrate(15);
         const result = useSheetStore.getState().onDotHold(rowIdx);
-        if (result) {
+        const row = useSheetStore.getState().rows[rowIdx] as Record<string, unknown> | undefined;
+        const taken = row && (row as Record<string, unknown>)._taken ? { at: (row as Record<string, unknown>)._takenAt as number, pool: (row as Record<string, unknown>)._pool as string | undefined } : null;
+        if (result || taken) {
           const rect = dot.getBoundingClientRect();
           setLogPopup({
-            logs: result.logs,
-            label: result.label,
-            crossInfo: result.crossInfo,
-            wa: result.wa,
+            logs: result?.logs ?? [],
+            label: result?.label ?? String(rowIdx + 1),
+            crossInfo: result?.crossInfo ?? [],
+            wa: result?.wa ?? null,
+            taken,
             x: Math.max(4, rect.right - 340),
             y: rect.bottom + 4,
           });
@@ -401,6 +412,11 @@ export default function SheetGrid() {
             padding: 10,
           }}
         >
+          {logPopup.taken ? (
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--blue)", marginBottom: 6, padding: "6px 8px", background: "var(--blue-light)", borderRadius: 6 }}>
+              Taken ✓ — claimed{logPopup.taken.pool ? ` from ${logPopup.taken.pool}` : ""}{logPopup.taken.at ? ` on ${new Date(logPopup.taken.at).toLocaleDateString()}` : ""} • permanently blocked
+            </div>
+          ) : null}
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
             {logPopup.label} — {logPopup.logs.length} API call
             {logPopup.logs.length > 1 ? "s" : ""}
@@ -575,32 +591,37 @@ const GridRow = memo(function GridRow({
     (s) => s.dupRows.has(rowIdx) || s.crossDupRows.has(rowIdx),
   );
 
+  const taken = !!(row as Record<string, unknown>)?._taken;
   const status = row?.status ?? "";
-  const dotClass = isDupRow
-    ? "d-yellow"
-    : status === "bad"
-      ? "d-red"
-      : row?.wa_status === "eligible"
-        ? "d-green"
-        : status === "good" || status === "done"
-          ? "d-blue"
-          : status === "pending"
-            ? "d-spin d-yellow"
-            : "";
-  const statusLabel = isDupRow
-    ? "Duplicate row"
-    : status === "bad"
-      ? "Dead account"
-      : row?.wa_status === "eligible"
-        ? "FB page eligible"
-        : status === "good" || status === "done"
-          ? "Valid account"
-          : status === "pending"
-            ? "Checking…"
-            : "";
+  const dotClass = taken
+    ? "d-taken"
+    : isDupRow
+      ? "d-yellow"
+      : status === "bad"
+        ? "d-red"
+        : row?.wa_status === "eligible"
+          ? "d-green"
+          : status === "good" || status === "done"
+            ? "d-blue"
+            : status === "pending"
+              ? "d-spin d-yellow"
+              : "";
+  const statusLabel = taken
+    ? "Taken — claimed"
+    : isDupRow
+      ? "Duplicate row"
+      : status === "bad"
+        ? "Dead account"
+        : row?.wa_status === "eligible"
+          ? "FB page eligible"
+          : status === "good" || status === "done"
+            ? "Valid account"
+            : status === "pending"
+              ? "Checking…"
+              : "";
 
   return (
-    <tr className={isRowSel ? "row-selected" : ""} role="row">
+    <tr className={`${isRowSel ? "row-selected" : ""}${taken ? " row-taken" : ""}`} role="row">
       <th
         className={"rh" + (isRowSel ? " row-sel" : "")}
         data-row={rowIdx}
@@ -666,6 +687,7 @@ const GridCell = memo(function GridCell({
   );
   const styles = parseStyles(row ?? ({} as never))[colKey];
 
+  const taken = !!(row as Record<string, unknown>)?._taken;
   return (
     <td
       className={
@@ -673,18 +695,20 @@ const GridCell = memo(function GridCell({
         (sel ? " ms-sel" : "") +
         (dup ? " cell-dup" : "") +
         (invalid ? " cell-invalid" : "") +
-        (active ? " cell-editing" : "")
+        (active ? " cell-editing" : "") +
+        (taken ? " cell-taken" : "")
       }
       data-row={rowIdx}
       data-col={colKey}
       role="gridcell"
       aria-colindex={colIndex + 1}
-      tabIndex={active ? 0 : -1}
+      tabIndex={taken ? -1 : active ? 0 : -1}
       aria-label={value + (dup ? " (duplicate)" : "")}
       style={{
-        backgroundColor: styles?.bg || undefined,
-        color: styles?.color || undefined,
+        backgroundColor: taken ? "#0070f3" : styles?.bg || undefined,
+        color: taken ? (active ? "#fff" : "rgba(255,255,255,0.72)") : styles?.color || undefined,
         fontWeight: styles?.bold ? 700 : undefined,
+        pointerEvents: taken ? "none" as const : undefined,
       }}
     >
       <div className="cell-inner">

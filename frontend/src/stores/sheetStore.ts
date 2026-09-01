@@ -611,6 +611,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     const s = get();
     const row = s.rows[rowIdx];
     if (!row) return;
+    if (row._taken) return;
     const prevVal = row[colKey] ?? "";
     if (value === prevVal) return;
     const prevRow = { ...row };
@@ -939,6 +940,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
   openQuickEdit: (rowIdx, colKey) => {
     const row = get().rows[rowIdx];
     if (!row) return;
+    if (row._taken) return;
     set({
       selectedCell: { rowIdx, colIdx: colKey, originalVal: row[colKey] ?? "" },
       draft: row[colKey] ?? "",
@@ -950,6 +952,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
   openInlineEdit: (rowIdx, colKey) => {
     const row = get().rows[rowIdx];
     if (!row) return;
+    if (row._taken) return;
     set({
       selectedCell: { rowIdx, colIdx: colKey, originalVal: row[colKey] ?? "" },
       draft: row[colKey] ?? "",

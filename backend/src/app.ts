@@ -13,6 +13,7 @@ import { createBotRouter, createWebhookRouter } from "./routes/bot";
 import { deployRouter } from "./routes/deploy";
 import { archiveRouter, crossDupsRouter, filesRouter } from "./routes/files";
 import { historyRouter } from "./routes/history";
+import { poolsRouter } from "./routes/pools";
 import { waRouter } from "./routes/wa";
 import { isBotEnabled } from "./services/telegram";
 import { redis } from "./services/redis";
@@ -55,6 +56,7 @@ export function createApp(): express.Express {
   app.use("/api/files", filesRouter);
   // /api/files/:id/history... — after filesRouter so /:id doesn't shadow it
   app.use("/api/files", historyRouter);
+  app.use("/api/pools", poolsRouter);
   app.use("/api/archive", archiveRouter);
   app.use("/api/cross-dups", crossDupsRouter);
   app.use("/api", waRouter); // /api/fb/check, /api/fb/wa-check, /api/wa/cache

@@ -31,6 +31,8 @@ export interface SheetFile {
 export interface StoredFile extends SheetFile {
   userId?: string;
   columns?: ColumnDef[] | null;
+  password?: string;
+  poolEnabled?: boolean;
   [k: string]: unknown;
 }
 
@@ -38,7 +40,7 @@ export interface StoredFile extends SheetFile {
 export type Row = Record<string, string | null | undefined>;
 
 /** Fields a client may mutate on an existing file via PUT (mass-assignment whitelist). */
-export const MUTABLE_FILE_FIELDS = ["name", "type", "columns"] as const;
+export const MUTABLE_FILE_FIELDS = ["name", "type", "columns", "password", "poolEnabled"] as const;
 
 export const FILE_TYPE_DEFS: Record<FileType, FileTypeDef> = {
   fb_cookie: {

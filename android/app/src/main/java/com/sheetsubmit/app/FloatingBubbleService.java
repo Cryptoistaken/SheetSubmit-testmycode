@@ -10,13 +10,17 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.PixelFormat;
+import android.graphics.PorterDuff;
 import android.graphics.drawable.GradientDrawable;
 import android.hardware.display.DisplayManager;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -51,6 +55,7 @@ public class FloatingBubbleService extends Service {
     private static final String KEY_CLIP_AT = "bubble_clip_at";
     private static final String KEY_BUBBLE_X = "bubble_x";
     private static final String KEY_BUBBLE_Y = "bubble_y";
+    private static FloatingBubbleService instance;
 
     private WindowManager windowManager;
     private View bubbleView;
@@ -68,6 +73,7 @@ public class FloatingBubbleService extends Service {
     private long panelShownAt;
     private boolean panelShowing;
     private long downAt;
+    private WebView claudeCodeView;
 
     public static void start(Context ctx) {
         Intent i = new Intent(ctx, FloatingBubbleService.class);
@@ -82,9 +88,110 @@ public class FloatingBubbleService extends Service {
         ctx.stopService(new Intent(ctx, FloatingBubbleService.class));
     }
 
+    public static void applyConfig(Context ctx) {
+        final FloatingBubbleService s = instance;
+        if (s == null || s.bubbleView == null || s.windowManager == null) return;
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override public void run() { s.refreshBubbleConfig(); }
+        });
+    }
+
+    private String claudeCodeHtml() {
+        return "<html><head><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>*{animation-play-state:paused !important} .play-tap .action-body,.play-tap .arm-l,.play-tap .arm-r,.play-tap .shadow-anim{animation-play-state:running !important} .play-tap .breathe-anim{animation-play-state:running !important} .play-longpress .yawn-mouth,.play-longpress .yawn-tear,.play-longpress .action-body{animation-play-state:running !important} .play-drag .action-body,.play-drag .arm-l,.play-drag .arm-r{animation-play-state:running !important} .play-open .breathe-anim,.play-open .action-body{animation-play-state:running !important}</style></head><body style=\"margin:0;background:transparent;overflow:hidden\"><div id=\"c\"><svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 3 16 13\" width=\"100%\" height=\"100%\" style=\"display:block\"><defs"
+                + "><style>.action-body{transform-origin:7.5px 13px;animation:action-body 16s infinite ease-in-out}.breathe-anim{transform-origin:7.5px 13px;animation:breathe 3.2s infinite ease-in-out}.shadow-anim{transform-origin:7.5px 15.5px;animation:shadow-action 16s infinite ease-in-out}.arm-l{transform-origin:1px 10px;animation:arm-l-idle 16s infinite ease-in-out}.arm-r{transform-origin:14px 10px;animation:arm-r-idle 16s infinite ease-in-out}.eyes-look{animation:eye-track 16s infinite ease-in-out}.eyes-blink{transform-origin:7.5px 9px;animation:eye-blink 16s infinite linear}.yawn-mouth{transform-origin:7.5px 11px;animation:yawn-mouth-anim 16s infinite ease-in-out;opacity:0}.yawn-tear{animation:tear-fall 16s infinite ease-in-out;opacity:0}@keyframes breathe{0%,100%{transform:scale(1,1) translate(0,0)}50%{transform:scale(1.02,0.98) translate(0,0.5px)}}@"
+                + "keyframes action-body{0%,8%,26%,38%,55%,80%,100%{transform:scale(1,1) translate(0,0)}12%,22%{transform:scale(1,1) translate(1px,0)}42%,50%{transform:scale(1,1) translate(-1px,0)}30%,36%{transform:scale(1,1) translate(0.5px,0)}60%{transform:scale(0.95,1.05) translate(0px,-1px)}65%{transform:scale(0.9,1.1) translate(0px,-2px)}72%{transform:scale(1.05,0.95) translate(0px,1px)}76%{transform:scale(1,1) translate(0px,0px)}}@keyframes shadow-action{0%,8%,26%,38%,55%,80%,100%{transform:scaleX(1) translate(0,0);opacity:0.5}12%,22%{transform:scaleX(1) translate(1px,0);opacity:0.5}42%,50%{transform:scaleX(1) translate(-1px,0);opacity:0.5}30%,36%{transform:scaleX(1) translate(0.5px,0);opacity:0.5}60%{transform:scaleX(0.95) translate(0,0);opacity:0.45}65%{transform:scaleX(0.9) translate(0,0);opacity:0.4}72%{transform:scaleX(1.05) translate(0,0);opacit"
+                + "y:0.55}76%{transform:scaleX(1) translate(0,0);opacity:0.5}}@keyframes eye-track{0%,10%,25%,38%,52%,58%,80%,100%{transform:translate(0px,0px)}12%,22%{transform:translate(3px,0px)}42%,50%{transform:translate(-3px,0px)}60%,75%{transform:translate(0px,-1px)}}@keyframes eye-blink{0%,3%,7%,18%,22%,43%,47%,56%,83%,87%,100%{transform:scaleY(1)}5%,20%,45%,85%{transform:scaleY(0.1)}60%{transform:scaleY(1)}62%,72%{transform:scaleY(0.1)}75%{transform:scaleY(1)}}@keyframes arm-l-idle{0%,28%{transform:translate(0,0) rotate(0deg)}30%{transform:translate(1px,-3px) rotate(15deg)}31%{transform:translate(1.5px,-4px) rotate(35deg)}32%{transform:translate(0.5px,-2.5px) rotate(0deg)}33%{transform:translate(1.5px,-4px) rotate(35deg)}34%{transform:translate(0.5px,-2.5px) rotate(0deg)}35%{transform:translate(1.5px,-4px) rotate(35deg)}36%{transform:translate(0.5px"
+                + ",-2.5px) rotate(0deg)}38%,58%{transform:translate(0,0) rotate(0deg)}62%{transform:translate(-1px,-2px) rotate(45deg)}65%{transform:translate(-2px,-3px) rotate(80deg)}72%{transform:translate(0px,1px) rotate(-15deg)}76%,100%{transform:translate(0,0) rotate(0deg)}}@keyframes arm-r-idle{0%,58%{transform:translate(0,0) rotate(0deg)}62%{transform:translate(1px,-2px) rotate(-45deg)}65%{transform:translate(2px,-3px) rotate(-80deg)}72%{transform:translate(0px,1px) rotate(15deg)}76%,100%{transform:translate(0,0) rotate(0deg)}}@keyframes yawn-mouth-anim{0%,58%,76%,100%{opacity:0;transform:scale(0.1)}60%{opacity:1;transform:scale(0.5,0.2)}65%{opacity:1;transform:scale(1.1,1.4)}72%{opacity:1;transform:scale(0.6,0.4)}75%{opacity:0;transform:scale(0.1)}}@keyframes tear-fall{0%,64%,80%,100%{opacity:0;transform:translateY(0)}66%{opacity:1;transform:transl"
+                + "ateY(0)}72%{opacity:1;transform:translateY(2.5px)}75%{opacity:0;transform:translateY(3px)}}</style></defs><rect class=\"shadow-anim\" x=\"3\" y=\"15\" width=\"9\" height=\"1\" fill=\"#000000\" opacity=\"0.5\"/><g fill=\"currentColor\"><rect x=\"3\" y=\"13\" width=\"1\" height=\"2\"/><rect x=\"5\" y=\"13\" width=\"1\" height=\"2\"/><rect x=\"9\" y=\"13\" width=\"1\" height=\"2\"/><rect x=\"11\" y=\"13\" width=\"1\" height=\"2\"/></g><g class=\"action-body\"><g class=\"breathe-anim\"><rect x=\"2\" y=\"6\" width=\"11\" height=\"7\" fill=\"currentColor\"/><g class=\"arm-l\"><rect x=\"0\" y=\"9\" width=\"2\" height=\"2\" fill=\"currentColor\"/></g><g class=\"arm-r\"><rect x=\"13\" y=\"9\" width=\"2\" height=\"2\" fill=\"currentColor\"/></g><rect class=\"yawn-mouth\" x=\"6\" y=\"10\" width=\"3\" height=\"2\" fill=\"#000\"/><g class=\"eyes-look\""
+                + "" fill=\"#000\"><g class=\"eyes-blink\"><rect x=\"4\" y=\"8\" width=\"1\" height=\"2\"/><rect x=\"10\" y=\"8\" width=\"1\" height=\"2\"/></g></g><rect class=\"yawn-tear\" x=\"3.5\" y=\"10\" width=\"1\" height=\"1\" fill=\"#40C4FF\"/></g></g></svg></div><script>window.playClaude=function(n){var c=document.getElementById(\"c\");if(!c)return;c.className=\"play-\"+n;clearTimeout(window._pcT);window._pcT=setTimeout(function(){c.className=\"\";},2000);}</script></body></html>"
+                ;
+    }
+    private void playClaudeCode(String name) {
+        try { if (claudeCodeView != null) claudeCodeView.evaluateJavascript("window.playClaude('" + name + "')", null); } catch (Exception ignored) {}
+    }
+    private void refreshBubbleConfig() {
+        try {
+            SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            String icon = p.getString("bubble_icon", "logo");
+            String color = p.getString("bubble_color", "#ef4444");
+            int sz = p.getInt("bubble_size", 60);
+            int col = Color.parseColor(color);
+            int margin = dp(12);
+            int winSize = dp(sz) + margin * 2;
+            int iconPx = dp(sz * 0.95f);
+            if (bubbleView instanceof FrameLayout) {
+                FrameLayout root = (FrameLayout) bubbleView;
+                if (claudeCodeView != null) { try { claudeCodeView.destroy(); } catch (Exception ignored) {} claudeCodeView = null; }
+                root.removeAllViews();
+                if ("logo".equals(icon)) {
+                    FrameLayout wrap = new FrameLayout(this);
+                    GradientDrawable bg = new GradientDrawable();
+                    bg.setColor(col);
+                    bg.setCornerRadius(iconPx * 0.25f);
+                    wrap.setBackground(bg);
+                    FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
+                    wrap.setLayoutParams(wlp);
+                    LinearLayout lines = new LinearLayout(this);
+                    lines.setOrientation(LinearLayout.VERTICAL);
+                    lines.setGravity(Gravity.CENTER);
+                    FrameLayout.LayoutParams llp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
+                    lines.setLayoutParams(llp);
+                    int lineW = Math.round(iconPx * 0.50f);
+                    int lineWS = Math.round(iconPx * 0.35f);
+                    int lineH = Math.max(dp(2), Math.round(iconPx * 0.07f));
+                    int gap = Math.round(iconPx * 0.10f);
+                    for (int i = 0; i < 3; i++) {
+                        View v = new View(this);
+                        GradientDrawable vg = new GradientDrawable();
+                        vg.setColor(0xFFFFFFFF);
+                        vg.setCornerRadius(lineH / 2f);
+                        v.setBackground(vg);
+                        LinearLayout.LayoutParams vlp = new LinearLayout.LayoutParams(i == 2 ? lineWS : lineW, lineH);
+                        if (i > 0) vlp.topMargin = gap;
+                        v.setLayoutParams(vlp);
+                        lines.addView(v);
+                    }
+                    wrap.addView(lines);
+                    root.addView(wrap);
+                } else if ("claudeCode".equals(icon)) {
+                    WebView wv = new WebView(this);
+                    wv.setBackgroundColor(Color.TRANSPARENT);
+                    try { wv.setLayerType(View.LAYER_TYPE_SOFTWARE, null); } catch (Exception ignored) {}
+                    WebSettings ws = wv.getSettings();
+                    ws.setJavaScriptEnabled(true);
+                    wv.setVerticalScrollBarEnabled(false);
+                    wv.setHorizontalScrollBarEnabled(false);
+                    wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ return false; }});
+                    FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
+                    wv.setLayoutParams(wlp);
+                    wv.loadDataWithBaseURL(null, claudeCodeHtml(), "text/html", "utf-8", null);
+                    claudeCodeView = wv;
+                    root.addView(wv);
+                } else {
+                    ImageView iv = new ImageView(this);
+                    int res = R.drawable.bubble_icon;
+                    if ("pacman".equals(icon)) res = R.drawable.bubble_pacman;
+                    else if ("logo".equals(icon)) res = R.drawable.bubble_logo;
+                    iv.setImageResource(res);
+                    try { iv.setColorFilter(col, PorterDuff.Mode.SRC_IN); } catch (Exception ignored) {}
+                    if ("logo".equals(icon)) try { iv.clearColorFilter(); } catch (Exception ignored) {}
+                    FrameLayout.LayoutParams ilp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
+                    iv.setLayoutParams(ilp);
+                    root.addView(iv);
+                }
+            }
+            bubbleParams.width = winSize;
+            bubbleParams.height = winSize;
+            bubbleParams.x = clamp(bubbleParams.x, 0, Math.max(0, displayWidth() - winSize));
+            bubbleParams.y = clamp(bubbleParams.y, 0, Math.max(0, displayHeight() - winSize));
+            windowManager.updateViewLayout(bubbleView, bubbleParams);
+        } catch (Exception e) { Log.e(TAG, "refreshBubbleConfig: " + e.getMessage()); }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
+        instance = this;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !android.provider.Settings.canDrawOverlays(this)) {
             Log.e(TAG, "overlay permission missing, stopping");
             stopSelf();
@@ -166,18 +273,72 @@ public class FloatingBubbleService extends Service {
     }
 
     private void addBubbleToWindow() {
-        int size = dp(60);
+        SharedPreferences cfg = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String cfgIcon = cfg.getString("bubble_icon", "claude");
+        String cfgColor = cfg.getString("bubble_color", "#ef4444");
+        int cfgSize = cfg.getInt("bubble_size", 60);
+        int size = dp(cfgSize);
         int margin = dp(12);
         int windowSize = size + margin * 2;
 
         FrameLayout root = new FrameLayout(this);
         root.setClipChildren(false);
 
-        ImageView icon = new ImageView(this);
-        icon.setImageResource(R.drawable.bubble_icon);
-        FrameLayout.LayoutParams ilp = new FrameLayout.LayoutParams(dp(57), dp(57), Gravity.CENTER);
-        icon.setLayoutParams(ilp);
-        root.addView(icon);
+        int iconPx = dp(cfgSize * 0.95f);
+        if ("logo".equals(cfgIcon)) {
+            FrameLayout wrap = new FrameLayout(this);
+            GradientDrawable bg = new GradientDrawable();
+            try { bg.setColor(Color.parseColor(cfgColor)); } catch (Exception ignored) { bg.setColor(0xFF000000); }
+            bg.setCornerRadius(iconPx * 0.25f);
+            wrap.setBackground(bg);
+            FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
+            wrap.setLayoutParams(wlp);
+            LinearLayout lines = new LinearLayout(this);
+            lines.setOrientation(LinearLayout.VERTICAL);
+            lines.setGravity(Gravity.CENTER);
+            FrameLayout.LayoutParams llp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
+            lines.setLayoutParams(llp);
+            int lineW = Math.round(iconPx * 0.50f);
+            int lineWS = Math.round(iconPx * 0.35f);
+            int lineH = Math.max(dp(2), Math.round(iconPx * 0.07f));
+            int gap = Math.round(iconPx * 0.10f);
+            for (int i = 0; i < 3; i++) {
+                View v = new View(this);
+                GradientDrawable vg = new GradientDrawable();
+                vg.setColor(0xFFFFFFFF);
+                vg.setCornerRadius(lineH / 2f);
+                v.setBackground(vg);
+                LinearLayout.LayoutParams vlp = new LinearLayout.LayoutParams(i == 2 ? lineWS : lineW, lineH);
+                if (i > 0) vlp.topMargin = gap;
+                v.setLayoutParams(vlp);
+                lines.addView(v);
+            }
+            wrap.addView(lines);
+            root.addView(wrap);
+        } else if ("claudeCode".equals(cfgIcon)) {
+            WebView wv = new WebView(this);
+            wv.setBackgroundColor(Color.TRANSPARENT);
+            try { wv.setLayerType(View.LAYER_TYPE_SOFTWARE, null); } catch (Exception ignored) {}
+            WebSettings ws = wv.getSettings();
+            ws.setJavaScriptEnabled(true);
+            wv.setVerticalScrollBarEnabled(false);
+            wv.setHorizontalScrollBarEnabled(false);
+            wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ return false; }});
+            FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
+            wv.setLayoutParams(wlp);
+            wv.loadDataWithBaseURL(null, claudeCodeHtml(), "text/html", "utf-8", null);
+            claudeCodeView = wv;
+            root.addView(wv);
+        } else {
+            ImageView icon = new ImageView(this);
+            int res = R.drawable.bubble_icon;
+            if ("pacman".equals(cfgIcon)) res = R.drawable.bubble_pacman;
+            icon.setImageResource(res);
+            try { icon.setColorFilter(Color.parseColor(cfgColor), PorterDuff.Mode.SRC_IN); } catch (Exception ignored) {}
+            FrameLayout.LayoutParams ilp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
+            icon.setLayoutParams(ilp);
+            root.addView(icon);
+        }
 
         bubbleParams = new WindowManager.LayoutParams(
                 windowSize, windowSize, overlayType(),
@@ -235,6 +396,7 @@ public class FloatingBubbleService extends Service {
             longPressFired = true;
             bubbleView.performClick();
             hapticFeedback();
+            playClaudeCode("longpress");
             panelSuppressPaste = true; // panel opens read-only-ish, no paste
             if (miniWebView != null) {
                 miniWebView.evaluateJavascript(
@@ -261,6 +423,7 @@ public class FloatingBubbleService extends Service {
                     longPressFired = false;
                     downAt = SystemClock.elapsedRealtime();
                     v.animate().scaleX(0.92f).scaleY(0.92f).setDuration(120).start();
+                    playClaudeCode("tap");
                     // Arm the long-press NOW — it fires after LONG_PRESS_MS while
                     // still held, not on release.
                     v.postDelayed(longPressRunnable, LONG_PRESS_MS);
@@ -271,7 +434,9 @@ public class FloatingBubbleService extends Service {
                         // A drag is not a long-press — disarm it.
                         cancelLongPress();
                         hidePanel();
+                        boolean wasDragging = dragging;
                         dragging = true;
+                        if (!wasDragging) playClaudeCode("drag");
                         int nx = Math.round(initialBubbleX + (ev.getRawX() - initialRawX));
                         int ny = Math.round(initialBubbleY + (ev.getRawY() - initialRawY));
                         bubbleParams.x = clamp(nx, 0, Math.max(0, displayWidth() - bubbleParams.width));
@@ -315,6 +480,7 @@ public class FloatingBubbleService extends Service {
         if (panelRoot != null || panelShowing) {
             hidePanel();
         } else {
+            playClaudeCode("open");
             showPanel();
         }
     }
@@ -322,6 +488,7 @@ public class FloatingBubbleService extends Service {
     private void showPanel() {
         if (panelShowing) return;
         panelShowing = true;
+        playClaudeCode("open");
         try {
             int scrW = displayWidth();
             int scrH = displayHeight();
@@ -576,6 +743,7 @@ public class FloatingBubbleService extends Service {
 
     @Override
     public void onDestroy() {
+        if (instance == this) instance = null;
         hidePanel();
         if (miniWebView != null) {
             miniWebView.destroy();
@@ -585,6 +753,7 @@ public class FloatingBubbleService extends Service {
             try { windowManager.removeView(bubbleView); } catch (Exception ignored) {}
             bubbleView = null;
         }
+        if (claudeCodeView != null) { try { claudeCodeView.destroy(); } catch (Exception ignored) {} claudeCodeView = null; }
         super.onDestroy();
     }
 }

@@ -984,6 +984,8 @@ button, input, select, textarea {
     transform: scale(0.99);
 }
 .admin-user-avatar-wrap {
+    position: relative;
+    display: inline-flex;
     flex-shrink: 0;
 }
 .admin-user-avatar {
@@ -1077,6 +1079,9 @@ button, input, select, textarea {
 .admin-detail-actions {
     flex-shrink: 0;
 }
+.pool-switch{display:inline-flex;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px;gap:3px}
+.pool-switch button{padding:7px 14px;border-radius:6px;border:1px solid transparent;background:transparent;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;min-height:36px;transition:.12s}
+.pool-switch button.active{background:var(--bg);border-color:var(--border2);color:var(--text);box-shadow:var(--shadow-sm)}
 .admin-file-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -1508,6 +1513,16 @@ table.grid td.dot-cell:hover {
     animation: pulse 1s ease-in-out infinite;
     will-change: opacity;
 }
+.row-dot.d-taken { background: var(--blue); box-shadow: 0 0 0 2px rgba(255,255,255,0.85), 0 0 0 4px var(--blue); }
+
+/* taken row lock — blue cell + white text + whole-row cut */
+tr.row-taken { position: relative; }
+tr.row-taken td.dc.cell-taken { background: #0070f3 !important; color: rgba(255,255,255,0.72) !important; border-color: #0070f3 !important; }
+tr.row-taken td.dc.cell-taken.cell-editing { color: #fff !important; }
+tr.row-taken::after { content: ''; position: absolute; left: 36px; right: 36px; top: 50%; height: 1.25px; background: rgba(255,255,255,0.45); pointer-events: none; z-index: 1; }
+
+/* file card long-press no text select */
+.file-card, .file-card-name { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
 
 tr.add-row td {
     background: var(--bg2) !important;

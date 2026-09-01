@@ -9,7 +9,7 @@
 import { mock } from "bun:test";
 import path from "node:path";
 
-type StoreVal = string | string[] | Set<string>;
+type StoreVal = string | string[] | Set<string> | Record<string, string>;
 
 export const store: Record<string, StoreVal> = {};
 const versions: Record<string, number> = {};
@@ -52,7 +52,8 @@ function valType(k: string): ValType {
   if (v === undefined) return "none";
   if (typeof v === "string") return "string";
   if (Array.isArray(v)) return "list";
-  return "set";
+  if (v instanceof Set) return "set";
+  return "string"; // hash treated as string type for valType
 }
 
 function norm(start: number, stop: number, len: number): [number, number] {
@@ -160,6 +161,23 @@ function cmdSmembers(k: string): string[] {
 function cmdScard(k: string): number {
   return store[k] instanceof Set ? (store[k] as Set<string>).size : 0;
 }
+function cmdSismember(k: string, member: string): number {
+  return store[k] instanceof Set && (store[k] as Set<string>).has(member) ? 1 : 0;
+}
+function cmdLrem(k: string, count: number, val: string): number {
+  if (!Array.isArray(store[k])) return 0;
+  const arr = store[k] as string[];
+  let removed = 0;
+  if (count === 0) { const n = arr.filter(v=>v!==val).length; removed = arr.length - n; store[k]=arr.filter(v=>v!==val); if(removed) bump(k); return removed; }
+  if (count > 0) { const idx = arr.indexOf(val); if(idx!==-1){arr.splice(idx,1); removed=1; bump(k);} return removed; }
+  const idx = arr.lastIndexOf(val); if(idx!==-1){arr.splice(idx,1); removed=1; bump(k);} return removed;
+}
+function cmdHincrby(k: string, field: string, inc: number): number {
+  const h = (store[k] && typeof store[k]==="object" && !(store[k] instanceof Set) && !Array.isArray(store[k])) ? store[k] as Record<string,string> : {} as Record<string,string>;
+  const cur = parseInt(h[field]||"0",10)||0; const nxt = cur + inc; h[field]=String(nxt); store[k]=h; bump(k); return nxt;
+}
+function cmdHget(k: string, field: string): string | null { const h = store[k] as Record<string,string>; return h && typeof h==="object" && !(h instanceof Set) && !Array.isArray(h) ? (h[field]??null) : null; }
+function cmdHset(k: string, field: string, val: string): number { const h = (store[k] && typeof store[k]==="object" && !(store[k] instanceof Set) && !Array.isArray(store[k])) ? store[k] as Record<string,string> : {} as Record<string,string>; const isNew = !(field in h); h[field]=val; store[k]=h; bump(k); return isNew?1:0; }
 
 function cmdScan(cursor: string, ...args: unknown[]): [string, string[]] {
   let pattern = "*";
@@ -199,6 +217,16 @@ function applyCmd(cmd: string, args: unknown[]): unknown {
       return cmdSmembers(String(args[0]));
     case "scard":
       return cmdScard(String(args[0]));
+    case "sismember":
+      return cmdSismember(String(args[0]), String(args[1]));
+    case "lrem":
+      return cmdLrem(String(args[0]), Number(args[1]), String(args[2]));
+    case "hincrby":
+      return cmdHincrby(String(args[0]), String(args[1]), Number(args[2]));
+    case "hget":
+      return cmdHget(String(args[0]), String(args[1]));
+    case "hset":
+      return cmdHset(String(args[0]), String(args[1]), String(args[2]));
     case "scan":
       return cmdScan(String(args[0]), ...args);
     default:
@@ -220,6 +248,11 @@ const CHAINABLE_CMDS = [
   "srem",
   "smembers",
   "scard",
+  "sismember",
+  "lrem",
+  "hincrby",
+  "hget",
+  "hset",
   "scan",
 ];
 
@@ -270,6 +303,11 @@ export const redis = {
   srem: async (k: string, ...members: string[]) => cmdSrem(k, ...members),
   smembers: async (k: string) => cmdSmembers(k),
   scard: async (k: string) => cmdScard(k),
+  sismember: async (k: string, m: string) => cmdSismember(k, m),
+  lrem: async (k: string, c: number, v: string) => cmdLrem(k, c, v),
+  hincrby: async (k: string, f: string, v: number) => cmdHincrby(k, f, v),
+  hget: async (k: string, f: string) => cmdHget(k, f),
+  hset: async (k: string, f: string, v: string) => cmdHset(k, f, v),
   scan: async (cursor: string, ...args: unknown[]) => cmdScan(cursor, ...args),
   watch: async (...keys: string[]) => {
     for (const k of keys) {

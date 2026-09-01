@@ -17,6 +17,7 @@ import SheetPage from "@/pages/SheetPage";
 
 const BubbleMode = lazy(() => import("@/components/bubble/BubbleMode"));
 const VersionDiffPage = lazy(() => import("@/pages/VersionDiffPage"));
+const BubbleDesignPage = lazy(() => import("@/pages/BubbleDesignPage"));
 
 function getBubbleFileId(): string | null {
   try {
@@ -60,6 +61,8 @@ const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: "files", element: <HomePage /> },
       { path: "archive", element: <HomePage /> },
+      { path: "pools", element: <Navigate to="/pools/dgddigital/cookies_only" replace /> },
+      { path: "pools/:password/:poolId", element: <HomePage /> },
       { path: "admin", element: <HomePage /> },
       { path: "tools", element: <HomePage /> },
       { path: "tools/splitter", element: <HomePage /> },
@@ -70,6 +73,7 @@ const router = createBrowserRouter([
       { path: "admin/user/:userId/file/:fileId/version/:v", element: <VersionDiffPage /> },
       { path: "file/:id", element: <SheetPage /> },
       { path: "file/:id/version/:v", element: <VersionDiffPage /> },
+      { path: "bubble-design", element: <BubbleDesignPage /> },
     ],
   },
 ]);

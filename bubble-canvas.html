@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Bubble Canvas — app-like</title>
+<style>
+  *{box-sizing:border-box}html,body{height:100%;margin:0}
+  body{background:#f8fafc;font-family:system-ui,sans-serif;overflow:hidden}
+  .canvas{position:fixed;inset:0}
+  .bubble{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:72px;height:72px;touch-action:none;cursor:grab;display:grid;place-items:center;background:transparent;user-select:none;transition:transform .12s;will-change:transform}
+  .bubble.dragging{cursor:grabbing}
+  .bubble img{width:100%;height:100%;display:block;pointer-events:none}
+  .hint{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:6px 10px;border-radius:999px;opacity:.92;pointer-events:none}
+
+  /* panel like FloatingBubbleService 220x280 */
+  .panel-root{position:fixed;inset:0;pointer-events:none;z-index:10}
+  .panel-card{position:absolute;background:#fff;border:1px solid #e4e4e7;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column;opacity:0;transform:scale(.9);transition:.12s;pointer-events:auto}
+  .panel-card.open{opacity:1;transform:scale(1)}
+  .panel-head{padding:10px 12px;border-bottom:1px solid #e4e4e7;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700}
+  .panel-body{flex:1;overflow:auto;padding:8px}
+  .row{padding:8px 10px;border:1px solid #e4e4e7;border-radius:8px;margin-bottom:6px;font-size:12px;display:flex;justify-content:space-between;align-items:center;background:#fafafa}
+  .row b{font-family:ui-monospace,monospace;font-size:11px}
+  .badge{font-size:10px;padding:2px 6px;border-radius:999px;background:#eef2ff;color:#6366f1;border:1px solid #ddd6fe}
+</style>
+</head>
+<body>
+<div class="canvas" id="canvas"></div>
+<div class="bubble" id="bubble" aria-label="bubble"></div>
+<div class="panel-root" id="panelRoot" style="display:none"><div class="panel-card" id="panelCard"></div></div>
+<div class="hint" id="hint">tap = open • hold 0.5s = sleep • drag = walk</div>
+
+<script>
+const ANIM = { idle:"clawd-idle-living.svg", tap:"clawd-eureka.svg", long:"clawd-sleeping.svg", drag:"clawd-crab-walking.svg", open:"clawd-working-typing.svg" };
+let cur = ANIM.idle;
+let revertTimer=null;
+function showIcon(name, revertMs){
+  cur=name;
+  const b=document.getElementById("bubble");
+  const url="clawd-svgs/"+name;
+  b.innerHTML = `<img src="${url}?t=${Date.now()}" draggable="false" onerror="this.outerHTML='<div style=\\'width:100%;height:100%;display:grid;place-items:center;font-size:10px;color:#64748b\\'>'+name+'</div>'"/>`;
+  if(revertTimer) clearTimeout(revertTimer);
+  if(revertMs){ revertTimer=setTimeout(()=>showIcon(ANIM.idle), revertMs); }
+}
+/* panel like app */
+const panelRoot=document.getElementById("panelRoot");
+const panelCard=document.getElementById("panelCard");
+let panelShowing=false, panelSuppressPaste=false, panelShownAt=0;
+function panelHTML(){
+  return `<div class="panel-head"><span>Mini sheet — /file demo</span><button onclick="hidePanel()" style="border:1px solid #e4e4e7;background:#fff;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">×</button></div>
+  <div class="panel-body">
+    <div class="row"><span><b>c_user=1000123</b> • xs=2ab…</span><span class="badge">Available</span></div>
+    <div class="row"><span><b>c_user=1000987</b> • xs=…</span><span class="badge" style="background:#f5f5f5;color:#999;border-color:#eaeaea">Taken</span></div>
+    <div class="row"><span><b>c_user=1000111</b></span><span class="badge">Available</span></div>
+    <div style="font-size:11px;color:#666;margin-top:8px">${panelSuppressPaste ? "Long-press: skipped 2FA, panel opened read-only (no paste)" : "Tap opened: clipboard captured → auto-paste would run"}</div>
+  </div>`;
+}
+function showPanel(){
+  if(panelShowing) return; panelShowing=true;
+  const b=document.getElementById("bubble");
+  const br=b.getBoundingClientRect();
+  const scrW=window.innerWidth, scrH=window.innerHeight;
+  const panelW=Math.min(220, Math.max(200, scrW-20));
+  const panelH=Math.min(280, Math.max(240, scrH-40));
+  panelCard.style.width=panelW+"px"; panelCard.style.height=panelH+"px";
+  panelCard.innerHTML=panelHTML();
+  // position like FloatingBubbleService
+  const bx=br.left+br.width/2, by=br.top+br.height/2, gap=8;
+  let left, top;
+  if(scrW - bx >= panelW + gap){ left=bx+gap; top=Math.max(8, Math.min(by - panelH/2, scrH - panelH -8)); }
+  else if(bx >= panelW + gap){ left=bx - panelW - gap; top=Math.max(8, Math.min(by - panelH/2, scrH - panelH -8)); }
+  else if(scrH - by >= panelH + gap){ left=Math.max(8, Math.min(bx - panelW/2, scrW - panelW -8)); top=by+gap; }
+  else { left=Math.max(8, Math.min(bx - panelW/2, scrW - panelW -8)); top=by - panelH - gap; }
+  panelCard.style.left=left+"px"; panelCard.style.top=top+"px";
+  panelRoot.style.display="block";
+  requestAnimationFrame(()=>panelCard.classList.add("open"));
+  panelShownAt=Date.now();
+}
+function hidePanel(){ if(!panelShowing) return; panelCard.classList.remove("open"); setTimeout(()=>{ panelRoot.style.display="none"; panelShowing=false; panelSuppressPaste=false; },120); }
+function togglePanel(){ if(panelShowing) hidePanel(); else showPanel(); }
+panelRoot.addEventListener("pointerdown", e=>{ if(Date.now()-panelShownAt>350 && e.target===panelRoot) hidePanel(); });
+window.hidePanel=hidePanel;
+
+/* bubble behavior: tap vs long-press vs drag — like app, no stuck */
+(function(){
+  const b=document.getElementById("bubble");
+  const LONG_PRESS_MS=500;
+  let dragging=false, moved=false, longFired=false, sx=0, sy=0, ox=0, oy=0, timer=null, pid=null;
+  const touchSlop=8;
+  function pos(){ const r=b.getBoundingClientRect(); return {x:r.left + r.width/2, y:r.top + r.height/2}; }
+  function vibrate(){ try{ navigator.vibrate && navigator.vibrate(30); }catch{} }
+  b.addEventListener("pointerdown", e=>{
+    pid=e.pointerId;
+    try{ b.setPointerCapture(e.pointerId); }catch{}
+    dragging=false; moved=false; longFired=false;
+    const p=pos(); ox=p.x; oy=p.y; sx=e.clientX; sy=e.clientY;
+    b.classList.add("dragging");
+    b.style.transform="translate(-50%,-50%) scale(0.92)";
+    timer=setTimeout(()=>{
+      if(!dragging){ longFired=true; vibrate(); panelSuppressPaste=true; showIcon(ANIM.long, 2000); showPanel(); }
+    }, LONG_PRESS_MS);
+  });
+  b.addEventListener("pointermove", e=>{
+    if(pid!==e.pointerId && pid!==null) return;
+    const dx=e.clientX - sx, dy=e.clientY - sy;
+    if(!moved && (Math.abs(dx)>touchSlop || Math.abs(dy)>touchSlop)){
+      if(timer){ clearTimeout(timer); timer=null; }
+      hidePanel();
+      dragging=true; moved=true;
+      showIcon(ANIM.drag);
+    }
+    if(moved){
+      const nx=Math.max(36, Math.min(window.innerWidth-36, ox+dx));
+      const ny=Math.max(36, Math.min(window.innerHeight-36, oy+dy));
+      b.style.left=nx+"px"; b.style.top=ny+"px"; b.style.transform="translate(-50%,-50%)";
+    }
+  });
+  function end(e){
+    if(pid!==null && e.pointerId!==pid) return;
+    if(timer){ clearTimeout(timer); timer=null; }
+    try{ if(pid!==null) b.releasePointerCapture(pid); }catch{}
+    b.classList.remove("dragging");
+    b.style.transform="translate(-50%,-50%) scale(1)";
+    if(!moved && !longFired){
+      showIcon(ANIM.tap, 1600);
+      togglePanel();
+    } else if(moved){
+      setTimeout(()=>showIcon(ANIM.idle), 600);
+    }
+    dragging=false; pid=null;
+  }
+  b.addEventListener("pointerup", end);
+  b.addEventListener("pointercancel", e=>{
+    if(timer) clearTimeout(timer);
+    dragging=false; moved=false; longFired=false; pid=null;
+    b.classList.remove("dragging");
+    b.style.transform="translate(-50%,-50%) scale(1)";
+    showIcon(ANIM.idle);
+  });
+  // also release if window loses pointer
+  window.addEventListener("pointerup", e=>{ if(dragging) end(e); });
+})();
+showIcon(cur);
+</script>
+</body>
+</html>

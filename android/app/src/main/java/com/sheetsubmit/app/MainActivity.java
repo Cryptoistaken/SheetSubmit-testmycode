@@ -256,6 +256,35 @@ public class MainActivity extends Activity {
             }
 
             @JavascriptInterface
+            public String getBubbleConfig() {
+                SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                JSONObject o = new JSONObject();
+                try {
+                    o.put("icon", p.getString("bubble_icon", "claude"));
+                    o.put("color", p.getString("bubble_color", "#ef4444"));
+                    o.put("size", p.getInt("bubble_size", 60));
+                    if (p.contains("bubble_x")) o.put("x", p.getInt("bubble_x", 0)); else o.put("x", JSONObject.NULL);
+                    if (p.contains("bubble_y")) o.put("y", p.getInt("bubble_y", 0)); else o.put("y", JSONObject.NULL);
+                } catch (Exception ignored) {}
+                return o.toString();
+            }
+
+            @JavascriptInterface
+            public void setBubbleConfig(String json) {
+                try {
+                    JSONObject o = new JSONObject(json == null ? "{}" : json);
+                    SharedPreferences.Editor ed = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+                    if (o.has("icon")) ed.putString("bubble_icon", o.optString("icon", "claude"));
+                    if (o.has("color")) ed.putString("bubble_color", o.optString("color", "#ef4444"));
+                    if (o.has("size")) ed.putInt("bubble_size", o.optInt("size", 60));
+                    if (o.has("x") && !o.isNull("x")) ed.putInt("bubble_x", o.optInt("x", 0));
+                    if (o.has("y") && !o.isNull("y")) ed.putInt("bubble_y", o.optInt("y", 0));
+                    ed.apply();
+                    FloatingBubbleService.applyConfig(MainActivity.this);
+                } catch (Exception e) { Log.e(TAG, "setBubbleConfig: " + e.getMessage()); }
+            }
+
+            @JavascriptInterface
             public String getBubbleFile() {
                 return getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("bubble_file", "");
             }
