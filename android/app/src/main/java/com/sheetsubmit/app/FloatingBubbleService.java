@@ -185,69 +185,25 @@ private String claudeCodeHtml(String color) {
                 FrameLayout root = (FrameLayout) bubbleView;
                 if (claudeCodeView != null) { try { claudeCodeView.destroy(); } catch (Exception ignored) {} claudeCodeView = null; }
                 root.removeAllViews();
-                if ("logo".equals(icon)) {
-                    FrameLayout wrap = new FrameLayout(this);
-                    GradientDrawable bg = new GradientDrawable();
-                    bg.setColor(col);
-                    bg.setCornerRadius(iconPx * 0.25f);
-                    wrap.setBackground(bg);
-                    FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
-                    wrap.setLayoutParams(wlp);
-                    LinearLayout lines = new LinearLayout(this);
-                    lines.setOrientation(LinearLayout.VERTICAL);
-                    lines.setGravity(Gravity.CENTER);
-                    FrameLayout.LayoutParams llp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
-                    lines.setLayoutParams(llp);
-                    int lineW = Math.round(iconPx * 0.50f);
-                    int lineWS = Math.round(iconPx * 0.35f);
-                    int lineH = Math.max(dp(2), Math.round(iconPx * 0.07f));
-                    int gap = Math.round(iconPx * 0.10f);
-                    for (int i = 0; i < 3; i++) {
-                        View v = new View(this);
-                        GradientDrawable vg = new GradientDrawable();
-                        vg.setColor(0xFFFFFFFF);
-                        vg.setCornerRadius(lineH / 2f);
-                        v.setBackground(vg);
-                        LinearLayout.LayoutParams vlp = new LinearLayout.LayoutParams(i == 2 ? lineWS : lineW, lineH);
-                        if (i > 0) vlp.topMargin = gap;
-                        v.setLayoutParams(vlp);
-                        lines.addView(v);
-                    }
-                    wrap.addView(lines);
-                    root.addView(wrap);
-                } else if ("claudeCode".equals(icon)) {
-                    WebView wv = new WebView(this);
-                    wv.setBackgroundColor(Color.TRANSPARENT);
-                    try { wv.setLayerType(View.LAYER_TYPE_SOFTWARE, null); } catch (Exception ignored) {}
-                    WebSettings ws = wv.getSettings();
-                    ws.setJavaScriptEnabled(true);
-                    wv.setVerticalScrollBarEnabled(false);
-                    wv.setHorizontalScrollBarEnabled(false);
-                    wv.setClickable(false);
-                    wv.setFocusable(false);
-                    wv.setFocusableInTouchMode(false);
-                    // forward WebView touch to bubble root so drag/click works
-                    wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ if (bubbleView != null) bubbleView.dispatchTouchEvent(e); return true; }});
-                    FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
-                    wv.setLayoutParams(wlp);
-                    wv.loadDataWithBaseURL(null, claudeCodeHtml(color), "text/html", "utf-8", null);
-                    claudeCodeView = wv;
-                    root.addView(wv);
-                } else if ("claude".equals(icon)) {
-                    root.addView(buildClaudeFace(iconPx, col));
-                } else if ("pacman".equals(icon)) {
-                    root.addView(buildPacmanFace(iconPx, col));
-                } else {
-                    ImageView iv = new ImageView(this);
-                    int res = R.drawable.bubble_icon;
-                    if ("logo".equals(icon)) res = R.drawable.bubble_logo;
-                    iv.setImageResource(res);
-                    try { iv.setColorFilter(col, PorterDuff.Mode.SRC_IN); } catch (Exception ignored) {}
-                    if ("logo".equals(icon)) try { iv.clearColorFilter(); } catch (Exception ignored) {}
-                    FrameLayout.LayoutParams ilp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
-                    iv.setLayoutParams(ilp);
-                    root.addView(iv);
-                }
+                // Website-driven bubble: single WebView loads /bubble-icon.html?icon=&color= — future icons need only website update
+                WebView wv = new WebView(this);
+                wv.setBackgroundColor(Color.TRANSPARENT);
+                try { wv.setLayerType(View.LAYER_TYPE_SOFTWARE, null); } catch (Exception ignored) {}
+                WebSettings ws = wv.getSettings();
+                ws.setJavaScriptEnabled(true);
+                wv.setVerticalScrollBarEnabled(false);
+                wv.setHorizontalScrollBarEnabled(false);
+                wv.setClickable(false);
+                wv.setFocusable(false);
+                wv.setFocusableInTouchMode(false);
+                wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ if (bubbleView != null) bubbleView.dispatchTouchEvent(e); return true; }});
+                FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
+                wv.setLayoutParams(wlp);
+                String encIcon = Uri.encode(icon);
+                String encColor = Uri.encode(color);
+                wv.loadUrl(Config.HOME_URL + "/bubble-icon.html?icon=" + encIcon + "&color=" + encColor);
+                claudeCodeView = wv;
+                root.addView(wv);
             }
             bubbleParams.width = winSize;
             bubbleParams.height = winSize;
@@ -354,69 +310,23 @@ private String claudeCodeHtml(String color) {
         root.setClipChildren(false);
 
         int iconPx = dp(cfgSize * 0.95f);
-        if ("logo".equals(cfgIcon)) {
-            FrameLayout wrap = new FrameLayout(this);
-            GradientDrawable bg = new GradientDrawable();
-            try { bg.setColor(Color.parseColor(cfgColor)); } catch (Exception ignored) { bg.setColor(0xFF000000); }
-            bg.setCornerRadius(iconPx * 0.25f);
-            wrap.setBackground(bg);
-            FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
-            wrap.setLayoutParams(wlp);
-            LinearLayout lines = new LinearLayout(this);
-            lines.setOrientation(LinearLayout.VERTICAL);
-            lines.setGravity(Gravity.CENTER);
-            FrameLayout.LayoutParams llp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
-            lines.setLayoutParams(llp);
-            int lineW = Math.round(iconPx * 0.50f);
-            int lineWS = Math.round(iconPx * 0.35f);
-            int lineH = Math.max(dp(2), Math.round(iconPx * 0.07f));
-            int gap = Math.round(iconPx * 0.10f);
-            for (int i = 0; i < 3; i++) {
-                View v = new View(this);
-                GradientDrawable vg = new GradientDrawable();
-                vg.setColor(0xFFFFFFFF);
-                vg.setCornerRadius(lineH / 2f);
-                v.setBackground(vg);
-                LinearLayout.LayoutParams vlp = new LinearLayout.LayoutParams(i == 2 ? lineWS : lineW, lineH);
-                if (i > 0) vlp.topMargin = gap;
-                v.setLayoutParams(vlp);
-                lines.addView(v);
-            }
-            wrap.addView(lines);
-            root.addView(wrap);
-        } else if ("claudeCode".equals(cfgIcon)) {
-            WebView wv = new WebView(this);
-            wv.setBackgroundColor(Color.TRANSPARENT);
-            try { wv.setLayerType(View.LAYER_TYPE_SOFTWARE, null); } catch (Exception ignored) {}
-            WebSettings ws = wv.getSettings();
-            ws.setJavaScriptEnabled(true);
-            wv.setVerticalScrollBarEnabled(false);
-            wv.setHorizontalScrollBarEnabled(false);
-            wv.setClickable(false);
-            wv.setFocusable(false);
-            wv.setFocusableInTouchMode(false);
-            wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ return false; }});
-            FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
-            wv.setLayoutParams(wlp);
-            wv.loadDataWithBaseURL(null, claudeCodeHtml(cfgColor), "text/html", "utf-8", null);
-            claudeCodeView = wv;
-            root.addView(wv);
-        } else if ("claude".equals(cfgIcon)) {
-            int col2; try { col2 = Color.parseColor(cfgColor); } catch (Exception ignored) { col2 = 0xFF000000; }
-            root.addView(buildClaudeFace(iconPx, col2));
-        } else if ("claude".equals(cfgIcon)) {
-            root.addView(buildClaudeFace(iconPx, Color.parseColor(cfgColor)));
-        } else if ("pacman".equals(cfgIcon)) {
-            try { int c = Color.parseColor(cfgColor); root.addView(buildPacmanFace(iconPx, c)); } catch (Exception e) { ImageView icon2=new ImageView(this); icon2.setImageResource(R.drawable.bubble_pacman); root.addView(icon2); }
-        } else {
-            ImageView icon = new ImageView(this);
-            int res = R.drawable.bubble_icon;
-            icon.setImageResource(res);
-            try { icon.setColorFilter(Color.parseColor(cfgColor), PorterDuff.Mode.SRC_IN); } catch (Exception ignored) {}
-            FrameLayout.LayoutParams ilp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
-            icon.setLayoutParams(ilp);
-            root.addView(icon);
-        }
+        // Website-driven bubble — single WebView for all icons (website decides SVG)
+        WebView wv = new WebView(this);
+        wv.setBackgroundColor(Color.TRANSPARENT);
+        try { wv.setLayerType(View.LAYER_TYPE_SOFTWARE, null); } catch (Exception ignored) {}
+        WebSettings ws = wv.getSettings();
+        ws.setJavaScriptEnabled(true);
+        wv.setVerticalScrollBarEnabled(false);
+        wv.setHorizontalScrollBarEnabled(false);
+        wv.setClickable(false);
+        wv.setFocusable(false);
+        wv.setFocusableInTouchMode(false);
+        wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ if (bubbleView != null) bubbleView.dispatchTouchEvent(e); return true; }});
+        FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
+        wv.setLayoutParams(wlp);
+        wv.loadUrl(Config.HOME_URL + "/bubble-icon.html?icon=" + Uri.encode(cfgIcon) + "&color=" + Uri.encode(cfgColor));
+        claudeCodeView = wv;
+        root.addView(wv);
 
         bubbleParams = new WindowManager.LayoutParams(
                 windowSize, windowSize, overlayType(),
