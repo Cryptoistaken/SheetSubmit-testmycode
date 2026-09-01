@@ -80,14 +80,14 @@ export default function BubbleDesignPage(){
       `}</style>
       <div className="bd-wrap">
         <div className="bd-top">
-          <button className="bd-back" aria-label="Back" onClick={()=>{ if(window.history.length>1) navigate(-1); else navigate("/"); }}>ΓÇ╣</button>
+          <button className="bd-back" aria-label="Back" onClick={()=>{ if(window.history.length>1) navigate(-1); else navigate("/"); }}>‹</button>
           <b style={{fontSize:15,letterSpacing:"-.02em"}}>Sheet Submit</b>
           <span style={{marginLeft:"auto",fontSize:11,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",color:"#64748b",background:"#fff",border:"1px solid var(--border,#e2e8f0)",padding:"4px 8px",borderRadius:999}}>Bubble design</span>
         </div>
         <h1 style={{margin:"10px 0 2px",fontSize:18,letterSpacing:"-.02em"}}>Bubble design</h1>
 
         <div className="bd-card">
-          <h3><i>Γ¼ó</i> Icon</h3>
+          <h3><i>⬢</i> Icon</h3>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>
             {([
               {id:"logo" as IconId},{id:"claude" as IconId},{id:"claudeCode" as IconId},{id:"pacman" as IconId},
@@ -100,7 +100,7 @@ export default function BubbleDesignPage(){
         </div>
 
         <div className="bd-card">
-          <h3><i>Γùë</i> Color</h3>
+          <h3><i>◉</i> Color</h3>
           <div style={{display:"flex",gap:1,flexWrap:"nowrap",overflowX:"auto",overflowY:"hidden",marginTop:10,paddingBottom:4,scrollbarWidth:"none"}}>
             <button className="bd-sw" aria-label="Custom" title="Custom" onClick={()=>{ setCustomOpen(o=>!o); setCpText(state.color); }} style={{width:20,height:30,padding:0,display:"grid",placeItems:"center",background:"#fff",border:"1px solid var(--border,#e2e8f0)",borderRadius:5,flexShrink:0}}>
               <span style={{width:10,height:10,borderRadius:3,background:"conic-gradient(from 0deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#8b5cf6,#ef4444)",border:"1px solid rgba(0,0,0,.15)",display:"block"}}/>
@@ -119,7 +119,7 @@ export default function BubbleDesignPage(){
         </div>
 
         <div className="bd-card">
-          <h3><i>Γåö</i> Size</h3>
+          <h3><i>↔</i> Size</h3>
           <div style={{marginTop:12}}>
             <input type="range" className="bd-range" min={36} max={84} step={2} value={state.size} onChange={e=>update({size:+e.target.value})}/>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#64748b",marginTop:4}}><span>Small</span><b style={{color:"#0f172a",fontSize:12,fontFamily:"ui-monospace,monospace"}}>{state.size} dp</b><span>Large</span></div>
@@ -129,7 +129,7 @@ export default function BubbleDesignPage(){
 
       <div className="bd-foot">
         <button className="bd-btn" onClick={()=>{ const n={...DEFAULT}; setState(n); persist(n); showToast("Reset to default"); }}>Reset</button>
-        <button className="bd-btn bd-btnPrimary" onClick={()=>{ persist(state); showToast(`Saved ΓÇö bubble_icon=${state.icon} bubble_color=${state.color} bubble_size=${state.size}`); }}>Save</button>
+        <button className="bd-btn bd-btnPrimary" onClick={()=>{ persist(state); showToast(`Saved — bubble_icon=${state.icon} bubble_color=${state.color} bubble_size=${state.size}`); }}>Save</button>
       </div>
     </>
   );
