@@ -97,17 +97,15 @@ public class FloatingBubbleService extends Service {
     }
 
     private String claudeCodeHtml() {
-        return "<html><head><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>*{animation-play-state:paused !important} .play-tap .action-body,.play-tap .arm-l,.play-tap .arm-r,.play-tap .shadow-anim{animation-play-state:running !important} .play-tap .breathe-anim{animation-play-state:running !important} .play-longpress .yawn-mouth,.play-longpress .yawn-tear,.play-longpress .action-body{animation-play-state:running !important} .play-drag .action-body,.play-drag .arm-l,.play-drag .arm-r{animation-play-state:running !important} .play-open .breathe-anim,.play-open .action-body{animation-play-state:running !important}</style></head><body style=\"margin:0;background:transparent;overflow:hidden\"><div id=\"c\"><svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 3 16 13\" width=\"100%\" height=\"100%\" style=\"display:block\"><defs"
-                + "><style>.action-body{transform-origin:7.5px 13px;animation:action-body 16s infinite ease-in-out}.breathe-anim{transform-origin:7.5px 13px;animation:breathe 3.2s infinite ease-in-out}.shadow-anim{transform-origin:7.5px 15.5px;animation:shadow-action 16s infinite ease-in-out}.arm-l{transform-origin:1px 10px;animation:arm-l-idle 16s infinite ease-in-out}.arm-r{transform-origin:14px 10px;animation:arm-r-idle 16s infinite ease-in-out}.eyes-look{animation:eye-track 16s infinite ease-in-out}.eyes-blink{transform-origin:7.5px 9px;animation:eye-blink 16s infinite linear}.yawn-mouth{transform-origin:7.5px 11px;animation:yawn-mouth-anim 16s infinite ease-in-out;opacity:0}.yawn-tear{animation:tear-fall 16s infinite ease-in-out;opacity:0}@keyframes breathe{0%,100%{transform:scale(1,1) translate(0,0)}50%{transform:scale(1.02,0.98) translate(0,0.5px)}}@"
-                + "keyframes action-body{0%,8%,26%,38%,55%,80%,100%{transform:scale(1,1) translate(0,0)}12%,22%{transform:scale(1,1) translate(1px,0)}42%,50%{transform:scale(1,1) translate(-1px,0)}30%,36%{transform:scale(1,1) translate(0.5px,0)}60%{transform:scale(0.95,1.05) translate(0px,-1px)}65%{transform:scale(0.9,1.1) translate(0px,-2px)}72%{transform:scale(1.05,0.95) translate(0px,1px)}76%{transform:scale(1,1) translate(0px,0px)}}@keyframes shadow-action{0%,8%,26%,38%,55%,80%,100%{transform:scaleX(1) translate(0,0);opacity:0.5}12%,22%{transform:scaleX(1) translate(1px,0);opacity:0.5}42%,50%{transform:scaleX(1) translate(-1px,0);opacity:0.5}30%,36%{transform:scaleX(1) translate(0.5px,0);opacity:0.5}60%{transform:scaleX(0.95) translate(0,0);opacity:0.45}65%{transform:scaleX(0.9) translate(0,0);opacity:0.4}72%{transform:scaleX(1.05) translate(0,0);opacit"
-                + "y:0.55}76%{transform:scaleX(1) translate(0,0);opacity:0.5}}@keyframes eye-track{0%,10%,25%,38%,52%,58%,80%,100%{transform:translate(0px,0px)}12%,22%{transform:translate(3px,0px)}42%,50%{transform:translate(-3px,0px)}60%,75%{transform:translate(0px,-1px)}}@keyframes eye-blink{0%,3%,7%,18%,22%,43%,47%,56%,83%,87%,100%{transform:scaleY(1)}5%,20%,45%,85%{transform:scaleY(0.1)}60%{transform:scaleY(1)}62%,72%{transform:scaleY(0.1)}75%{transform:scaleY(1)}}@keyframes arm-l-idle{0%,28%{transform:translate(0,0) rotate(0deg)}30%{transform:translate(1px,-3px) rotate(15deg)}31%{transform:translate(1.5px,-4px) rotate(35deg)}32%{transform:translate(0.5px,-2.5px) rotate(0deg)}33%{transform:translate(1.5px,-4px) rotate(35deg)}34%{transform:translate(0.5px,-2.5px) rotate(0deg)}35%{transform:translate(1.5px,-4px) rotate(35deg)}36%{transform:translate(0.5px"
-                + ",-2.5px) rotate(0deg)}38%,58%{transform:translate(0,0) rotate(0deg)}62%{transform:translate(-1px,-2px) rotate(45deg)}65%{transform:translate(-2px,-3px) rotate(80deg)}72%{transform:translate(0px,1px) rotate(-15deg)}76%,100%{transform:translate(0,0) rotate(0deg)}}@keyframes arm-r-idle{0%,58%{transform:translate(0,0) rotate(0deg)}62%{transform:translate(1px,-2px) rotate(-45deg)}65%{transform:translate(2px,-3px) rotate(-80deg)}72%{transform:translate(0px,1px) rotate(15deg)}76%,100%{transform:translate(0,0) rotate(0deg)}}@keyframes yawn-mouth-anim{0%,58%,76%,100%{opacity:0;transform:scale(0.1)}60%{opacity:1;transform:scale(0.5,0.2)}65%{opacity:1;transform:scale(1.1,1.4)}72%{opacity:1;transform:scale(0.6,0.4)}75%{opacity:0;transform:scale(0.1)}}@keyframes tear-fall{0%,64%,80%,100%{opacity:0;transform:translateY(0)}66%{opacity:1;transform:transl"
-                + "ateY(0)}72%{opacity:1;transform:translateY(2.5px)}75%{opacity:0;transform:translateY(3px)}}</style></defs><rect class=\"shadow-anim\" x=\"3\" y=\"15\" width=\"9\" height=\"1\" fill=\"#000000\" opacity=\"0.5\"/><g fill=\"currentColor\"><rect x=\"3\" y=\"13\" width=\"1\" height=\"2\"/><rect x=\"5\" y=\"13\" width=\"1\" height=\"2\"/><rect x=\"9\" y=\"13\" width=\"1\" height=\"2\"/><rect x=\"11\" y=\"13\" width=\"1\" height=\"2\"/></g><g class=\"action-body\"><g class=\"breathe-anim\"><rect x=\"2\" y=\"6\" width=\"11\" height=\"7\" fill=\"currentColor\"/><g class=\"arm-l\"><rect x=\"0\" y=\"9\" width=\"2\" height=\"2\" fill=\"currentColor\"/></g><g class=\"arm-r\"><rect x=\"13\" y=\"9\" width=\"2\" height=\"2\" fill=\"currentColor\"/></g><rect class=\"yawn-mouth\" x=\"6\" y=\"10\" width=\"3\" height=\"2\" fill=\"#000\"/><g class=\"eyes-look\""
-                + "" fill=\"#000\"><g class=\"eyes-blink\"><rect x=\"4\" y=\"8\" width=\"1\" height=\"2\"/><rect x=\"10\" y=\"8\" width=\"1\" height=\"2\"/></g></g><rect class=\"yawn-tear\" x=\"3.5\" y=\"10\" width=\"1\" height=\"1\" fill=\"#40C4FF\"/></g></g></svg></div><script>window.playClaude=function(n){var c=document.getElementById(\"c\");if(!c)return;c.className=\"play-\"+n;clearTimeout(window._pcT);window._pcT=setTimeout(function(){c.className=\"\";},2000);}</script></body></html>"
-                ;
+        return """
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:transparent;overflow:hidden}#a{width:100%;height:100%;display:grid;place-items:center;font-family:sans-serif;font-size:10px;color:#000}</style></head><body><div id="a"><div id="idle" style="width:100%;height:100%;display:grid;place-items:center;background:#DE886D;border-radius:12px">IDLE</div><div id="tap" style="display:none;width:100%;height:100%;display:none;place-items:center;background:#FFD400;border-radius:12px">TAP</div><div id="long" style="display:none;width:100%;height:100%;display:none;place-items:center;background:#90A4AE;border-radius:12px">SLEEP</div><div id="drag" style="display:none;width:100%;height:100%;display:none;place-items:center;background:#A7E0FF;border-radius:12px">WALK</div></div><script>window.playClaude=function(n,ms){var d={tap:1600,long:2000,drag:600,open:1600};if(ms==null)ms=d[n]||1600;var ids=["idle","tap","long","drag"];for(var i=0;i<ids.length;i++){var e=document.getElementById(ids[i]);if(e)e.style.display="none";}var t=document.getElementById(n)||document.getElementById("idle");if(t)t.style.display="grid";clearTimeout(window._pcT);if(n!=="idle"&&ms>0)window._pcT=setTimeout(function(){window.playClaude("idle",0)},ms);}</script></body></html>
+""";
     }
-    private void playClaudeCode(String name) {
+    private void playClaudeCode(String name)    private void playClaudeCode(String name) {
         try { if (claudeCodeView != null) claudeCodeView.evaluateJavascript("window.playClaude('" + name + "')", null); } catch (Exception ignored) {}
+    }
+    private void playClaudeCode(String name, int revertMs) {
+        try { if (claudeCodeView != null) claudeCodeView.evaluateJavascript("window.playClaude('" + name + "'," + revertMs + ")", null); } catch (Exception ignored) {}
     }
     private void refreshBubbleConfig() {
         try {
@@ -396,7 +394,7 @@ public class FloatingBubbleService extends Service {
             longPressFired = true;
             bubbleView.performClick();
             hapticFeedback();
-            playClaudeCode("longpress");
+            playClaudeCode("long",2000);
             panelSuppressPaste = true; // panel opens read-only-ish, no paste
             if (miniWebView != null) {
                 miniWebView.evaluateJavascript(
@@ -423,7 +421,6 @@ public class FloatingBubbleService extends Service {
                     longPressFired = false;
                     downAt = SystemClock.elapsedRealtime();
                     v.animate().scaleX(0.92f).scaleY(0.92f).setDuration(120).start();
-                    playClaudeCode("tap");
                     // Arm the long-press NOW — it fires after LONG_PRESS_MS while
                     // still held, not on release.
                     v.postDelayed(longPressRunnable, LONG_PRESS_MS);
@@ -436,7 +433,7 @@ public class FloatingBubbleService extends Service {
                         hidePanel();
                         boolean wasDragging = dragging;
                         dragging = true;
-                        if (!wasDragging) playClaudeCode("drag");
+                        if (!wasDragging) playClaudeCode("drag",0);
                         int nx = Math.round(initialBubbleX + (ev.getRawX() - initialRawX));
                         int ny = Math.round(initialBubbleY + (ev.getRawY() - initialRawY));
                         bubbleParams.x = clamp(nx, 0, Math.max(0, displayWidth() - bubbleParams.width));
@@ -452,12 +449,16 @@ public class FloatingBubbleService extends Service {
                             .putInt(KEY_BUBBLE_Y, bubbleParams.y)
                             .apply();
                     if (!dragging && !longPressFired) {
+                        playClaudeCode("tap",1600);
                         // Short tap only — a long-press already ran its skip while
                         // held and consumed this gesture, so release does NOT open
                         // the panel or paste anything.
                         v.performClick();
                         togglePanel();
+                    } else if (dragging) {
+                        playClaudeCode("drag",600);
                     }
+                    dragging=false;
                     return true;
                 case MotionEvent.ACTION_CANCEL:
                     cancelLongPress();
@@ -480,7 +481,7 @@ public class FloatingBubbleService extends Service {
         if (panelRoot != null || panelShowing) {
             hidePanel();
         } else {
-            playClaudeCode("open");
+            playClaudeCode("tap",1600);
             showPanel();
         }
     }
@@ -488,7 +489,7 @@ public class FloatingBubbleService extends Service {
     private void showPanel() {
         if (panelShowing) return;
         panelShowing = true;
-        playClaudeCode("open");
+        playClaudeCode("tap",1600);
         try {
             int scrW = displayWidth();
             int scrH = displayHeight();
