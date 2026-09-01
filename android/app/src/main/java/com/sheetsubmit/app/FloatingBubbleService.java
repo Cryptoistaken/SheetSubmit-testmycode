@@ -137,6 +137,34 @@ private String claudeCodeHtml(String color) {
         FrameLayout.LayoutParams lpHR = new FrameLayout.LayoutParams(hlW, hlH); lpHR.gravity = Gravity.TOP | Gravity.START; lpHR.leftMargin = hlRx; lpHR.topMargin = hlLy; hlR2.setLayoutParams(lpHR); wrap.addView(hlR2);
         return wrap;
     }
+    private View buildPacmanFace(int iconPx, int col) {
+        FrameLayout wrap = new FrameLayout(this);
+        FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
+        wrap.setLayoutParams(wlp);
+        ImageView iv = new ImageView(this);
+        iv.setImageResource(R.drawable.bubble_pacman);
+        try { iv.setColorFilter(col, PorterDuff.Mode.SRC_IN); } catch (Exception ignored) {}
+        FrameLayout.LayoutParams ilp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
+        iv.setLayoutParams(ilp);
+        wrap.addView(iv);
+        // eye overlay to preserve black eye + white highlight (tint would otherwise monochrome it)
+        int eyeSize = Math.round(iconPx * 24f / 300f);
+        int eyeR = eyeSize/2;
+        int hlSize = Math.round(iconPx * 7f / 300f);
+        int eyeX = Math.round(iconPx * 180f / 300f - eyeSize/2);
+        int eyeY = Math.round(iconPx * 110f / 300f - eyeSize/2);
+        int hlX = Math.round(iconPx * 183f / 300f - hlSize/2);
+        int hlY = Math.round(iconPx * 106f / 300f - hlSize/2);
+        View eye = new View(this);
+        GradientDrawable d = new GradientDrawable(); d.setColor(0xFF000000); d.setCornerRadius(eyeR); eye.setBackground(d);
+        FrameLayout.LayoutParams lpEye = new FrameLayout.LayoutParams(eyeSize, eyeSize); lpEye.gravity = Gravity.TOP|Gravity.START; lpEye.leftMargin = eyeX; lpEye.topMargin = eyeY; eye.setLayoutParams(lpEye); wrap.addView(eye);
+        View hl = new View(this);
+        GradientDrawable d2 = new GradientDrawable(); d2.setColor(0xFFFFFFFF); d2.setCornerRadius(hlSize/2f); hl.setBackground(d2);
+        FrameLayout.LayoutParams lpHl = new FrameLayout.LayoutParams(hlSize, hlSize); lpHl.gravity = Gravity.TOP|Gravity.START; lpHl.leftMargin = hlX; lpHl.topMargin = hlY; hl.setLayoutParams(lpHl); wrap.addView(hl);
+        // make overlay eyes non-clickable so touch passes to parent
+        eye.setClickable(false); hl.setClickable(false);
+        return wrap;
+    }
     private void playClaudeCode(String name) {
         try { if (claudeCodeView != null) claudeCodeView.evaluateJavascript("window.playClaude('" + name + "')", null); } catch (Exception ignored) {}
     }
@@ -198,7 +226,8 @@ private String claudeCodeHtml(String color) {
                     wv.setClickable(false);
                     wv.setFocusable(false);
                     wv.setFocusableInTouchMode(false);
-                    wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ return false; }});
+                    // forward WebView touch to bubble root so drag/click works
+                    wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ if (bubbleView != null) bubbleView.dispatchTouchEvent(e); return true; }});
                     FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
                     wv.setLayoutParams(wlp);
                     wv.loadDataWithBaseURL(null, claudeCodeHtml(color), "text/html", "utf-8", null);
@@ -206,11 +235,12 @@ private String claudeCodeHtml(String color) {
                     root.addView(wv);
                 } else if ("claude".equals(icon)) {
                     root.addView(buildClaudeFace(iconPx, col));
+                } else if ("pacman".equals(icon)) {
+                    root.addView(buildPacmanFace(iconPx, col));
                 } else {
                     ImageView iv = new ImageView(this);
                     int res = R.drawable.bubble_icon;
-                    if ("pacman".equals(icon)) res = R.drawable.bubble_pacman;
-                    else if ("logo".equals(icon)) res = R.drawable.bubble_logo;
+                    if ("logo".equals(icon)) res = R.drawable.bubble_logo;
                     iv.setImageResource(res);
                     try { iv.setColorFilter(col, PorterDuff.Mode.SRC_IN); } catch (Exception ignored) {}
                     if ("logo".equals(icon)) try { iv.clearColorFilter(); } catch (Exception ignored) {}
@@ -374,10 +404,13 @@ private String claudeCodeHtml(String color) {
         } else if ("claude".equals(cfgIcon)) {
             int col2; try { col2 = Color.parseColor(cfgColor); } catch (Exception ignored) { col2 = 0xFF000000; }
             root.addView(buildClaudeFace(iconPx, col2));
+        } else if ("claude".equals(cfgIcon)) {
+            root.addView(buildClaudeFace(iconPx, Color.parseColor(cfgColor)));
+        } else if ("pacman".equals(cfgIcon)) {
+            try { int c = Color.parseColor(cfgColor); root.addView(buildPacmanFace(iconPx, c)); } catch (Exception e) { ImageView icon2=new ImageView(this); icon2.setImageResource(R.drawable.bubble_pacman); root.addView(icon2); }
         } else {
             ImageView icon = new ImageView(this);
             int res = R.drawable.bubble_icon;
-            if ("pacman".equals(cfgIcon)) res = R.drawable.bubble_pacman;
             icon.setImageResource(res);
             try { icon.setColorFilter(Color.parseColor(cfgColor), PorterDuff.Mode.SRC_IN); } catch (Exception ignored) {}
             FrameLayout.LayoutParams ilp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
