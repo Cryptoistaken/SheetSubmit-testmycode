@@ -19,23 +19,22 @@ function getAndroid2(): AndroidBridge2|null{
   try{return (window as unknown as {Android?:AndroidBridge2}).Android ?? null;}catch{return null;}
 }
 function loadState(): BubbleCfg{
-  // Android bridge first, fallback to localStorage, else default
   try{
     const a=getAndroid2();
     if(a?.getBubbleConfig){
       const raw=a.getBubbleConfig();
       if(raw){ const p=JSON.parse(raw) as BubbleCfg; if(p?.icon && p?.color && p?.size) return {icon:p.icon as IconId, color:p.color, size:p.size, x:p.x??null, y:p.y??null};}
     }
-  }catch{/* ignore */}
+  }catch{}
   try{
     const ls=localStorage.getItem("mock_bubble");
     if(ls){ const p=JSON.parse(ls) as BubbleCfg; if(p?.icon && p?.color && p?.size) return {icon:p.icon as IconId, color:p.color, size:p.size, x:p.x??null, y:p.y??null};}
-  }catch{/* ignore */}
+  }catch{}
   return {...DEFAULT};
 }
 function persist(s:BubbleCfg){
-  try{localStorage.setItem("mock_bubble",JSON.stringify(s));}catch{/* */}
-  try{getAndroid2()?.setBubbleConfig?.(JSON.stringify(s));}catch{/* */}
+  try{localStorage.setItem("mock_bubble",JSON.stringify(s));}catch{}
+  try{getAndroid2()?.setBubbleConfig?.(JSON.stringify(s));}catch{}
 }
 
 export default function BubbleDesignPage(){
@@ -44,93 +43,85 @@ export default function BubbleDesignPage(){
   const [state,setState]=useState<BubbleCfg>(()=>loadState());
   const [customOpen,setCustomOpen]=useState(false);
   const [cpText,setCpText]=useState(state.color);
-
   useEffect(()=>{ setCpText(state.color); },[state.color]);
-
   const update=(patch:Partial<BubbleCfg>)=>{
     setState(prev=>{ const next={...prev,...patch}; persist(next); return next; });
   };
-
   const applyCustom=()=>{
     let v=cpText.trim().toLowerCase();
     if(!v.startsWith("#")) v="#"+v;
     if(/^#[0-9a-f]{6}$/.test(v)){ update({color:v}); }
     setCustomOpen(false);
   };
-
   return (
-    <>
-      <style>{`
-        .bd-wrap{max-width:100%;margin:0 auto;padding:12px 12px 90px;background:var(--bg,#f8fafc);min-height:calc(100dvh - 56px);overflow-y:auto;overflow-x:hidden;box-sizing:border-box}
-        .bd-wrap *{box-sizing:border-box;max-width:100%}
-        .bd-top{position:sticky;top:0;z-index:5;background:rgba(248,250,252,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:10px 0 10px;margin:0 -12px 8px;border-bottom:1px solid var(--border,#e2e8f0);padding-left:12px;padding-right:12px}
-        .bd-back{width:34px;height:34px;border-radius:999px;border:1px solid var(--border,#e2e8f0);background:#fff;display:grid;place-items:center;cursor:pointer;font-size:20px;line-height:1}
-        .bd-card{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:14px;padding:12px;margin-top:10px;overflow:hidden}
-        .bd-card h3{margin:0;font-size:13px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
-        .bd-card h3 i{width:24px;height:24px;border-radius:7px;background:#f1f5f9;display:grid;place-items:center;font-style:normal;font-size:13px}
-        .bd-iconOpt{width:48px;height:48px;border-radius:12px;border:2px solid var(--border,#e2e8f0);display:grid;place-items:center;cursor:pointer;background:#fff;transition:.15s;flex-shrink:0;overflow:hidden}
-        .bd-iconOpt svg{width:100%!important;height:100%!important;display:block;max-width:28px;max-height:28px}
-        .bd-iconOpt.on{border-color:#0f172a}
-        .bd-sw{width:28px;height:38px;border-radius:0;border:2px solid transparent;cursor:pointer;flex-shrink:0}
-        .bd-sw.on{border-color:#0f172a}
-        .bd-range{width:100%;accent-color:#0f172a}
-        .bd-foot{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-top:1px solid var(--border,#e2e8f0);padding:10px 14px;display:flex;gap:10px;max-width:640px;margin:0 auto;z-index:30}
-        .bd-btn{flex:1;padding:12px;border-radius:12px;border:1px solid var(--border,#e2e8f0);background:#fff;font-weight:700;font-size:13px;cursor:pointer}
-        .bd-btnPrimary{background:#0f172a;color:#fff;border-color:#0f172a}
-      `}</style>
-      <div className="bd-wrap">
-        <div className="bd-top">
-          <button className="bd-back" aria-label="Back" onClick={()=>{ if(window.history.length>1) navigate(-1); else navigate("/"); }}>‹</button>
-          <b style={{fontSize:15,letterSpacing:"-.02em"}}>Sheet Submit</b>
-          <span style={{marginLeft:"auto",fontSize:11,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",color:"#64748b",background:"#fff",border:"1px solid var(--border,#e2e8f0)",padding:"4px 8px",borderRadius:999}}>Bubble design</span>
+    <div style={{flex:1,overflowY:"auto",background:"var(--bg)"}}>
+      <div style={{maxWidth:960,margin:"0 auto",padding:"24px 24px 96px",width:"100%"}}>
+        {/* Header — matches sheet header */}
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:24}}>
+          <button className="btn btn-ghost" aria-label="Back" onClick={()=>{ if(window.history.length>1) navigate(-1); else navigate("/"); }} style={{width:32,height:32,padding:0,justifyContent:"center"}}>
+            <span style={{fontSize:18,lineHeight:1}}>‹</span>
+          </button>
+          <h1 style={{fontSize:16,fontWeight:700,letterSpacing:"-0.02em",color:"var(--text)"}}>Bubble design</h1>
+          <span style={{marginLeft:"auto",fontSize:11,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",color:"var(--text3)",background:"var(--bg3)",border:"1px solid var(--border)",padding:"4px 8px",borderRadius:999}}>Live — real bubble updates</span>
         </div>
-        <h1 style={{margin:"10px 0 2px",fontSize:18,letterSpacing:"-.02em"}}>Bubble design</h1>
 
-        <div className="bd-card">
-          <h3><i>⬢</i> Icon</h3>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>
+        {/* Icon — same card as admin-stat-card / file-card */}
+        <div style={{border:"1px solid var(--border)",borderRadius:"var(--rl)",background:"var(--bg)",padding:16,marginBottom:12}}>
+          <div style={{fontSize:12,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",color:"var(--text3)",marginBottom:12}}>Icon</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             {([
-              {id:"logo" as IconId},{id:"claude" as IconId},{id:"claudeCode" as IconId},{id:"pacman" as IconId},
+              {id:"logo" as IconId,label:"Logo"},{id:"claude" as IconId,label:"Claude"},{id:"claudeCode" as IconId,label:"Claude Code"},{id:"pacman" as IconId,label:"Pac-Man"},
             ]).map(m=>(
-              <button key={m.id} className={`bd-iconOpt${state.icon===m.id?" on":""}`} aria-label={m.id} onClick={()=>update({icon:m.id})}>
+              <button key={m.id} onClick={()=>update({icon:m.id})} title={m.label} aria-label={m.label}
+                style={{
+                  width:64,height:64,borderRadius:"var(--r)",border: m.id===state.icon ? "1.5px solid var(--text)" : "1px solid var(--border)",
+                  background: m.id===state.icon ? "var(--bg2)" : "var(--bg)", display:"grid",placeItems:"center", cursor:"pointer", transition:"border-color 0.12s, background 0.12s"
+                }}>
                 <div style={{width:28,height:28,color:state.color,display:"grid",placeItems:"center"}} dangerouslySetInnerHTML={{__html: m.id==="claudeCode" ? CLAUDE_CODE_SVG : (ICONS[m.id] ?? ICON_CLAUDE)}} />
               </button>
             ))}
           </div>
+          <div style={{fontSize:11,color:"var(--text3)",marginTop:8}}>Changes apply instantly to the floating bubble if enabled</div>
         </div>
 
-        <div className="bd-card">
-          <h3><i>◉</i> Color</h3>
-          <div style={{display:"flex",gap:0,flexWrap:"wrap",overflow:"visible",marginTop:10,paddingBottom:4}}>
-            <button className="bd-sw" aria-label="Custom" title="Custom" onClick={()=>{ setCustomOpen(o=>!o); setCpText(state.color); }} style={{width:28,height:38,padding:0,display:"grid",placeItems:"center",background:"#fff",border:"1px solid var(--border,#e2e8f0)",borderRadius:0,flexShrink:0}}>
-              <span style={{width:14,height:14,borderRadius:0,background:"conic-gradient(from 0deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#8b5cf6,#ef4444)",border:"1px solid rgba(0,0,0,.15)",display:"block"}}/>
+        {/* Color — Vercel minimal, no rounded, 2 lines wrap, bigger */}
+        <div style={{border:"1px solid var(--border)",borderRadius:"var(--rl)",background:"var(--bg)",padding:16,marginBottom:12}}>
+          <div style={{fontSize:12,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",color:"var(--text3)",marginBottom:12}}>Color</div>
+          <div style={{display:"flex",gap:0,flexWrap:"wrap"}}>
+            <button aria-label="Custom" title="Custom" onClick={()=>{ setCustomOpen(o=>!o); setCpText(state.color); }}
+              style={{width:28,height:38,display:"grid",placeItems:"center",background:"var(--bg)",border:"1px solid var(--border)",cursor:"pointer",flexShrink:0}}>
+              <span style={{width:14,height:14,background:"conic-gradient(from 0deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#8b5cf6,#ef4444)",border:"1px solid rgba(0,0,0,.12)",display:"block"}}/>
             </button>
             {COLORS.map(c=>(
-              <button key={c} className={`bd-sw${c.toLowerCase()===state.color.toLowerCase()?" on":""}`} aria-label={c} title={c} onClick={()=>update({color:c.toLowerCase()})} style={{background:c,borderColor:c.toLowerCase()==="#ffffff"?"var(--border,#e2e8f0)":undefined}} />
+              <button key={c} aria-label={c} title={c} onClick={()=>update({color:c.toLowerCase()})}
+                style={{
+                  width:28,height:38, background:c, cursor:"pointer", flexShrink:0,
+                  border: c.toLowerCase()===state.color.toLowerCase() ? "1.5px solid var(--text)" : "1px solid rgba(0,0,0,0.06)",
+                  outline: c.toLowerCase()===state.color.toLowerCase() ? "1px solid var(--text)" : "none", outlineOffset:-2
+                }} />
             ))}
           </div>
           {customOpen && (
-            <div style={{display:"flex",gap:8,alignItems:"center",marginTop:10}}>
-              <input type="color" value={/^#[0-9a-f]{6}$/i.test(cpText) ? cpText.toLowerCase() : state.color} onChange={e=>{ const v=e.target.value.toLowerCase(); setCpText(v); update({color:v}); }} style={{width:40,height:36,padding:3,border:"1px solid var(--border,#e2e8f0)",borderRadius:8,background:"#fff"}}/>
-              <input type="text" value={cpText} maxLength={7} spellCheck={false} onChange={e=>{ let v=e.target.value.trim(); if(!v.startsWith("#")) v="#"+v; v=v.toLowerCase(); setCpText(e.target.value); if(/^#[0-9a-f]{6}$/.test(v)){ update({color:v}); } if(/^#[0-9a-f]{6}$/i.test(v)) setCpText(v); }} style={{flex:1,padding:"8px 10px",border:"1px solid var(--border,#e2e8f0)",borderRadius:8,fontSize:13,fontFamily:"ui-monospace,monospace"}}/>
-              <button className="bd-btn bd-btnPrimary" style={{padding:"8px 14px",flex:"0 0 auto"}} onClick={applyCustom}>Use</button>
+            <div style={{display:"flex",gap:8,alignItems:"center",marginTop:12}}>
+              <input type="color" value={/^#[0-9a-f]{6}$/i.test(cpText) ? cpText.toLowerCase() : state.color} onChange={e=>{ const v=e.target.value.toLowerCase(); setCpText(v); update({color:v}); }} style={{width:40,height:36,padding:3,border:"1px solid var(--border)",borderRadius:"var(--r)",background:"var(--bg)"}}/>
+              <input type="text" value={cpText} maxLength={7} spellCheck={false} onChange={e=>{ let v=e.target.value.trim(); if(!v.startsWith("#")) v="#"+v; v=v.toLowerCase(); setCpText(e.target.value); if(/^#[0-9a-f]{6}$/.test(v)){ update({color:v}); } }} placeholder="#ef4444" style={{flex:1,padding:"8px 10px",border:"1px solid var(--border)",borderRadius:"var(--r)",fontSize:13,fontFamily:"var(--mono)",background:"var(--bg)",color:"var(--text)"}}/>
+              <button className="btn btn-primary btn-sm" onClick={applyCustom}>Use</button>
             </div>
           )}
         </div>
 
-        <div className="bd-card">
-          <h3><i>↔</i> Size</h3>
-          <div style={{marginTop:12}}>
-            <input type="range" className="bd-range" min={36} max={84} step={2} value={state.size} onChange={e=>update({size:+e.target.value})}/>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#64748b",marginTop:4}}><span>Small</span><b style={{color:"#0f172a",fontSize:12,fontFamily:"ui-monospace,monospace"}}>{state.size} dp</b><span>Large</span></div>
-          </div>
+        {/* Size — same slider style as site */}
+        <div style={{border:"1px solid var(--border)",borderRadius:"var(--rl)",background:"var(--bg)",padding:16,marginBottom:12}}>
+          <div style={{fontSize:12,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",color:"var(--text3)",marginBottom:12}}>Size</div>
+          <input type="range" min={36} max={84} step={2} value={state.size} onChange={e=>update({size:+e.target.value})} style={{width:"100%",accentColor:"var(--text)"}}/>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"var(--text3)",marginTop:8}}><span>Small</span><span style={{color:"var(--text)",fontFamily:"var(--mono)",fontWeight:600}}>{state.size} dp</span><span>Large</span></div>
+        </div>
+
+        <div style={{display:"flex",gap:8,marginTop:20}}>
+          <button className="btn btn-ghost" style={{flex:1}} onClick={()=>{ const n={...DEFAULT}; setState(n); persist(n); showToast("Reset to default"); }}>Reset</button>
+          <button className="btn btn-primary" style={{flex:1}} onClick={()=>{ persist(state); showToast(`Saved — ${state.icon} ${state.color} ${state.size}dp`); }}>Save</button>
         </div>
       </div>
-
-      <div className="bd-foot">
-        <button className="bd-btn" onClick={()=>{ const n={...DEFAULT}; setState(n); persist(n); showToast("Reset to default"); }}>Reset</button>
-        <button className="bd-btn bd-btnPrimary" onClick={()=>{ persist(state); showToast(`Saved — bubble_icon=${state.icon} bubble_color=${state.color} bubble_size=${state.size}`); }}>Save</button>
-      </div>
-    </>
+    </div>
   );
 }
