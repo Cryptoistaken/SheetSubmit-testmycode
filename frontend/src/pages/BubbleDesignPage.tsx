@@ -71,7 +71,7 @@ export default function BubbleDesignPage(){
         .bd-iconOpt{width:48px;height:48px;border-radius:12px;border:2px solid var(--border,#e2e8f0);display:grid;place-items:center;cursor:pointer;background:#fff;transition:.15s;flex-shrink:0;overflow:hidden}
         .bd-iconOpt svg{width:100%!important;height:100%!important;display:block;max-width:28px;max-height:28px}
         .bd-iconOpt.on{border-color:#0f172a}
-        .bd-sw{width:20px;height:30px;border-radius:0;border:2px solid transparent;cursor:pointer;flex-shrink:0}
+        .bd-sw{width:28px;height:38px;border-radius:0;border:2px solid transparent;cursor:pointer;flex-shrink:0}
         .bd-sw.on{border-color:#0f172a}
         .bd-range{width:100%;accent-color:#0f172a}
         .bd-foot{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-top:1px solid var(--border,#e2e8f0);padding:10px 14px;display:flex;gap:10px;max-width:640px;margin:0 auto;z-index:30}
@@ -101,9 +101,9 @@ export default function BubbleDesignPage(){
 
         <div className="bd-card">
           <h3><i>◉</i> Color</h3>
-          <div style={{display:"flex",gap:0,flexWrap:"nowrap",overflowX:"auto",overflowY:"hidden",marginTop:10,paddingBottom:4,scrollbarWidth:"none"}}>
-            <button className="bd-sw" aria-label="Custom" title="Custom" onClick={()=>{ setCustomOpen(o=>!o); setCpText(state.color); }} style={{width:20,height:30,padding:0,display:"grid",placeItems:"center",background:"#fff",border:"1px solid var(--border,#e2e8f0)",borderRadius:0,flexShrink:0}}>
-              <span style={{width:10,height:10,borderRadius:0,background:"conic-gradient(from 0deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#8b5cf6,#ef4444)",border:"1px solid rgba(0,0,0,.15)",display:"block"}}/>
+          <div style={{display:"flex",gap:0,flexWrap:"wrap",overflow:"visible",marginTop:10,paddingBottom:4}}>
+            <button className="bd-sw" aria-label="Custom" title="Custom" onClick={()=>{ setCustomOpen(o=>!o); setCpText(state.color); }} style={{width:28,height:38,padding:0,display:"grid",placeItems:"center",background:"#fff",border:"1px solid var(--border,#e2e8f0)",borderRadius:0,flexShrink:0}}>
+              <span style={{width:14,height:14,borderRadius:0,background:"conic-gradient(from 0deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#8b5cf6,#ef4444)",border:"1px solid rgba(0,0,0,.15)",display:"block"}}/>
             </button>
             {COLORS.map(c=>(
               <button key={c} className={`bd-sw${c.toLowerCase()===state.color.toLowerCase()?" on":""}`} aria-label={c} title={c} onClick={()=>update({color:c.toLowerCase()})} style={{background:c,borderColor:c.toLowerCase()==="#ffffff"?"var(--border,#e2e8f0)":undefined}} />
