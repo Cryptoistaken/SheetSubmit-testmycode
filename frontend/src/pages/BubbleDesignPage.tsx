@@ -6,7 +6,7 @@ type IconId = "claude" | "claudeCode" | "pacman" | "logo";
 interface BubbleCfg { icon: IconId; color: string; size: number; x: number | null; y: number | null; }
 
 const DEFAULT: BubbleCfg = { icon: "logo", color: "#ef4444", size: 60, x: null, y: null };
-const COLORS = ["#000000","#1e293b","#334155","#64748b","#ffffff","#fff000","#fde68a","#f59e0b","#f97316","#ea580c","#ef4444","#dc2626","#e11d48","#be185d","#E89B83","#C46044","#a855f7","#7e22ce","#8b5cf6","#4f46e5","#2563eb","#1d4ed8","#06b6d4","#0891b2","#0e7490","#047857","#22c55e","#16a34a","#14b8a6"];
+const COLORS = ["#000000","#1e293b","#334155","#64748b","#ffffff","#fff000","#fde68a","#f59e0b","#f97316","#ea580c","#ef4444","#dc2626","#e11d48","#be185d","#E89B83","#C46044","#a855f7","#7e22ce","#8b5cf6","#4f46e5","#2563eb","#1d4ed8","#06b6d4","#0891b2","#0e7490","#047857","#22c55e","#16a34a","#14b8a6","#eab308","#84cc16","#ec4899"];
 
 const ICON_CLAUDE = `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><rect width="1024" height="1024" rx="230" fill="currentColor"/><g fill="#111111"><rect x="250" y="350" width="120" height="240" rx="20"/><rect x="650" y="350" width="120" height="240" rx="20"/></g><g fill="#FFFFFF"><rect x="270" y="380" width="40" height="60" rx="10"/><rect x="670" y="380" width="40" height="60" rx="10"/></g><path d="M -50 600 L 150 600 L 150 800 L -50 800 Z" fill="#C46044"/><path d="M 874 600 L 1074 600 L 1074 800 L 874 800 Z" fill="#C46044"/></svg>`;
 const ICON_PACMAN = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="100%" height="100%"><path fill="currentColor" d="M 150,150 L 236.6,100 A 100 100 0 1 0 236.6,200 Z"/><circle cx="180" cy="110" r="12" fill="#000"/><circle cx="183" cy="106" r="3.5" fill="#fff" opacity="0.9"/></svg>`;
