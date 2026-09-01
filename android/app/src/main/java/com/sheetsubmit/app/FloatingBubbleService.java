@@ -196,7 +196,7 @@ private String claudeCodeHtml(String color) {
                 wv.setClickable(false);
                 wv.setFocusable(false);
                 wv.setFocusableInTouchMode(false);
-                wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ if (bubbleView != null) bubbleView.dispatchTouchEvent(e); return true; }});
+                wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ if (bubbleView != null) bubbleTouchListener.onTouch(bubbleView, e); return true; }});
                 FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
                 wv.setLayoutParams(wlp);
                 String encIcon = Uri.encode(icon);
@@ -321,7 +321,7 @@ private String claudeCodeHtml(String color) {
         wv.setClickable(false);
         wv.setFocusable(false);
         wv.setFocusableInTouchMode(false);
-        wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ if (bubbleView != null) bubbleView.dispatchTouchEvent(e); return true; }});
+        wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ if (bubbleView != null) bubbleTouchListener.onTouch(bubbleView, e); return true; }});
         FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
         wv.setLayoutParams(wlp);
         wv.loadUrl(Config.HOME_URL + "/bubble-icon.html?icon=" + Uri.encode(cfgIcon) + "&color=" + Uri.encode(cfgColor));
