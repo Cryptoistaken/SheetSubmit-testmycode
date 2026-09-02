@@ -87,15 +87,15 @@ export default function BubbleDesignPage(){
         {/* Color — Vercel minimal, no rounded, 2 lines wrap, bigger */}
         <div style={{border:"1px solid var(--border)",borderRadius:"var(--rl)",background:"var(--bg)",padding:16,marginBottom:12}}>
           <div style={{fontSize:12,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",color:"var(--text3)",marginBottom:12}}>Color</div>
-          <div style={{display:"flex",gap:0,flexWrap:"wrap"}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(28px, 1fr))",gap:0}}>
             <button aria-label="Custom" title="Custom" onClick={()=>{ setCustomOpen(o=>!o); setCpText(state.color); }}
-              style={{width:28,height:38,display:"grid",placeItems:"center",background:"var(--bg)",border:"1px solid var(--border)",cursor:"pointer",flexShrink:0}}>
+              style={{height:38,display:"grid",placeItems:"center",background:"var(--bg)",border:"1px solid var(--border)",cursor:"pointer"}}>
               <span style={{width:14,height:14,background:"conic-gradient(from 0deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#8b5cf6,#ef4444)",border:"1px solid rgba(0,0,0,.12)",display:"block"}}/>
             </button>
             {COLORS.map(c=>(
               <button key={c} aria-label={c} title={c} onClick={()=>update({color:c.toLowerCase()})}
                 style={{
-                  width:28,height:38, background:c, cursor:"pointer", flexShrink:0,
+                  height:38, background:c, cursor:"pointer",
                   border: c.toLowerCase()===state.color.toLowerCase() ? "1.5px solid var(--text)" : "1px solid rgba(0,0,0,0.06)",
                   outline: c.toLowerCase()===state.color.toLowerCase() ? "1px solid var(--text)" : "none", outlineOffset:-2
                 }} />
