@@ -7,28 +7,35 @@ interface BubbleCfg { icon: IconId; color: string; size: number; x: number | nul
 
 const DEFAULT: BubbleCfg = { icon: "logo", color: "#ef4444", size: 60, x: null, y: null };
 const COLORS = [
-  "#ef4444", // red-500 — DEFAULT, max pop on light+dark, white icon AA
+  "#ef4444", // red-500 — DEFAULT
   "#f97316", // orange-500
   "#f59e0b", // amber-500
-  "#ca8a04", // yellow-600 — darker than #eab308 so white icon stays legible
+  "#ca8a04", // yellow-600
   "#65a30d", // lime-600
-  "#16a34a", // green-600 (app --green)
+  "#16a34a", // green-600
   "#059669", // emerald-600
   "#0d9488", // teal-600
   "#0891b2", // cyan-600
   "#0284c7", // sky-600
-  "#0070f3", // vercel blue (app --blue)
+  "#0070f3", // vercel blue
   "#4f46e5", // indigo-600
   "#7c3aed", // violet-600
   "#9333ea", // purple-600
   "#c026d3", // fuchsia-600
   "#db2777", // pink-600
   "#e11d48", // rose-600
-  "#1e293b", // slate-800 — sole dark neutral (not pure black)
-  "#92400e", // amber-800 — warm brown, distinct
-  "#0f766e", // teal-800 — deep teal
-  "#1d4ed8", // blue-700 — deeper blue alt
-  "#be185d", // rose-700 — deep rose
+  "#1e293b", // slate-800
+  "#92400e", // amber-800
+  "#0f766e", // teal-800
+  "#1d4ed8", // blue-700
+  "#be185d", // rose-700
+  "#eab308", // yellow-500 — +7 to reach 29, fills 3rd row
+  "#84cc16", // lime-500
+  "#22d3ee", // cyan-400
+  "#a3e635", // lime-400
+  "#fb7185", // rose-400
+  "#f43f5e", // rose-500
+  "#38bdf8", // sky-400
 ];
 
 const ICON_CLAUDE = `<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><rect width="1024" height="1024" rx="230" fill="currentColor"/><g fill="#111111"><rect x="250" y="350" width="120" height="240" rx="20"/><rect x="650" y="350" width="120" height="240" rx="20"/></g><g fill="#FFFFFF"><rect x="270" y="380" width="40" height="60" rx="10"/><rect x="670" y="380" width="40" height="60" rx="10"/></g><path d="M -50 600 L 150 600 L 150 800 L -50 800 Z" fill="#C46044"/><path d="M 874 600 L 1074 600 L 1074 800 L 874 800 Z" fill="#C46044"/></svg>`;
