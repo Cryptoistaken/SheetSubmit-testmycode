@@ -1628,6 +1628,49 @@ th.rh:hover {
     cursor: not-allowed;
 }
 
+/* ── Autosave status (sheet toolbar) ── */
+.save-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text3);
+    white-space: nowrap;
+    margin-right: 6px;
+    flex-shrink: 0;
+    min-height: 32px;
+    padding: 0 6px;
+    border-radius: var(--r);
+    border: 1px solid transparent;
+}
+
+.save-status .save-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    flex-shrink: 0;
+}
+
+.save-status.save-pending {
+    color: var(--text2);
+}
+
+.save-status.save-pending .save-dot {
+    background: var(--blue);
+}
+
+.save-status.save-offline {
+    color: var(--amber);
+    border-color: var(--border);
+    background: var(--bg3);
+}
+
+.save-status.save-offline .save-dot {
+    background: var(--amber);
+}
+
 /* ── Quick edit bar (qeb) — card ── */
 .qeb-bar {
     position: fixed;

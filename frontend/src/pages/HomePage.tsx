@@ -124,6 +124,13 @@ export default function HomePage() {
 
   const openFile = (id: string) => navigate("/file/" + id);
 
+  // Multi-select belongs to one section: switching tabs must not leave an armed
+  // selection bar behind (its Delete would act on files from the previous tab).
+  const goTab = (to: string) => {
+    setSelected(new Set());
+    navigate(to);
+  };
+
   const bubblePickMode = useBubbleStore((s) => s.pickMode);
 
   const pickBubbleFile = (id: string) => {
@@ -331,20 +338,20 @@ export default function HomePage() {
       <div className="home-tabs">
         <button
           className={`home-tab${tab === "files" ? " active" : ""}`}
-          onClick={() => navigate("/")}
+          onClick={() => goTab("/")}
         >
           My Files
         </button>
         <button
           className={`home-tab${tab === "archive" ? " active" : ""}`}
-          onClick={() => navigate("/archive")}
+          onClick={() => goTab("/archive")}
         >
           Archive
         </button>
         {user?.isAdmin ? (
           <button
             className={`home-tab${tab === "pools" ? " active" : ""}`}
-            onClick={() => navigate("/pools/dgddigital/cookies_only")}
+            onClick={() => goTab("/pools/dgddigital/cookies_only")}
           >
             Pools
           </button>
@@ -352,7 +359,7 @@ export default function HomePage() {
         {user?.isAdmin ? (
           <button
             className={`home-tab${tab === "admin" ? " active" : ""}`}
-            onClick={() => navigate("/admin")}
+            onClick={() => goTab("/admin")}
           >
             Admin
           </button>
@@ -360,7 +367,7 @@ export default function HomePage() {
         {user?.isAdmin ? (
           <button
             className={`home-tab${tab === "tools" ? " active" : ""}`}
-            onClick={() => navigate("/tools")}
+            onClick={() => goTab("/tools")}
           >
             Tools
           </button>

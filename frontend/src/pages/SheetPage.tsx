@@ -56,11 +56,20 @@ export default function SheetPage() {
   const params = useParams();
   const navigate = useNavigate();
   const status = useSheetStore((s) => s.status);
+  const fileName = useSheetStore((s) => s.file?.name);
   const fileId = params.fileId ?? params.id;
   const ownerId = params.userId;
   const confirm = useConfirm();
 
   usePersist();
+
+  // File name in the tab so several open sheets stay distinguishable.
+  useEffect(() => {
+    document.title = fileName ? `${fileName} — SheetSubmit` : "SheetSubmit";
+    return () => {
+      document.title = "SheetSubmit";
+    };
+  }, [fileName]);
 
   useEffect(() => {
     void import("@/bones/registry");
@@ -84,6 +93,9 @@ export default function SheetPage() {
         target?.tagName === "TEXTAREA" ||
         target?.isContentEditable;
       if (e.key === "Escape") {
+        // Inputs (cell editor, modals) handle Escape themselves; do not yank
+        // selection state out from under an open edit.
+        if (typing) return;
         useSheetStore.getState().exitSelectionMode();
         return;
       }
