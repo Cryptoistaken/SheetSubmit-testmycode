@@ -2244,14 +2244,17 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
   bubbleSaveCookie: (text) => {
     const s = get();
     const trimmed = (text || "").trim();
-    const dupe = s.rows.findIndex((r) => (r.cookies ?? "").trim() === trimmed);
-    if (dupe !== -1) {
+    const dupe = bubbleCookieIndex(s.rows).get(trimmed);
+    if (dupe !== undefined) {
       toast("Duplicate @ " + (dupe + 1));
       return;
     }
     const idx = get().bubbleGetActiveRow();
     if (s.rows[idx].cookies) {
-      toast("Paste 2FA key");
+      // Row already has a cookie — this paste was NOT saved (it's a cookie,
+      // not a 2FA key). Keep it short: the bubble popup has no room for a
+      // long toast.
+      toast("Need 2FA");
       return;
     }
     const rows = s.rows.slice();
@@ -2287,20 +2290,16 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
   bubbleSaveKey: async (text) => {
     const key = normalizeBubbleKey(text);
     const s = get();
-    // A skipped row's "No_2Fa" marker is a display placeholder, not a real
-    // key — it never counts as a duplicate of (or a block against) a real key.
-    for (let i = 0; i < s.rows.length; i++) {
-      const val = s.rows[i].twofakey ?? "";
-      if (isNo2FAMark("twofakey", val)) continue;
-      const k = val ? normalizeBubbleKey(val) : "";
-      if (k === key) {
-        toast("Duplicate 2FA");
-        return;
-      }
+    if (bubbleKeyIndex(s.rows).has(key)) {
+      toast("Duplicate 2FA");
+      return;
     }
     const idx = get().bubbleGetActiveRow();
     if (s.rows[idx].twofakey) {
-      toast("Paste cookie");
+      // Row already has a 2FA key — this paste was NOT saved (it's a key,
+      // not a cookie). Keep it short: the bubble popup has no room for a
+      // long toast.
+      toast("Need cookie");
       return;
     }
     const rows = s.rows.slice();
@@ -2451,6 +2450,41 @@ function trimMemoryRows() {
 /** Normalize a 2FA key: strip spaces/dashes, uppercase (old normalizeKey). */
 export function normalizeBubbleKey(t: string | null | undefined): string {
   return (t || "").replace(/[\s\-]/g, "").toUpperCase();
+}
+
+// Bubble paste duplicate lookups used to re-scan every row on every paste.
+// Rows are only ever replaced (never mutated in place) elsewhere in this
+// store, so an index keyed on the array's identity stays valid until the
+// next edit — cache it and rebuild only when the reference changes.
+let cookieIndexRows: Row[] | null = null;
+let cookieIndex: Map<string, number> | null = null;
+function bubbleCookieIndex(rows: Row[]): Map<string, number> {
+  if (cookieIndexRows === rows && cookieIndex) return cookieIndex;
+  const idx = new Map<string, number>();
+  rows.forEach((r, i) => {
+    const v = (r.cookies ?? "").trim();
+    if (v && !idx.has(v)) idx.set(v, i);
+  });
+  cookieIndexRows = rows;
+  cookieIndex = idx;
+  return idx;
+}
+
+let keyIndexRows: Row[] | null = null;
+let keyIndex: Map<string, number> | null = null;
+function bubbleKeyIndex(rows: Row[]): Map<string, number> {
+  if (keyIndexRows === rows && keyIndex) return keyIndex;
+  const idx = new Map<string, number>();
+  rows.forEach((r, i) => {
+    const v = r.twofakey ?? "";
+    // "No 2FA" skip markers never count as a duplicate of a real key.
+    if (!v || isNo2FAMark("twofakey", v)) return;
+    const k = normalizeBubbleKey(v);
+    if (!idx.has(k)) idx.set(k, i);
+  });
+  keyIndexRows = rows;
+  keyIndex = idx;
+  return idx;
 }
 
 function applyCells(

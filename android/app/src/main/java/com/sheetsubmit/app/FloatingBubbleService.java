@@ -197,11 +197,12 @@ private String claudeCodeHtml(String color) {
                 wv.setFocusable(false);
                 wv.setFocusableInTouchMode(false);
                 wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ if (bubbleView != null) bubbleTouchListener.onTouch(bubbleView, e); return true; }});
-                FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
+                FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(winSize, winSize, Gravity.CENTER);
                 wv.setLayoutParams(wlp);
                 String encIcon = Uri.encode(icon);
                 String encColor = Uri.encode(color);
-                wv.loadUrl(Config.HOME_URL + "/bubble-icon.html?icon=" + encIcon + "&color=" + encColor);
+                int boxPct = Math.round(iconPx * 100f / winSize);
+                wv.loadUrl(Config.HOME_URL + "/bubble-icon.html?icon=" + encIcon + "&color=" + encColor + "&box=" + boxPct);
                 claudeCodeView = wv;
                 root.addView(wv);
             }
@@ -322,9 +323,17 @@ private String claudeCodeHtml(String color) {
         wv.setFocusable(false);
         wv.setFocusableInTouchMode(false);
         wv.setOnTouchListener(new View.OnTouchListener(){ @Override public boolean onTouch(View v, MotionEvent e){ if (bubbleView != null) bubbleTouchListener.onTouch(bubbleView, e); return true; }});
-        FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(iconPx, iconPx, Gravity.CENTER);
+        // The WebView fills the whole window (icon + reserved margin) instead of
+        // just the icon box — the animated SVGs intentionally scale/translate
+        // past their rest size, and a WebView clips its own canvas at its view
+        // bounds. Sizing it to iconPx only (old behavior) hard-cropped every
+        // frame that reached past the icon's resting box. `box` tells the page
+        // what percent of this now-larger canvas the icon should occupy at rest
+        // so it still looks the same size, with real headroom around it.
+        FrameLayout.LayoutParams wlp = new FrameLayout.LayoutParams(windowSize, windowSize, Gravity.CENTER);
         wv.setLayoutParams(wlp);
-        wv.loadUrl(Config.HOME_URL + "/bubble-icon.html?icon=" + Uri.encode(cfgIcon) + "&color=" + Uri.encode(cfgColor));
+        int boxPct = Math.round(iconPx * 100f / windowSize);
+        wv.loadUrl(Config.HOME_URL + "/bubble-icon.html?icon=" + Uri.encode(cfgIcon) + "&color=" + Uri.encode(cfgColor) + "&box=" + boxPct);
         claudeCodeView = wv;
         root.addView(wv);
 
@@ -542,7 +551,10 @@ private String claudeCodeHtml(String color) {
                     // Tap-opened panel: capture the clipboard and auto-paste.
                     try {
                         Intent cap = new Intent(this, ClipboardCaptureActivity.class);
-                        cap.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        // NO_ANIMATION — without it, launching this activity plays the
+                        // default open/close window transition, which looks like the
+                        // app briefly reopening and closing behind the bubble on a tap.
+                        cap.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION);
                         startActivity(cap);
                     } catch (Exception e) {
                         Log.w(TAG, "ClipboardCaptureActivity failed, using fallback", e);
