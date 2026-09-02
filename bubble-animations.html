@@ -1,0 +1,4352 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bubble Animations — all original SVGs</title>
+<style>
+  :root{--bg:#fff;--border:#eaeaea;--text:#000;--text2:#666;--r:8px}
+  body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);margin:0;padding:24px}
+  h1{font-size:18px;font-weight:700;letter-spacing:-0.02em;margin:0 0 4px}
+  .sub{color:var(--text2);font-size:12px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+  .card{border:1px solid var(--border);border-radius:var(--r);padding:12px;background:#fff;display:flex;flex-direction:column;gap:8px}
+  .card h3{font-size:11px;font-weight:600;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .preview{width:100%;height:140px;display:grid;place-items:center;background:#fafafa;border-radius:6px;overflow:hidden;border:1px solid #f0f0f0}
+  .preview svg{width:90%;height:90%;display:block}
+  .meta{font-size:10px;color:var(--text2);word-break:break-all}
+</style>
+<h1>All Original SVGs</h1>
+<div class="sub">33 original <code>clawd-tank/assets/svg-animations/*.svg</code> — as downloaded, no filter. Pick any 4 for bubble events.</div>
+<div class="grid">
+
+<div class="card"><h3>clawd-crab-walking</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      .body-anim {
+        animation: body-bob 1s infinite linear;
+      }
+      .leg-a {
+        animation: leg-a 1s infinite linear;
+      }
+      .leg-b {
+        animation: leg-b 1s infinite linear;
+      }
+      .arm-l {
+        animation: arm-l 1s infinite linear;
+      }
+      .arm-r {
+        animation: arm-r 1s infinite linear;
+      }
+      .eyes-anim {
+        transform-origin: 7.5px 9px;
+        animation: eyes-look-blink 4s infinite linear;
+      }
+
+      @keyframes body-bob {
+        0%, 100% { transform: translate(0px, 1px); }
+        25%      { transform: translate(0px, 0px); }
+        50%      { transform: translate(0px, 1px); }
+        75%      { transform: translate(0px, 0px); }
+      }
+
+      @keyframes leg-a {
+        0%, 100% { transform: translate(-2px, 0px); }
+        25%      { transform: translate(0px, 0px); }
+        50%      { transform: translate(2px, 0px); }
+        75%      { transform: translate(0px, -2px); }
+      }
+
+      @keyframes leg-b {
+        0%, 100% { transform: translate(2px, 0px); }
+        25%      { transform: translate(0px, -2px); }
+        50%      { transform: translate(-2px, 0px); }
+        75%      { transform: translate(0px, 0px); }
+      }
+
+      @keyframes arm-l {
+        0%, 50%, 100% { transform: translate(0px, 0px); }
+        25%           { transform: translate(0px, -1px); }
+        75%           { transform: translate(0px, 1px); }
+      }
+
+      @keyframes arm-r {
+        0%, 50%, 100% { transform: translate(0px, 0px); }
+        25%           { transform: translate(0px, 1px); }
+        75%           { transform: translate(0px, -1px); }
+      }
+
+      @keyframes eyes-look-blink {
+        0%, 48%, 52%, 100% { transform: translate(-2px, 0px) scaleY(1); }
+        50%                { transform: translate(-2px, 0px) scaleY(0.1); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Animated Legs -->
+  <g id="legs" fill="#DE886D">
+    <g class="leg-a">
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+    </g>
+    <g class="leg-b">
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+    </g>
+    <g class="leg-a">
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+    </g>
+    <g class="leg-b">
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+  </g>
+
+  <!-- Animated Upper Body -->
+  <g class="body-anim">
+    <!-- Body Color Group -->
+    <g fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <g class="arm-l">
+        <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      </g>
+      <g class="arm-r">
+        <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+      </g>
+    </g>
+    
+    <!-- Eyes Color Group -->
+    <g class="eyes-anim" fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+</svg>
+</div><div class="meta">clawd-crab-walking.svg</div></div>
+<div class="card"><h3>clawd-disconnected</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -20 50 40" width="500" height="400">
+  <defs>
+    <style>
+      .body-anim {
+        animation: body-move 6s infinite ease-in-out;
+      }
+      .eyes-anim {
+        animation: eyes-move 6s infinite ease-in-out;
+      }
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: blink 6s infinite linear;
+      }
+      .question-mark {
+        transform-origin: center;
+        animation: question-fade 6s infinite ease-in-out;
+      }
+      .exclamation-mark {
+        transform-origin: center;
+        animation: exclamation-fade 6s infinite ease-in-out;
+      }
+      .ble-icon-group {
+        animation: ble-float 3s infinite ease-in-out;
+      }
+      .ble-shadow {
+        transform-origin: 26px 15.5px;
+        animation: ble-shadow-pulse 3s infinite ease-in-out;
+      }
+      .glow-pulse {
+        transform-origin: 0px 0px;
+        animation: glow 3s infinite ease-in-out;
+      }
+
+      /* Character Upper Body Movement (Simulates Side-to-Side Head/Torso Tilt) */
+      @keyframes body-move {
+        0%, 5% { transform: translate(0px, 0px); }
+        12%, 22% { transform: translate(-1px, 0px); } /* Looks left */
+        29%, 39% { transform: translate(1px, 0px); }  /* Looks right */
+        44% { transform: translate(-1px, 0px); }      /* Quick look left */
+        49% { transform: translate(1px, 0px); }       /* Quick look right */
+        56%, 88% { transform: translate(1px, -1px); } /* Stares up-right */
+        95%, 100% { transform: translate(0px, 0px); }
+      }
+
+      /* Eye Movement for Parallax Directional Looking */
+      @keyframes eyes-move {
+        0%, 5% { transform: translate(0px, 0px); }
+        12%, 22% { transform: translate(-2px, 0px); }
+        29%, 39% { transform: translate(2px, 0px); }
+        44% { transform: translate(-2px, 0px); }
+        49% { transform: translate(2px, 0px); }
+        56%, 88% { transform: translate(3px, -2px); }
+        95%, 100% { transform: translate(0px, 0px); }
+      }
+
+      /* Occasional Blinking */
+      @keyframes blink {
+        0%, 20%, 24%, 60%, 64%, 80%, 84%, 100% { transform: scaleY(1); }
+        22%, 62%, 82% { transform: scaleY(0.1); }
+      }
+
+      /* Confused Question Mark Animation */
+      @keyframes question-fade {
+        0%, 5% { opacity: 0; transform: translate(-4px, 4px) scale(0.5); }
+        12%, 46% { opacity: 1; transform: translate(-4px, 0px) scale(1); }
+        50%, 100% { opacity: 0; transform: translate(-4px, -4px) scale(1.2); }
+      }
+
+      /* Exclamation Mark Animation (Spotting the BLE Icon) */
+      @keyframes exclamation-fade {
+        0%, 50% { opacity: 0; transform: translate(6px, 0px) scale(0.5); }
+        56%, 85% { opacity: 1; transform: translate(6px, -4px) scale(1); }
+        90%, 100% { opacity: 0; transform: translate(6px, -8px) scale(1.2); }
+      }
+
+      /* Floating BLE Icon */
+      @keyframes ble-float {
+        0%, 100% { transform: translate(26px, -3px); }
+        50% { transform: translate(26px, -6px); }
+      }
+
+      /* Floating BLE Shadow */
+      @keyframes ble-shadow-pulse {
+        0%, 100% { transform: scale(1); opacity: 0.3; }
+        50% { transform: scale(0.8); opacity: 0.15; }
+      }
+
+      /* BLE Glow Pulse */
+      @keyframes glow {
+        0%, 100% { transform: scale(1); opacity: 0.4; }
+        50% { transform: scale(1.3); opacity: 0.1; }
+      }
+    </style>
+  </defs>
+
+  <!-- BLE Icon Ground Shadow -->
+  <ellipse class="ble-shadow" cx="26" cy="15.5" rx="5" ry="0.8" fill="#000000" opacity="0.3"/>
+
+  <!-- Character Ground Shadow -->
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Static Character Legs -->
+  <g id="legs" fill="#DE886D">
+    <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+    <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+    <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+    <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+  </g>
+
+  <!-- Animated Upper Body (Torso, Arms, and Eyes) -->
+  <g class="body-anim">
+    <!-- Body Color Group -->
+    <g fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+    </g>
+    
+    <!-- Eyes Color Group -->
+    <g class="eyes-anim">
+      <g class="eyes-blink" fill="#000000">
+        <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+        <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- Confused Question Mark -->
+  <g class="question-mark" fill="#FFFFFF" opacity="0">
+    <rect x="1" y="0" width="2" height="1"/>
+    <rect x="0" y="1" width="1" height="1"/>
+    <rect x="3" y="1" width="1" height="2"/>
+    <rect x="2" y="3" width="1" height="1"/>
+    <rect x="1" y="4" width="1" height="1"/>
+    <rect x="1" y="6" width="1" height="1"/>
+  </g>
+
+  <!-- Exclamation Mark -->
+  <g class="exclamation-mark" fill="#0082FC" opacity="0">
+    <rect x="1" y="0" width="1" height="4"/>
+    <rect x="1" y="5" width="1" height="1"/>
+  </g>
+
+  <!-- Large Floating BLE Icon -->
+  <g class="ble-icon-group">
+    <!-- Glowing Pulse -->
+    <circle cx="0" cy="0" r="9" fill="#0082FC" class="glow-pulse" opacity="0.4"/>
+    
+    <!-- BLE Background -->
+    <circle cx="0" cy="0" r="6" fill="#0082FC"/>
+    
+    <!-- BLE Rune Symbol (Bind-rune of Hagall and Bjarkan) -->
+    <path d="M -3,3 L 3,-3 L 0,-6 L 0,6 L 3,3 L -3,-3" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg></div><div class="meta">clawd-disconnected.svg</div></div>
+<div class="card"><h3>clawd-dizzy</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      .body-anim-rot {
+        transform-origin: 7.5px 15px; /* Pivot at the feet */
+        animation: dizzy-rot 4s infinite ease-in-out;
+      }
+      
+      .star {
+        animation: star-orbit 3s infinite linear;
+      }
+      .star-1 { animation-delay: 0s; }
+      .star-2 { animation-delay: -1s; }
+      .star-3 { animation-delay: -2s; }
+
+      /* Swaying back and forth from the feet */
+      @keyframes dizzy-rot {
+        0%, 100% { transform: rotate(-6deg); }
+        50% { transform: rotate(6deg); }
+      }
+
+      /* Elliptical 3D-ish orbit for stars */
+      @keyframes star-orbit {
+        0%, 100% { transform: translate(-10px, 0px) scale(0.85); opacity: 1; }
+        12.5% { transform: translate(-7px, 2px) scale(0.97); opacity: 1; }
+        25% { transform: translate(0px, 3px) scale(1.1); opacity: 1; }
+        37.5% { transform: translate(7px, 2px) scale(0.97); opacity: 1; }
+        50% { transform: translate(10px, 0px) scale(0.85); opacity: 1; }
+        62.5% { transform: translate(7px, -2px) scale(0.72); opacity: 0.8; }
+        75% { transform: translate(0px, -3px) scale(0.6); opacity: 0.4; }
+        87.5% { transform: translate(-7px, -2px) scale(0.72); opacity: 0.8; }
+      }
+    </style>
+    
+    <g id="pixel-star" fill="#FFC107">
+      <rect x="1" y="0" width="1" height="1"/>
+      <rect x="0" y="1" width="3" height="1"/>
+      <rect x="1" y="2" width="1" height="1"/>
+    </g>
+  </defs>
+
+  <!-- Character Ground Shadow -->
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Animated Character (Body + Legs) -->
+  <g class="body-anim-rot">
+      
+      <!-- Character Legs -->
+      <g id="legs" fill="#DE886D">
+        <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+        <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+        <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+        <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+      </g>
+
+      <!-- Body Color Group -->
+      <g id="body-color-group" fill="#DE886D">
+        <rect id="torso" x="2" y="6" width="11" height="7"/>
+        <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+        <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+      </g>
+      
+
+      <!-- Eyes Color Group with X Extensions -->
+      <g id="eyes-color-group" fill="#000000">
+        <!-- Original Eyes serving as center of X -->
+        <rect id="left-eye" x="4" y="8" width="1" height="1"/>
+        <rect id="right-eye" x="10" y="8" width="1" height="1"/>
+        
+        <!-- Left Eye X Extensions -->
+        <rect x="3" y="7" width="1" height="1"/>
+        <rect x="5" y="7" width="1" height="1"/>
+        <rect x="3" y="9" width="1" height="1"/>
+        <rect x="5" y="9" width="1" height="1"/>
+
+        <!-- Right Eye X Extensions -->
+        <rect x="9" y="7" width="1" height="1"/>
+        <rect x="11" y="7" width="1" height="1"/>
+        <rect x="9" y="9" width="1" height="1"/>
+        <rect x="11" y="9" width="1" height="1"/>
+      </g>
+    </g>
+
+  <!-- Orbiting Stars -->
+  <g transform="translate(7.5, 2)">
+    <g class="star star-1"><use href="#pixel-star" transform="translate(-1.5, -1.5)"/></g>
+    <g class="star star-2"><use href="#pixel-star" transform="translate(-1.5, -1.5)"/></g>
+    <g class="star star-3"><use href="#pixel-star" transform="translate(-1.5, -1.5)"/></g>
+  </g>
+</svg>
+</div><div class="meta">clawd-dizzy.svg</div></div>
+<div class="card"><h3>clawd-eureka</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      .body-breathe {
+        transform-box: view-box;
+        transform-origin: 7.5px 12px;
+        animation: body-breathe 6s infinite ease-in-out;
+      }
+      @keyframes body-breathe {
+        0%, 18%, 84%, 100% { transform: translateY(0); }
+        38%, 64%           { transform: translateY(-0.28px); }
+        72%                { transform: translateY(-0.12px); }
+      }
+
+      #ground-shadow {
+        transform-box: view-box;
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-breathe 6s infinite ease-in-out;
+      }
+      @keyframes shadow-breathe {
+        0%, 18%, 84%, 100% { opacity: 0.5; transform: scaleX(1); }
+        38%, 64%           { opacity: 0.36; transform: scaleX(0.86); }
+        72%                { opacity: 0.44; transform: scaleX(0.94); }
+      }
+
+      .body-tilt {
+        transform-box: view-box;
+        transform-origin: 7.5px 13px;
+        animation: body-tilt 6s infinite ease-in-out;
+      }
+      @keyframes body-tilt {
+        0%, 22%, 76%, 100% { transform: rotate(0deg) scaleY(1); }
+        30%                { transform: rotate(3deg) scaleY(0.97); }
+        39%                { transform: rotate(4.5deg) scaleY(0.97); }
+        48%                { transform: rotate(2deg) scaleY(0.97); }
+        57%                { transform: rotate(4deg) scaleY(0.97); }
+        66%                { transform: rotate(3deg) scaleY(0.97); }
+      }
+
+      .leg-left-inner {
+        transform-box: fill-box;
+        transform-origin: 50% 0%;
+        animation: leg-left-inner 6s infinite ease-in-out;
+      }
+      @keyframes leg-left-inner {
+        0%, 22%, 76%, 100% { transform: rotate(0deg); }
+        30%                { transform: rotate(12deg); }
+        36%                { transform: rotate(15deg); }
+        42%                { transform: rotate(9deg); }
+        48%                { transform: rotate(15deg); }
+        54%                { transform: rotate(9deg); }
+        60%                { transform: rotate(15deg); }
+        66%                { transform: rotate(12deg); }
+      }
+      .leg-left-outer {
+        transform-box: fill-box;
+        transform-origin: 50% 0%;
+        animation: leg-left-outer 6s infinite ease-in-out;
+      }
+      @keyframes leg-left-outer {
+        0%, 22%, 76%, 100% { transform: rotate(0deg); }
+        30%                { transform: rotate(22deg); }
+        36%                { transform: rotate(26deg); }
+        42%                { transform: rotate(19deg); }
+        48%                { transform: rotate(26deg); }
+        54%                { transform: rotate(19deg); }
+        60%                { transform: rotate(26deg); }
+        66%                { transform: rotate(22deg); }
+      }
+
+      .arm-l-balance {
+        transform-box: fill-box;
+        transform-origin: 100% 0%;
+        animation: arm-l-balance 6s infinite ease-in-out;
+      }
+      @keyframes arm-l-balance {
+        0%, 22%, 76%, 100% { transform: translate(0, 0) rotate(0deg); }
+        30%                { transform: translate(0, 0.5px) rotate(-2deg); }
+        37%                { transform: translate(0, 0.55px) rotate(1deg); }
+        44%                { transform: translate(0, 0.5px) rotate(-3deg); }
+        51%                { transform: translate(0, 0.55px) rotate(2deg); }
+        58%                { transform: translate(0, 0.5px) rotate(-1deg); }
+        66%                { transform: translate(0, 0.5px) rotate(0deg); }
+      }
+
+      .arm-r {
+        transform-origin: 13px 10px;
+        animation: arm-r 6s infinite ease-in-out;
+      }
+      @keyframes arm-r {
+        0%, 8%    { transform: none; }
+        16%, 22%  { transform: translateY(-3px) rotate(-90deg); }
+        30%, 66%  { transform: translateY(-4.5px) rotate(-90deg); }
+        76%       { transform: translateY(-3px) rotate(-90deg); }
+        80%, 100% { transform: none; }
+      }
+
+      .lightbulb-zone {
+        transform-box: view-box;
+        transform-origin: 0 0;
+        animation: lightbulb-zone 6s infinite ease-in-out;
+      }
+      @keyframes lightbulb-zone {
+        0%, 22%, 76%, 100% { transform: translate(0, 0); }
+        30%                { transform: translate(0, -1.5px); }
+        39%                { transform: translate(0.3px, -1.7px); }
+        48%                { transform: translate(-0.2px, -1.3px); }
+        57%                { transform: translate(0.3px, -1.6px); }
+        66%                { transform: translate(0, -1.5px); }
+      }
+
+      .eyes-rect {
+        transform-box: view-box;
+        transform-origin: 7.5px 9px;
+        animation:
+          eyes-rect-move 6s infinite ease-in-out,
+          eyes-rect-vis 6s infinite step-end;
+      }
+      @keyframes eyes-rect-move {
+        0%, 17%       { transform: translate(0, 0) scaleY(1); }
+        22%, 30%      { transform: translate(1px, -0.5px) scaleY(1); }   34%           { transform: translate(0, 0) scaleY(1); }          36%           { transform: translate(0, 0) scaleY(0.1); }        72%           { transform: translate(0, 0) scaleY(0.1); }        74%, 100%     { transform: translate(0, 0) scaleY(1); }          }
+      @keyframes eyes-rect-vis {
+        0%, 36%       { opacity: 1; }
+        37%, 72%      { opacity: 0; }
+        73%, 100%     { opacity: 1; }
+      }
+
+      .eyes-smile {
+        opacity: 0;
+        animation: eyes-smile-vis 6s infinite step-end;
+      }
+      @keyframes eyes-smile-vis {
+        0%, 36%       { opacity: 0; }
+        37%, 72%      { opacity: 1; }
+        73%, 100%     { opacity: 0; }
+      }
+
+      .bulb {
+        transform-box: view-box;
+        transform-origin: 0 0;
+        opacity: 0;
+        animation: bulb-fly 6s infinite ease-in-out;
+      }
+      @keyframes bulb-fly {
+        0%, 17%   { opacity: 0; transform: translate(9.5px, -2.7px) scale(0.15); }
+        19%       { opacity: 1; transform: translate(9.5px, -2.7px) scale(0.27); }
+        22%, 66%  { opacity: 1; transform: translate(9.5px, -2.7px) scale(0.24); }
+        70%, 100% { opacity: 0; transform: translate(9.5px, -2.7px) scale(0.2); }
+      }
+
+      .bulb rect[fill="#FFB000"] { animation: glass-edge 6s infinite step-end; }
+      .bulb rect[fill="#FFD400"] { animation: glass-main 6s infinite step-end; }
+      .bulb rect[fill="#E88900"] { animation: glass-shadow 6s infinite step-end; }
+      .bulb rect[fill="#FFFFFF"],
+      .bulb rect[fill="#FFF8B8"] { animation: glass-highlight 6s infinite step-end; }
+
+      @keyframes glass-main {
+        0%, 23%   { fill: #8A7428; }
+        24%, 70%  { fill: #FFD400; }
+        71%, 100% { fill: #8A7428; }
+      }
+      @keyframes glass-edge {
+        0%, 23%   { fill: #725B20; }
+        24%, 70%  { fill: #FFB000; }
+        71%, 100% { fill: #725B20; }
+      }
+      @keyframes glass-shadow {
+        0%, 23%   { fill: #56451D; }
+        24%, 70%  { fill: #E88900; }
+        71%, 100% { fill: #56451D; }
+      }
+      @keyframes glass-highlight {
+        0%, 23%   { opacity: 0.25; }
+        24%, 70%  { opacity: 1; }
+        71%, 100% { opacity: 0.25; }
+      }
+
+      .f-anim { animation: filament-f 6s infinite step-end; }
+      @keyframes filament-f {
+        0%, 23%   { fill: #555; }
+        24%, 70%  { fill: #C96E00; }
+        71%, 100% { fill: #555; }
+      }
+
+      .fg-anim { animation: filament-fg 6s infinite step-end; }
+      @keyframes filament-fg {
+        0%, 23%   { fill: #777; }
+        24%, 70%  { fill: #E89500; }
+        71%, 100% { fill: #777; }
+      }
+
+      .rays {
+        transform-box: view-box;
+        transform-origin: 13.5px 0.5px;
+        opacity: 0;
+        animation: rays-burst 6s infinite ease-in-out;
+      }
+      @keyframes rays-burst {
+        0%, 28%   { opacity: 0; transform: translate(-0.1px, -0.1px) scale(0.65); }
+        29%, 30%  { opacity: 0.9; transform: translate(-0.1px, -0.1px) scale(0.9); }
+        31%, 32%  { opacity: 0; transform: translate(-0.1px, -0.1px) scale(0.65); }
+        33%, 34%  { opacity: 0.9; transform: translate(-0.1px, -0.1px) scale(0.95); }
+        35%, 36%  { opacity: 0; transform: translate(-0.1px, -0.1px) scale(0.65); }
+        37%, 38%  { opacity: 0.9; transform: translate(-0.1px, -0.1px) scale(0.9); }
+        39%, 40%  { opacity: 0; transform: translate(-0.1px, -0.1px) scale(0.65); }
+        41%, 42%  { opacity: 0.9; transform: translate(-0.1px, -0.1px) scale(0.95); }
+        43%, 44%  { opacity: 0; transform: translate(-0.1px, -0.1px) scale(0.65); }
+        45%, 46%  { opacity: 0.9; transform: translate(-0.1px, -0.1px) scale(0.9); }
+        47%, 48%  { opacity: 0; transform: translate(-0.1px, -0.1px) scale(0.65); }
+        49%, 50%  { opacity: 0.9; transform: translate(-0.1px, -0.1px) scale(0.95); }
+        51%, 52%  { opacity: 0; transform: translate(-0.1px, -0.1px) scale(0.65); }
+        53%, 54%  { opacity: 0.9; transform: translate(-0.1px, -0.1px) scale(0.9); }
+        55%, 56%  { opacity: 0; transform: translate(-0.1px, -0.1px) scale(0.65); }
+        57%, 60%  { opacity: 1; transform: translate(-0.1px, -0.1px) scale(0.95); }
+        61%, 100% { opacity: 0; transform: translate(-0.1px, -0.1px) scale(0.65); }
+      }
+    </style>
+  </defs>
+
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <g id="master-group" transform="translate(15, 0) scale(-1, 1)">
+    <g class="body-breathe">
+      <g class="body-tilt">
+        <rect class="leg-left-outer" x="3" y="13" width="1" height="2" fill="#DE886D"/>
+        <rect class="leg-left-inner" x="5" y="13" width="1" height="2" fill="#DE886D"/>
+
+        <rect x="2" y="6" width="11" height="7" fill="#DE886D"/>
+
+        <g class="eyes-rect" fill="#000000">
+          <rect x="4"  y="8" width="1" height="2"/>
+          <rect x="10" y="8" width="1" height="2"/>
+        </g>
+
+        <g class="eyes-smile" fill="none" stroke="#000000" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3.5,9 4.5,8 5.5,9"/>
+          <polyline points="9.5,9 10.5,8 11.5,9"/>
+        </g>
+
+        <rect class="arm-l-balance" x="0" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+
+      <rect x="9" y="13" width="1" height="2" fill="#DE886D"/>
+    </g>
+
+    <rect x="11" y="13" width="1" height="2" fill="#DE886D"/>
+
+    <g class="lightbulb-zone">
+      <g class="bulb">
+        <rect fill="#FFB000" x="12" y="2"  width="8"  height="1"/>
+        <rect fill="#FFB000" x="10" y="3"  width="12" height="1"/>
+        <rect fill="#FFB000" x="9"  y="4"  width="14" height="1"/>
+        <rect fill="#FFB000" x="8"  y="5"  width="16" height="1"/>
+        <rect fill="#FFB000" x="7"  y="6"  width="18" height="1"/>
+        <rect fill="#FFB000" x="6"  y="7"  width="20" height="1"/>
+        <rect fill="#FFB000" x="5"  y="8"  width="22" height="2"/>
+        <rect fill="#FFB000" x="4"  y="10" width="24" height="7"/>
+        <rect fill="#FFB000" x="5"  y="17" width="22" height="2"/>
+        <rect fill="#FFB000" x="6"  y="19" width="20" height="1"/>
+        <rect fill="#FFB000" x="7"  y="20" width="18" height="1"/>
+        <rect fill="#FFB000" x="8"  y="21" width="16" height="1"/>
+        <rect fill="#FFB000" x="9"  y="22" width="14" height="1"/>
+        <rect fill="#FFB000" x="10" y="23" width="12" height="1"/>
+        <rect fill="#FFB000" x="12" y="24" width="8"  height="2"/>
+
+        <rect fill="#FFD400" x="13" y="3"  width="6"  height="1"/>
+        <rect fill="#FFD400" x="11" y="4"  width="10" height="1"/>
+        <rect fill="#FFD400" x="10" y="5"  width="12" height="1"/>
+        <rect fill="#FFD400" x="9"  y="6"  width="14" height="1"/>
+        <rect fill="#FFD400" x="8"  y="7"  width="16" height="1"/>
+        <rect fill="#FFD400" x="7"  y="8"  width="18" height="2"/>
+        <rect fill="#FFD400" x="6"  y="10" width="20" height="7"/>
+        <rect fill="#FFD400" x="7"  y="17" width="18" height="2"/>
+        <rect fill="#FFD400" x="8"  y="19" width="16" height="1"/>
+        <rect fill="#FFD400" x="9"  y="20" width="14" height="1"/>
+        <rect fill="#FFD400" x="10" y="21" width="12" height="1"/>
+        <rect fill="#FFD400" x="11" y="22" width="10" height="1"/>
+        <rect fill="#FFD400" x="12" y="23" width="8"  height="1"/>
+        <rect fill="#FFD400" x="13" y="24" width="6"  height="2"/>
+
+        <rect fill="#E88900" x="21" y="4"  width="2" height="1"/>
+        <rect fill="#E88900" x="22" y="5"  width="1" height="2"/>
+        <rect fill="#E88900" x="24" y="8"  width="1" height="4"/>
+        <rect fill="#E88900" x="25" y="10" width="1" height="4"/>
+        <rect fill="#E88900" x="23" y="17" width="2" height="1"/>
+        <rect fill="#E88900" x="22" y="19" width="2" height="1"/>
+        <rect fill="#E88900" x="20" y="22" width="2" height="1"/>
+        <rect fill="#E88900" x="18" y="24" width="2" height="2"/>
+        <rect fill="#E88900" x="7"  y="8"  width="1" height="2"/>
+        <rect fill="#E88900" x="6"  y="17" width="1" height="1"/>
+        <rect fill="#E88900" x="8"  y="20" width="1" height="1"/>
+        <rect fill="#E88900" x="10" y="23" width="1" height="1"/>
+
+        <rect fill="#FFFFFF" x="13" y="4"  width="2" height="1"/>
+        <rect fill="#FFF8B8" x="12" y="5"  width="1" height="2"/>
+        <rect fill="#FFFFFF" x="11" y="7"  width="2" height="1"/>
+        <rect fill="#FFF8B8" x="10" y="8"  width="1" height="1"/>
+        <rect fill="#FFF8B8" x="9"  y="10" width="1" height="2"/>
+
+        <rect class="f-anim"  x="13" y="12" width="2" height="1"/>
+        <rect class="f-anim"  x="18" y="12" width="2" height="1"/>
+        <rect class="f-anim"  x="13" y="13" width="1" height="3"/>
+        <rect class="f-anim"  x="19" y="13" width="1" height="3"/>
+        <rect class="fg-anim" x="14" y="14" width="1" height="2"/>
+        <rect class="fg-anim" x="18" y="14" width="1" height="2"/>
+        <rect class="f-anim"  x="15" y="15" width="3" height="1"/>
+        <rect class="fg-anim" x="15" y="16" width="1" height="2"/>
+        <rect class="fg-anim" x="17" y="16" width="1" height="2"/>
+        <rect class="f-anim"  x="16" y="18" width="1" height="7"/>
+
+        <rect fill="#2E2E2E" x="11" y="25" width="10" height="1"/>
+        <rect fill="#2E2E2E" x="12" y="26" width="1"  height="1"/>
+        <rect fill="#9B9B9B" x="13" y="26" width="2"  height="1"/>
+        <rect fill="#D7D7D7" x="15" y="26" width="4"  height="1"/>
+        <rect fill="#2E2E2E" x="19" y="26" width="1"  height="1"/>
+        <rect fill="#2E2E2E" x="11" y="27" width="1"  height="1"/>
+        <rect fill="#9B9B9B" x="12" y="27" width="3"  height="1"/>
+        <rect fill="#D7D7D7" x="15" y="27" width="4"  height="1"/>
+        <rect fill="#666666" x="19" y="27" width="1"  height="1"/>
+        <rect fill="#2E2E2E" x="20" y="27" width="1"  height="1"/>
+        <rect fill="#2E2E2E" x="12" y="28" width="1"  height="1"/>
+        <rect fill="#9B9B9B" x="13" y="28" width="2"  height="1"/>
+        <rect fill="#D7D7D7" x="15" y="28" width="4"  height="1"/>
+        <rect fill="#2E2E2E" x="19" y="28" width="1"  height="1"/>
+        <rect fill="#2E2E2E" x="11" y="29" width="1"  height="1"/>
+        <rect fill="#9B9B9B" x="12" y="29" width="3"  height="1"/>
+        <rect fill="#D7D7D7" x="15" y="29" width="4"  height="1"/>
+        <rect fill="#666666" x="19" y="29" width="1"  height="1"/>
+        <rect fill="#2E2E2E" x="20" y="29" width="1"  height="1"/>
+        <rect fill="#2E2E2E" x="12" y="30" width="1"  height="1"/>
+        <rect fill="#9B9B9B" x="13" y="30" width="2"  height="1"/>
+        <rect fill="#D7D7D7" x="15" y="30" width="4"  height="1"/>
+        <rect fill="#2E2E2E" x="19" y="30" width="1"  height="1"/>
+        <rect fill="#2E2E2E" x="13" y="31" width="6"  height="1"/>
+        <rect fill="#2E2E2E" x="14" y="32" width="4"  height="1"/>
+      </g>
+
+      <g class="rays" fill="#FFFFFF">
+        <rect x="13" y="-5" width="1" height="1"/>
+        <rect x="13" y="-4" width="1" height="1"/>
+        <rect x="13" y="4"  width="1" height="1"/>
+        <rect x="13" y="5"  width="1" height="1"/>
+        <rect x="6"  y="0"  width="1" height="1"/>
+        <rect x="7"  y="0"  width="1" height="1"/>
+        <rect x="19" y="0"  width="1" height="1"/>
+        <rect x="20" y="0"  width="1" height="1"/>
+        <rect x="9"  y="-3" width="1" height="1"/>
+        <rect x="17" y="-3" width="1" height="1"/>
+        <rect x="9"  y="3"  width="1" height="1"/>
+        <rect x="17" y="3"  width="1" height="1"/>
+      </g>
+    </g>
+
+    <g class="body-breathe">
+      <g class="body-tilt">
+        <g class="arm-r" fill="#DE886D">
+          <rect x="13" y="9" width="2" height="2"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>
+</div><div class="meta">clawd-eureka.svg</div></div>
+<div class="card"><h3>clawd-going-away</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      .digging-body {
+        animation: dig-down 3s forwards linear;
+      }
+      .digging-arm-l {
+        animation: frantic-dig-l 0.15s infinite ease-in-out;
+      }
+      .digging-arm-r {
+        animation: frantic-dig-r 0.15s infinite ease-in-out;
+      }
+      .digging-legs {
+        animation: frantic-kick 0.15s infinite ease-in-out;
+      }
+      .hole {
+        transform-origin: 0px 0.5px;
+        animation: hole-open-close 3s forwards linear;
+      }
+      .dirt-group {
+        animation: show-dirt 3s forwards linear;
+      }
+      .dirt-particle {
+        opacity: 0;
+        animation: fly-dirt 0.5s infinite linear;
+      }
+      
+      /* Stagger dirt particles */
+      .d1 { animation-delay: 0.0s; }
+      .d2 { animation-delay: 0.1s; }
+      .d3 { animation-delay: 0.2s; }
+      .d4 { animation-delay: 0.3s; }
+      .d5 { animation-delay: 0.05s; }
+      .d6 { animation-delay: 0.15s; }
+      .d7 { animation-delay: 0.25s; }
+      .d8 { animation-delay: 0.35s; }
+
+      @keyframes dig-down {
+        0% { transform: translateY(0); }
+        25% { transform: translateY(0); }
+        50% { transform: translateY(18px); }
+        100% { transform: translateY(18px); }
+      }
+
+      @keyframes frantic-dig-l {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-1px); }
+      }
+
+      @keyframes frantic-dig-r {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(1px); }
+      }
+
+      @keyframes frantic-kick {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-1px); }
+      }
+
+      @keyframes hole-open-close {
+        0% { transform: scale(0); opacity: 0; }
+        5% { transform: scale(0); opacity: 0; }
+        10% { transform: scale(2); opacity: 1; }
+        50% { transform: scale(2); opacity: 1; }
+        55% { transform: scale(0); opacity: 0; }
+        100% { transform: scale(0); opacity: 0; }
+      }
+
+      @keyframes show-dirt {
+        0% { opacity: 0; }
+        5% { opacity: 0; }
+        6% { opacity: 1; }
+        50% { opacity: 1; }
+        51% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+
+      @keyframes fly-dirt {
+        0% { opacity: 0; transform: translate(0, 0); }
+        10% { opacity: 1; transform: translate(0, 0); }
+        70% { opacity: 1; transform: translate(calc(var(--tx) * 0.8), calc(var(--ty) * 0.8)); }
+        90% { opacity: 0; transform: translate(var(--tx), var(--ty)); }
+        100% { opacity: 0; transform: translate(var(--tx), var(--ty)); }
+      }
+    </style>
+    
+    <g id="dirt">
+      <rect x="0" y="0" width="1.5" height="1.5" fill="#5D4037" />
+    </g>
+
+    <clipPath id="ground-clip">
+      <rect x="-15" y="-25" width="45" height="40" />
+    </clipPath>
+  </defs>
+
+  <!-- The hole -->
+  <g transform="translate(7.5, 15)">
+    <rect id="ground-shadow" x="-4.5" y="0" width="9" height="1" fill="#000000" class="hole" />
+  </g>
+
+  <!-- Dirt Particles flying out during the dig phase -->
+  <g class="dirt-group" transform="translate(7.5, 15)">
+    <use href="#dirt" class="dirt-particle d1" style="--tx: -12px; --ty: -8px;" x="-2" y="0" />
+    <use href="#dirt" class="dirt-particle d2" style="--tx: 14px; --ty: -10px;" x="2" y="0" />
+    <use href="#dirt" class="dirt-particle d3" style="--tx: -18px; --ty: -4px;" x="-4" y="0" />
+    <use href="#dirt" class="dirt-particle d4" style="--tx: 12px; --ty: -14px;" x="4" y="0" />
+    <use href="#dirt" class="dirt-particle d5" style="--tx: -10px; --ty: -12px;" x="-1" y="0" />
+    <use href="#dirt" class="dirt-particle d6" style="--tx: 16px; --ty: -6px;" x="1" y="0" />
+    <use href="#dirt" class="dirt-particle d7" style="--tx: -15px; --ty: -16px;" x="-3" y="0" />
+    <use href="#dirt" class="dirt-particle d8" style="--tx: 10px; --ty: -8px;" x="3" y="0" />
+  </g>
+
+  <!-- Clawd masked by the ground line -->
+  <g id="master-group" clip-path="url(#ground-clip)">
+    <g class="digging-body">
+      
+      <g id="body-color-group" fill="#DE886D">
+        <rect id="torso" x="2" y="6" width="11" height="7"/>
+        
+        <g class="digging-arm-l">
+          <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+        </g>
+        
+        <g class="digging-arm-r">
+          <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+        </g>
+        
+        <g class="digging-legs">
+          <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+          <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+          <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+          <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+        </g>
+      </g>
+      
+      <g id="eyes-color-group" fill="#000000">
+        <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+        <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+      </g>
+      
+    </g>
+  </g>
+</svg></div><div class="meta">clawd-going-away.svg</div></div>
+<div class="card"><h3>clawd-grooving</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      .shadow-sway {
+        transform-box: fill-box;
+        transform-origin: 50% 50%;
+        animation: shadow-sway 1.6s infinite ease-in-out;
+      }
+
+      .body-sway {
+        transform-origin: 7.5px 13px;
+        animation: body-sway 1.6s infinite ease-in-out;
+      }
+
+      .leg-left-inner,
+      .leg-left-outer,
+      .leg-right-inner,
+      .leg-right-outer {
+        transform-box: fill-box;
+        transform-origin: 50% 0%;
+      }
+      .leg-left-inner  { animation: leg-left-inner  1.6s infinite ease-in-out; }
+      .leg-left-outer  { animation: leg-left-outer  1.6s infinite ease-in-out; }
+      .leg-right-inner { animation: leg-right-inner 1.6s infinite ease-in-out; }
+      .leg-right-outer { animation: leg-right-outer 1.6s infinite ease-in-out; }
+
+      .arm-left-dance  {
+        transform-box: fill-box;
+        transform-origin: 100% 0%;
+        animation: arm-left-dance 1.6s infinite ease-in-out;
+      }
+      .arm-right-dance {
+        transform-box: fill-box;
+        transform-origin: 0% 0%;
+        animation: arm-right-dance 1.6s infinite ease-in-out;
+      }
+
+      .earcup-left {
+        transform-box: fill-box;
+        transform-origin: 100% 50%; animation: earcup-squeeze 1.6s infinite ease-in-out;
+      }
+      .earcup-right {
+        transform-box: fill-box;
+        transform-origin: 0% 50%;   animation: earcup-squeeze 1.6s infinite ease-in-out;
+      }
+
+      .note-left  { animation: note-left  1.6s infinite ease-out; }
+      .note-right { animation: note-right 1.6s infinite ease-out; }
+
+      @keyframes shadow-sway {
+        0%, 100% { transform: translateX(0) scaleX(1); opacity: 0.5; }
+        22%, 30% { transform: translateX(-0.5px) scaleX(0.85); opacity: 0.45; }
+        50%      { transform: translateX(0) scaleX(1); opacity: 0.5; }
+        70%, 78% { transform: translateX(0.5px) scaleX(0.85); opacity: 0.45; }
+      }
+
+      @keyframes body-sway {
+        0%, 100% { transform: rotate(0deg) translateY(0); }
+        22%, 30% { transform: rotate(-6deg) translateY(0.3px); }
+        50%      { transform: rotate(0deg) translateY(-0.2px); }
+        70%, 78% { transform: rotate(6deg) translateY(0.3px); }
+      }
+
+      @keyframes leg-right-inner {
+        0%, 100% { transform: rotate(0deg) translateY(0); }
+        22%, 30% { transform: rotate(-12deg) translateY(-0.2px); }
+        50%, 70%, 78% { transform: rotate(0deg) translateY(0); }
+      }
+      @keyframes leg-right-outer {
+        0%, 100% { transform: rotate(0deg) translateY(0); }
+        22%, 30% { transform: rotate(-22deg) translateY(-0.3px); }
+        50%, 70%, 78% { transform: rotate(0deg) translateY(0); }
+      }
+      @keyframes leg-left-inner {
+        0%, 22%, 30%, 50%, 100% { transform: rotate(0deg) translateY(0); }
+        70%, 78% { transform: rotate(12deg) translateY(-0.2px); }
+      }
+      @keyframes leg-left-outer {
+        0%, 22%, 30%, 50%, 100% { transform: rotate(0deg) translateY(0); }
+        70%, 78% { transform: rotate(22deg) translateY(-0.3px); }
+      }
+
+      @keyframes arm-left-dance {
+        0%, 100% { transform: rotate(0deg); }
+        22%, 30% { transform: rotate(-30deg); }
+        50%      { transform: rotate(0deg); }
+        70%, 78% { transform: rotate(20deg); }
+      }
+      @keyframes arm-right-dance {
+        0%, 100% { transform: rotate(0deg); }
+        22%, 30% { transform: rotate(-20deg); }
+        50%      { transform: rotate(0deg); }
+        70%, 78% { transform: rotate(30deg); }
+      }
+
+      @keyframes earcup-squeeze {
+        0%, 100% { transform: scaleX(1); }
+        22%, 30% { transform: scaleX(0.85); }
+        50%      { transform: scaleX(1.02); }
+        70%, 78% { transform: scaleX(0.85); }
+      }
+
+      @keyframes note-left {
+        0%, 14%, 42%, 100% { opacity: 0; transform: translate(0, 0); }
+        22%                { opacity: 1; transform: translate(-0.4px, -1.2px); }
+        38%                { opacity: 0; transform: translate(-1.6px, -3.5px); }
+      }
+      @keyframes note-right {
+        0%, 62%, 82%, 100% { opacity: 0; transform: translate(0, 0); }
+        70%                { opacity: 1; transform: translate(0.4px, -1.2px); }
+        78%                { opacity: 0; transform: translate(1.6px, -3.5px); }
+      }
+    </style>
+
+    <g id="music-note" fill="#FFE066">
+      <rect x="0" y="2" width="1" height="1"/>
+      <rect x="1" y="0" width="1" height="3"/>
+      <rect x="2" y="0" width="1" height="1"/>
+    </g>
+  </defs>
+
+  <rect class="shadow-sway" x="3" y="15" width="9" height="1" fill="#000000"/>
+
+  <g fill="#DE886D">
+    <rect class="leg-left-outer"  x="3"  y="13" width="1" height="2"/>
+    <rect class="leg-left-inner"  x="5"  y="13" width="1" height="2"/>
+    <rect class="leg-right-inner" x="9"  y="13" width="1" height="2"/>
+    <rect class="leg-right-outer" x="11" y="13" width="1" height="2"/>
+  </g>
+
+  <g class="body-sway">
+    <rect x="2" y="6" width="11" height="7" fill="#DE886D"/>
+
+    <g fill="#1D5C83">
+      <rect x="4.9"   y="2.85" width="5.05" height="0.75"/>
+      <rect x="4.46"  y="2.93" width="0.75" height="0.75"/>
+      <rect x="9.66"  y="2.93" width="0.75" height="0.75"/>
+      <rect x="4.03"  y="3.1"  width="0.75" height="0.75"/>
+      <rect x="10.11" y="3.09" width="0.75" height="0.75"/>
+      <rect x="3.59"  y="3.34" width="0.75" height="0.75"/>
+      <rect x="10.57" y="3.33" width="0.75" height="0.75"/>
+      <rect x="3.15"  y="3.63" width="0.75" height="0.75"/>
+      <rect x="11.02" y="3.61" width="0.75" height="0.75"/>
+      <rect x="2.71"  y="3.98" width="0.75" height="0.75"/>
+      <rect x="11.48" y="3.96" width="0.75" height="0.75"/>
+      <rect x="2.28"  y="4.37" width="0.75" height="0.75"/>
+      <rect x="11.94" y="4.34" width="0.75" height="0.75"/>
+      <rect x="1.84"  y="4.82" width="0.75" height="0.75"/>
+      <rect x="12.39" y="4.78" width="0.75" height="0.75"/>
+      <rect x="1.4"   y="5.3"  width="0.75" height="0.75"/>
+      <rect x="12.85" y="5.25" width="0.75" height="0.75"/>
+    </g>
+
+    <g class="earcup-left">
+      <rect x="0.2" y="7"   width="0.6" height="2.4"  fill="#1D5C83"/>
+      <rect x="0.8" y="6.5" width="0.6" height="3.25" fill="#256891"/>
+      <rect x="1.4" y="6"   width="0.6" height="4.05" fill="#2E7AA8"/>
+    </g>
+
+    <g class="earcup-right">
+      <rect x="14.2" y="7"   width="0.6" height="2.4"  fill="#1D5C83"/>
+      <rect x="13.6" y="6.5" width="0.6" height="3.25" fill="#256891"/>
+      <rect x="13"   y="6"   width="0.6" height="4.05" fill="#2E7AA8"/>
+    </g>
+
+    <g class="arm-left-dance">
+      <rect x="-1" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <g class="arm-right-dance">
+      <rect x="14" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+
+    <g fill="none" stroke="#000000" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="3.5,8.5 4.5,9.5 5.5,8.5"/>
+      <polyline points="9.5,8.5 10.5,9.5 11.5,8.5"/>
+    </g>
+  </g>
+
+  <g transform="translate(-5 4)"><g class="note-left"><use href="#music-note"/></g></g>
+  <g transform="translate(15 4)"><g class="note-right"><use href="#music-note"/></g></g>
+</svg>
+</div><div class="meta">clawd-grooving.svg</div></div>
+<div class="card"><h3>clawd-happy</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -15 40 40" width="500" height="500">
+  <defs>
+    <style>
+      /* Bouncing Character Body */
+      .bounce-anim {
+        transform-box: fill-box;
+        transform-origin: 50% 100%; /* Base of the feet */
+        animation: bounce 1s infinite ease-in-out;
+      }
+      
+      /* Ground Shadow Pulse */
+      .shadow-anim {
+        transform-box: fill-box;
+        transform-origin: 50% 50%;
+        animation: shadow 1s infinite ease-in-out;
+      }
+
+      /* Enthusiastic Waving Arms */
+      .arm-l {
+        transform-box: fill-box;
+        transform-origin: 100% 50%; /* Shoulder joint */
+        animation: wave-l 0.15s infinite alternate ease-in-out;
+      }
+      .arm-r {
+        transform-box: fill-box;
+        transform-origin: 0% 50%; /* Shoulder joint */
+        animation: wave-r 0.15s infinite alternate ease-in-out;
+      }
+
+      /* Happy Blinking Eyes */
+      .eyes-blink {
+        transform-box: fill-box;
+        transform-origin: 50% 50%;
+        animation: blink 2s infinite linear;
+      }
+
+      /* Pixel-Art Sparkle Animations (Frame-by-frame style) */
+      .spark-center {
+        opacity: 0;
+        animation: flash-center 1.5s infinite step-end;
+        animation-delay: var(--delay, 0s);
+      }
+      
+      .spark-outer {
+        opacity: 0;
+        animation: flash-outer 1.5s infinite step-end;
+        animation-delay: var(--delay, 0s);
+      }
+
+      /* Character Keyframes */
+      @keyframes bounce {
+        0%, 15%, 100% { transform: translateY(0) scaleY(1); }
+        20% { transform: translateY(0) scaleY(0.85); }     /* Anticipation squash */
+        40% { transform: translateY(-10px) scaleY(1.05); } /* Fast up + stretch */
+        50% { transform: translateY(-12px) scaleY(1); }    /* Hangtime peak */
+        60% { transform: translateY(-10px) scaleY(1.05); } /* Fast fall + stretch */
+        80% { transform: translateY(0) scaleY(0.85); }     /* Landing squash */
+        85% { transform: translateY(0) scaleY(1); }        /* Recover */
+      }
+
+      @keyframes shadow {
+        0%, 15%, 100% { transform: scale(1); opacity: 0.5; }
+        20% { transform: scale(1.1); opacity: 0.6; }
+        40% { transform: scale(0.6); opacity: 0.2; }
+        50% { transform: scale(0.5); opacity: 0.15; }
+        60% { transform: scale(0.6); opacity: 0.2; }
+        80% { transform: scale(1.1); opacity: 0.6; }
+        85% { transform: scale(1); opacity: 0.5; }
+      }
+
+      @keyframes wave-l {
+        0% { transform: rotate(45deg); }
+        100% { transform: rotate(85deg); }
+      }
+
+      @keyframes wave-r {
+        0% { transform: rotate(-45deg); }
+        100% { transform: rotate(-85deg); }
+      }
+
+      @keyframes blink {
+        0%, 46%, 54%, 100% { transform: scaleY(1); }
+        50% { transform: scaleY(0.1); }
+      }
+
+      /* 
+        True 8-Bit Sparkle Timeline:
+        1. Small center dot appears
+        2. Outer arms appear (Full Star)
+        3. Center dot disappears (Hollow Ring)
+        4. Everything disappears 
+      */
+      @keyframes flash-center {
+        0%  { opacity: 0; }
+        10% { opacity: 1; }  /* Small dot */
+        30% { opacity: 0; }  /* Disappears, leaving hollow star */
+        100%{ opacity: 0; }
+      }
+      
+      @keyframes flash-outer {
+        0%  { opacity: 0; }
+        20% { opacity: 1; }  /* Outer arms appear to complete the star */
+        40% { opacity: 0; }  /* Entire star disappears */
+        100%{ opacity: 0; }
+      }
+    </style>
+
+    <!-- Reusable Pixel Art Sparkle Definition -->
+    <g id="px-sparkle">
+      <!-- Center pixel -->
+      <rect class="spark-center" x="-0.5" y="-0.5" width="1" height="1" />
+      <!-- Outer 4 pixels forming the cross -->
+      <path class="spark-outer" d="M -0.5,-1.5 h1 v1 h-1 z 
+                                   M -0.5,0.5 h1 v1 h-1 z 
+                                   M -1.5,-0.5 h1 v1 h-1 z 
+                                   M 0.5,-0.5 h1 v1 h-1 z" />
+    </g>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000"/>
+
+  <!-- Pixel-Art Sparkle Particles Group -->
+  <g class="sparkles">
+    <use href="#px-sparkle" x="-4" y="-2" fill="#FFD700" style="--delay: 0.0s"/>
+    <use href="#px-sparkle" x="18" y="-4" fill="#FFA000" style="--delay: 0.3s"/>
+    <use href="#px-sparkle" x="20" y="10" fill="#FFF59D" style="--delay: 0.6s"/>
+    <use href="#px-sparkle" x="-6" y="12" fill="#FFC107" style="--delay: 0.9s"/>
+    <use href="#px-sparkle" x="7" y="-8" fill="#FFF59D" style="--delay: 1.2s"/>
+    <use href="#px-sparkle" x="-2" y="6" fill="#FFD700" style="--delay: 0.7s"/>
+  </g>
+
+  <!-- Main Animated Character -->
+  <g class="bounce-anim">
+    <!-- Body Color Group -->
+    <g id="body-color-group" fill="#DE886D">
+      <!-- Legs (Move and squash with the body naturally) -->
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+
+      <!-- Main Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      
+      <!-- Waving Arms -->
+      <g class="arm-l">
+        <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      </g>
+      <g class="arm-r">
+        <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+      </g>
+    </g>
+    
+    <!-- Eyes Color Group -->
+    <g class="eyes-blink" fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+</svg></div><div class="meta">clawd-happy.svg</div></div>
+<div class="card"><h3>clawd-hat-mishap</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      .body-hunch {
+        transform-origin: 7.5px 15px;
+        animation: hunch-walk 7s infinite ease-in-out;
+      }
+      .leg-step { transform-origin: top center; transform-box: fill-box; }
+      .leg-1 { animation: leg-step 7s infinite linear; }
+      .leg-2 { animation: leg-step 7s infinite linear; animation-delay: -0.245s; }
+      .shadow-walk {
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-walk 7s infinite ease-in-out;
+      }
+      .hat-drop {
+        transform-origin: 7.5px 6px;
+        animation: hat-drop 7s infinite ease-in-out;
+      }
+      .hat-scale {
+        transform-origin: 7.5px 6px;
+        animation: hat-scale 7s infinite ease-in-out;
+      }
+      .hat-tilt {
+        transform-origin: 7.5px 5px;
+        animation: hat-tilt 7s infinite ease-in-out;
+      }
+      .hat-crown-magic {
+        transform-origin: 7.5px 1px;
+        animation: hat-crown-magic 7s infinite ease-in-out;
+      }
+      .hat-stars-magic {
+        animation: hat-stars-magic 7s infinite ease-in-out;
+      }
+      .brim-tilt {
+        transform-origin: 7.5px 5.5px;
+        animation: brim-tilt 7s infinite ease-in-out;
+      }
+      .brim-center {
+        transform-origin: 7.5px 5.5px;
+        animation: brim-center-sag 7s infinite ease-in-out;
+      }
+      .brim-side {
+        animation: brim-side-fall 7s infinite ease-in-out;
+      }
+      .arm-fix {
+        transform-origin: 13px 10px;
+        animation: arm-fix 7s infinite ease-in-out;
+      }
+      .eyes-wizard {
+        transform-origin: 7.5px 9px;
+        animation: eyes-wizard 7s infinite ease-in-out;
+      }
+      svg:hover .eyes-wizard {
+        animation: eyes-user-hover 0.9s infinite ease-in-out;
+      }
+      .magic-sparkle-a { animation: magic-sparkle-a 7s infinite ease-in-out; opacity: 0; }
+      .magic-sparkle-b { animation: magic-sparkle-b 7s infinite ease-in-out; opacity: 0; }
+      .magic-sparkle-c { animation: magic-sparkle-c 7s infinite ease-in-out; opacity: 0; }
+      .magic-sparkle-d { animation: magic-sparkle-d 7s infinite ease-in-out; opacity: 0; }
+      .magic-sparkle-e { animation: magic-sparkle-e 7s infinite ease-in-out; opacity: 0; }
+
+      @keyframes hunch-walk {
+        0%   { transform: translate(-2px, 1px) rotate(2deg); }
+        14%  { transform: translate(3px, 1px) rotate(2deg); }
+        28%  { transform: translate(0, 1px) rotate(2deg); }
+        72%  { transform: translate(0, 1px) rotate(2deg); }
+        87%  { transform: translate(-3px, 1px) rotate(2deg); }
+        100% { transform: translate(-2px, 1px) rotate(2deg); }
+      }
+
+      @keyframes leg-step {
+        0%   { transform: rotate(0deg) scaleY(1); }
+        7%   { transform: rotate(-25deg) scaleY(0.7); }
+        14%  { transform: rotate(0deg) scaleY(1); }
+        21%  { transform: rotate(-25deg) scaleY(0.7); }
+        28%  { transform: rotate(0deg) scaleY(1); }
+        72%  { transform: rotate(0deg) scaleY(1); }
+        79%  { transform: rotate(-25deg) scaleY(0.7); }
+        86%  { transform: rotate(0deg) scaleY(1); }
+        93%  { transform: rotate(-25deg) scaleY(0.7); }
+        100% { transform: rotate(0deg) scaleY(1); }
+      }
+
+      @keyframes shadow-walk {
+        0%   { transform: translateX(-2px) scale(0.9); opacity: 0.4; }
+        14%  { transform: translateX(3px) scale(0.9); opacity: 0.4; }
+        28%  { transform: translateX(0) scale(0.9); opacity: 0.4; }
+        72%  { transform: translateX(0) scale(0.9); opacity: 0.4; }
+        87%  { transform: translateX(-3px) scale(0.9); opacity: 0.4; }
+        100% { transform: translateX(-2px) scale(0.9); opacity: 0.4; }
+      }
+
+      @keyframes hat-drop {
+        0%, 28% { transform: translate(0, 0); }
+        35%     { transform: translate(0.42px, 1px); }
+        42%, 55%{ transform: translate(0.7px, 2px); }
+        58%     { transform: translate(0.315px, 1.2px); }
+        63%     { transform: translate(0.105px, 0.35px); }
+        67%     { transform: translate(0, -0.35px); }
+        70%     { transform: translate(0, 0.15px); }
+        72%, 100%{ transform: translate(0, 0); }
+      }
+
+      @keyframes hat-scale {
+        0%, 28% { transform: scale(1); }
+        35%     { transform: scale(1.0495); }
+        42%, 55%{ transform: scale(1.11); }
+        58%, 67%{ transform: scale(1); }
+        72%, 100%{ transform: scale(1); }
+      }
+
+      @keyframes hat-tilt {
+        0%, 28% { transform: rotate(0deg); }
+        35%     { transform: rotate(3.15deg); }
+        42%, 55%{ transform: rotate(7.5deg); }
+        58%     { transform: rotate(-3deg); }
+        63%     { transform: rotate(2.1deg); }
+        67%     { transform: rotate(-1deg); }
+        70%     { transform: rotate(0.5deg); }
+        72%, 100%{ transform: rotate(0deg); }
+      }
+
+      @keyframes hat-crown-magic {
+        0%, 55%  { transform: rotate(0deg) translateY(0); }
+        58%      { transform: rotate(-2deg) translateY(-0.15px); }
+        62%      { transform: rotate(3deg) translateY(-0.35px); }
+        66%      { transform: rotate(-1.5deg) translateY(-0.15px); }
+        70%      { transform: rotate(0.8deg) translateY(0); }
+        72%, 100%{ transform: rotate(0deg) translateY(0); }
+      }
+
+      @keyframes hat-stars-magic {
+        0%, 52%  { opacity: 1; }
+        55%      { opacity: 0.35; }
+        58%      { opacity: 1; }
+        61%      { opacity: 0.45; }
+        64%      { opacity: 1; }
+        72%, 100%{ opacity: 1; }
+      }
+
+      @keyframes brim-tilt {
+        0%, 28% { transform: rotate(0deg); }
+        35%     { transform: rotate(3.15deg); }
+        42%, 55%{ transform: rotate(7deg); }
+        58%     { transform: rotate(-1.5deg); }
+        63%     { transform: rotate(1.4deg); }
+        67%     { transform: rotate(-0.6deg); }
+        70%     { transform: rotate(0.3deg); }
+        72%, 100%{ transform: rotate(0deg); }
+      }
+
+      @keyframes brim-center-sag {
+        0%, 28% { transform: translateY(0); }
+        35%     { transform: translateY(0.2px); }
+        42%, 55%{ transform: translateY(0.4px); }
+        58%     { transform: translateY(0.24px); }
+        63%     { transform: translateY(0.25px); }
+        67%     { transform: translateY(0.1px); }
+        72%, 100%{ transform: translateY(0); }
+      }
+
+      @keyframes brim-side-fall {
+        0%, 28% { transform: translateY(0); }
+        35%     { transform: translateY(0); }
+        42%, 55%{ transform: translateY(0); }
+        58%     { transform: translateY(0); }
+        63%     { transform: translateY(0); }
+        67%     { transform: translateY(0); }
+        72%, 100%{ transform: translateY(0); }
+      }
+
+      @keyframes arm-fix {
+        0%, 38%   { transform: rotate(0deg); }
+        45%       { transform: translate(-2px, -3px) rotate(-90deg); }
+        50%       { transform: translate(-2px, -3px) rotate(-90deg); }
+        55%       { transform: translate(-2px, -3px) rotate(-100deg); }
+        58%       { transform: translate(-2px, -3px) rotate(-80deg); }
+        62%       { transform: translate(-2px, -3px) rotate(-90deg); }
+        67%       { transform: rotate(0deg); }
+        100%      { transform: rotate(0deg); }
+      }
+
+      @keyframes eyes-wizard {
+        0%, 28%  { transform: translateX(2px) scaleY(1); }
+        32%      { transform: translateX(0) scaleY(1); }
+        38%, 58% { transform: translateX(0) scaleY(1); }
+        62%      { transform: translate(0, -0.25px) scaleY(1); }
+        66%      { transform: translate(0, -0.15px) scaleY(1.12); }
+        70%      { transform: translateX(0) scaleY(0.1); }
+        73%      { transform: translateX(0) scaleY(1.08); }
+        78%      { transform: translateX(-0.7px) scaleY(1); }
+        82%      { transform: translateX(0.4px) scaleY(1); }
+        88%      { transform: translateX(2px) scaleY(1); }
+        100%     { transform: translateX(2px) scaleY(1); }
+      }
+
+      @keyframes eyes-user-hover {
+        0%   { transform: translateX(0) scaleY(1); }
+        45%  { transform: translateX(0) scaleY(1); }
+        55%  { transform: translateX(0) scaleY(0.18); }
+        70%  { transform: translateX(0) scaleY(1.08); }
+        100% { transform: translateX(0) scaleY(1); }
+      }
+
+      @keyframes magic-sparkle-a {
+        0%, 47%  { opacity: 0; transform: translate(0, 0); }
+        50%      { opacity: 1; transform: translate(0, 0); }
+        58%      { opacity: 1; transform: translate(-1.6px, -2.2px); }
+        66%      { opacity: 0; transform: translate(-2.6px, -3.6px); }
+        100%     { opacity: 0; transform: translate(-2.6px, -3.6px); }
+      }
+
+      @keyframes magic-sparkle-b {
+        0%, 50%  { opacity: 0; transform: translate(0, 0); }
+        54%      { opacity: 1; transform: translate(0, 0); }
+        62%      { opacity: 1; transform: translate(1.7px, -1.8px); }
+        70%      { opacity: 0; transform: translate(2.8px, -3px); }
+        100%     { opacity: 0; transform: translate(2.8px, -3px); }
+      }
+
+      @keyframes magic-sparkle-c {
+        0%, 52%  { opacity: 0; transform: translate(0, 0); }
+        56%      { opacity: 1; transform: translate(0, 0); }
+        64%      { opacity: 0.8; transform: translate(-0.8px, -2.8px); }
+        72%      { opacity: 0; transform: translate(-1.2px, -3.8px); }
+        100%     { opacity: 0; transform: translate(-1.2px, -3.8px); }
+      }
+
+      @keyframes magic-sparkle-d {
+        0%, 53%  { opacity: 0; transform: translate(0, 0); }
+        58%      { opacity: 1; transform: translate(0, 0); }
+        66%      { opacity: 0.7; transform: translate(2.2px, -1px); }
+        72%      { opacity: 0; transform: translate(3.4px, -1.8px); }
+        100%     { opacity: 0; transform: translate(3.4px, -1.8px); }
+      }
+
+      @keyframes magic-sparkle-e {
+        0%, 56%  { opacity: 0; transform: translate(0, 0); }
+        60%      { opacity: 1; transform: translate(0, 0); }
+        68%      { opacity: 0.8; transform: translate(-1.8px, 0.8px); }
+        74%      { opacity: 0; transform: translate(-2.8px, 1.2px); }
+        100%     { opacity: 0; transform: translate(-2.8px, 1.2px); }
+      }
+    </style>
+  </defs>
+
+  <rect id="ground-shadow" class="shadow-walk" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <g class="body-hunch">
+
+    <g id="legs" fill="#DE886D">
+      <rect class="leg-step leg-1" x="3" y="13" width="1" height="2"/>
+      <rect class="leg-step leg-2" x="5" y="13" width="1" height="2"/>
+      <rect class="leg-step leg-1" x="9" y="13" width="1" height="2"/>
+      <rect class="leg-step leg-2" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+    </g>
+
+    <g class="eyes-wizard" fill="#000000">
+      <rect x="4" y="8" width="1" height="2"/>
+      <rect x="10" y="8" width="1" height="2"/>
+      <rect x="4" y="8" width="0.35" height="0.35" fill="#FFFFFF"/>
+      <rect x="10" y="8" width="0.35" height="0.35" fill="#FFFFFF"/>
+    </g>
+
+    <g class="hat-drop">
+      <g class="hat-scale">
+      <g id="wizard-hat-fit" transform="translate(0, 1.5) translate(7.5, 6) scale(0.95) translate(-7.5, -6)">
+        <g class="hat-tilt">
+          <g class="hat-crown-magic">
+          <g id="hat-cone" fill="#5865C8">
+            <rect x="3" y="-5" width="4" height="1"/>
+            <rect x="2" y="-4" width="6" height="1"/>
+            <rect x="2" y="-3" width="7" height="1"/>
+            <rect x="4" y="-2" width="6" height="1"/>
+            <rect x="3" y="-1" width="8" height="1"/>
+            <rect x="3" y="0"  width="9" height="1"/>
+            <rect x="2" y="1"  width="11" height="1"/>
+            <rect x="2" y="2"  width="11" height="1"/>
+          </g>
+          <g id="hat-fold" fill="#404CB0">
+            <rect x="4" y="-3" width="1" height="1"/>
+            <rect x="4" y="-2" width="1" height="1"/>
+          </g>
+          <g id="hat-stars" class="hat-stars-magic" fill="#FFFFFF">
+            <rect x="6" y="-4" width="1" height="1"/>
+            <rect x="3" y="-3" width="1" height="1"/>
+            <rect x="7" y="-2" width="1" height="1"/>
+            <rect x="8" y="0"  width="1" height="1"/>
+            <rect x="4" y="1"  width="1" height="1"/>
+            <rect x="10" y="2" width="1" height="1"/>
+          </g>
+          </g>
+          <g id="hat-band" fill="#2C2557">
+            <rect x="1" y="3" width="13" height="2"/>
+          </g>
+        </g>
+
+        <g transform="translate(-0.2, -0.5)">
+        <g class="brim-tilt">
+        <g id="hat-brim" fill="#6A70D8">
+          <rect class="brim-side" x="-1" y="5" width="3" height="1"/>
+          <rect class="brim-center" x="2" y="5" width="11" height="1"/>
+          <rect class="brim-side" x="13" y="5" width="3" height="1"/>
+        </g>
+        </g>
+        </g>
+      </g>
+      </g>
+    </g>
+
+    <g class="arm-fix" fill="#DE886D">
+      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+    </g>
+
+    <g id="magic-sparkles">
+      <g class="magic-sparkle-a" fill="#FFF3A8">
+        <rect x="13" y="2.8" width="1.1" height="1.1"/>
+      </g>
+      <g class="magic-sparkle-b" fill="#FFFFFF">
+        <rect x="15" y="4" width="1" height="1"/>
+        <rect x="15.35" y="3.65" width="0.3" height="1.7"/>
+        <rect x="14.65" y="4.35" width="1.7" height="0.3"/>
+      </g>
+      <g class="magic-sparkle-c" fill="#DCC5FF">
+        <rect x="9.2" y="3.4" width="1.1" height="1.1"/>
+      </g>
+      <g class="magic-sparkle-d" fill="#FFF3A8">
+        <rect x="15.4" y="6.2" width="1" height="1"/>
+      </g>
+      <g class="magic-sparkle-e" fill="#FFFFFF">
+        <rect x="9" y="6.5" width="0.9" height="0.9"/>
+      </g>
+    </g>
+
+  </g>
+</svg>
+</div><div class="meta">clawd-hat-mishap.svg</div></div>
+<div class="card"><h3>clawd-idle-living</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      /* 16-Second Master Sequence for Idle Actions */
+      .action-body {
+        transform-origin: 7.5px 13px; /* Pivot at the base of the torso */
+        animation: action-body 16s infinite ease-in-out;
+      }
+      
+      /* Continuous Subtle Breathing (Syncs exactly 5 times per 16s loop) */
+      .breathe-anim {
+        transform-origin: 7.5px 13px;
+        animation: breathe 3.2s infinite ease-in-out;
+      }
+
+      /* Shadow shrinking and shifting matching actions */
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-action 16s infinite ease-in-out;
+      }
+
+      /* Left Arm (Scratching and Yawn Stretching) */
+      .arm-l {
+        transform-origin: 1px 10px;
+        animation: arm-l-idle 16s infinite ease-in-out;
+      }
+
+      /* Right Arm (Yawn Stretching) */
+      .arm-r {
+        transform-origin: 14px 10px;
+        animation: arm-r-idle 16s infinite ease-in-out;
+      }
+
+      /* Eye Tracking (Looking around) */
+      .eyes-look {
+        animation: eye-track 16s infinite ease-in-out;
+      }
+
+      /* Occasional Blinks and shutting during Yawn */
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: eye-blink 16s infinite linear;
+      }
+
+      /* Yawn Mouth Appearance */
+      .yawn-mouth {
+        transform-origin: 7.5px 11px;
+        animation: yawn-mouth-anim 16s infinite ease-in-out;
+        opacity: 0;
+      }
+
+      /* Tiny tear that appears during the big yawn */
+      .yawn-tear {
+        animation: tear-fall 16s infinite ease-in-out;
+        opacity: 0;
+      }
+
+      /* --- Keyframes --- */
+
+      @keyframes breathe {
+        0%, 100% { transform: scale(1, 1) translate(0, 0); }
+        50% { transform: scale(1.02, 0.98) translate(0, 0.5px); }
+      }
+
+      @keyframes action-body {
+        0%, 8%, 26%, 38%, 55%, 80%, 100% { transform: scale(1, 1) translate(0, 0); }
+        /* Look Right Tilt */
+        12%, 22% { transform: scale(1, 1) translate(1px, 0); }
+        /* Look Left Tilt */
+        42%, 50% { transform: scale(1, 1) translate(-1px, 0); }
+        /* Scratching Lean */
+        30%, 36% { transform: scale(1, 1) translate(0.5px, 0); } 
+        /* Deep Yawn Stretch */
+        60% { transform: scale(0.95, 1.05) translate(0px, -1px); } /* Stretch up */
+        65% { transform: scale(0.9, 1.1) translate(0px, -2px); }   /* Peak stretch */
+        72% { transform: scale(1.05, 0.95) translate(0px, 1px); }  /* Heavy sigh / squash down */
+        76% { transform: scale(1, 1) translate(0px, 0px); }        /* Recover */
+      }
+
+      @keyframes shadow-action {
+        0%, 8%, 26%, 38%, 55%, 80%, 100% { transform: scaleX(1) translate(0, 0); opacity: 0.5; }
+        12%, 22% { transform: scaleX(1) translate(1px, 0); opacity: 0.5; }
+        42%, 50% { transform: scaleX(1) translate(-1px, 0); opacity: 0.5; }
+        30%, 36% { transform: scaleX(1) translate(0.5px, 0); opacity: 0.5; }
+        60% { transform: scaleX(0.95) translate(0, 0); opacity: 0.45; }
+        65% { transform: scaleX(0.9) translate(0, 0); opacity: 0.4; }
+        72% { transform: scaleX(1.05) translate(0, 0); opacity: 0.55; }
+        76% { transform: scaleX(1) translate(0, 0); opacity: 0.5; }
+      }
+
+      @keyframes eye-track {
+        0%, 10%, 25%, 38%, 52%, 58%, 80%, 100% { transform: translate(0px, 0px); }
+        12%, 22% { transform: translate(3px, 0px); } /* Look Right */
+        42%, 50% { transform: translate(-3px, 0px); } /* Look Left */
+        60%, 75% { transform: translate(0px, -1px); } /* Look slightly up during yawn */
+      }
+
+      @keyframes eye-blink {
+        0%, 3%, 7%, 18%, 22%, 43%, 47%, 56%, 83%, 87%, 100% { transform: scaleY(1); }
+        5%, 20%, 45%, 85% { transform: scaleY(0.1); } /* Quick Blinks */
+        /* Yawn Closed Eyes */
+        60% { transform: scaleY(1); }
+        62%, 72% { transform: scaleY(0.1); } /* Eyes completely shut */
+        75% { transform: scaleY(1); }
+      }
+
+      @keyframes arm-l-idle {
+        0%, 28% { transform: translate(0, 0) rotate(0deg); }
+        
+        /* Occasional Scratching Sequence (Left Arm) */
+        30% { transform: translate(1px, -3px) rotate(15deg); }
+        31% { transform: translate(1.5px, -4px) rotate(35deg); } /* Up */
+        32% { transform: translate(0.5px, -2.5px) rotate(0deg); } /* Down */
+        33% { transform: translate(1.5px, -4px) rotate(35deg); }
+        34% { transform: translate(0.5px, -2.5px) rotate(0deg); }
+        35% { transform: translate(1.5px, -4px) rotate(35deg); }
+        36% { transform: translate(0.5px, -2.5px) rotate(0deg); }
+        
+        38%, 58% { transform: translate(0, 0) rotate(0deg); }
+        
+        /* Yawn Stretch */
+        62% { transform: translate(-1px, -2px) rotate(45deg); }
+        65% { transform: translate(-2px, -3px) rotate(80deg); } /* Full outward stretch */
+        72% { transform: translate(0px, 1px) rotate(-15deg); } /* Relax down */
+        76%, 100% { transform: translate(0, 0) rotate(0deg); }
+      }
+
+      @keyframes arm-r-idle {
+        0%, 58% { transform: translate(0, 0) rotate(0deg); }
+        /* Yawn Stretch */
+        62% { transform: translate(1px, -2px) rotate(-45deg); }
+        65% { transform: translate(2px, -3px) rotate(-80deg); } /* Full outward stretch */
+        72% { transform: translate(0px, 1px) rotate(15deg); } /* Relax down */
+        76%, 100% { transform: translate(0, 0) rotate(0deg); }
+      }
+
+      @keyframes yawn-mouth-anim {
+        0%, 58%, 76%, 100% { opacity: 0; transform: scale(0.1); }
+        60% { opacity: 1; transform: scale(0.5, 0.2); }
+        65% { opacity: 1; transform: scale(1.1, 1.4); } /* Wide Open */
+        72% { opacity: 1; transform: scale(0.6, 0.4); } /* Shrinking */
+        75% { opacity: 0; transform: scale(0.1); }
+      }
+
+      @keyframes tear-fall {
+        0%, 64%, 80%, 100% { opacity: 0; transform: translateY(0); }
+        66% { opacity: 1; transform: translateY(0); } /* Appears at corner of eye */
+        72% { opacity: 1; transform: translateY(2.5px); } /* Slides down cheek */
+        75% { opacity: 0; transform: translateY(3px); } /* Fades out */
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Static Character Legs (Planted firmly while the body stretches above) -->
+  <g id="legs" fill="#DE886D">
+    <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+    <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+    <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+    <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+  </g>
+
+  <!-- Animated Upper Body (Combines occasional actions + continuous breathing) -->
+  <g class="action-body">
+    <g class="breathe-anim">
+      
+      <!-- Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+      
+      <!-- Arms -->
+      <g class="arm-l">
+        <rect id="left-arm" x="0" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+      <g class="arm-r">
+        <rect id="right-arm" x="13" y="9" width="2" height="2" fill="#DE886D"/>
+      </g>
+
+      <!-- Yawning Mouth (Hidden usually) -->
+      <rect class="yawn-mouth" x="6" y="10" width="3" height="2" fill="#000000"/>
+
+      <!-- Eyes Group -->
+      <g class="eyes-look" fill="#000000">
+        <g class="eyes-blink">
+          <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+          <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+        </g>
+      </g>
+
+      <!-- Yawn Tear Drop (A tiny detail for the big stretch) -->
+      <rect class="yawn-tear" x="3.5" y="10" width="1" height="1" fill="#40C4FF"/>
+      
+    </g>
+  </g>
+</svg></div><div class="meta">clawd-idle-living.svg</div></div>
+<div class="card"><h3>clawd-idle-low-battery</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      .doze-body {
+        transform-origin: 7.5px 13px;
+        animation: doze-breathe 4s infinite ease-in-out;
+      }
+
+      .doze-shadow {
+        transform-origin: 7.5px 15.5px;
+        animation: doze-shadow 4s infinite ease-in-out;
+      }
+
+      .arm-l-doze {
+        transform-origin: 1px 10px;
+        transform: translate(0px, 1px) rotate(-15deg);
+      }
+
+      .arm-r-doze {
+        transform-origin: 14px 10px;
+        transform: translate(0px, 1px) rotate(15deg);
+      }
+
+      .eyes-struggle {
+        transform-origin: 7.5px 9px;
+        animation: eyes-struggle 8s infinite ease-in-out;
+      }
+
+      .battery-low {
+        animation: battery-pulse 4s infinite ease-in-out;
+        animation-delay: 0.2s;
+      }
+
+
+      @keyframes doze-breathe {
+        0%, 100% { transform: scale(1.05, 0.95) translate(0, 1px); }
+        50%      { transform: scale(1.08, 0.92) translate(0, 1.8px); }
+      }
+
+      @keyframes doze-shadow {
+        0%, 100% { transform: scaleX(1.05); opacity: 0.55; }
+        50%      { transform: scaleX(1.08); opacity: 0.5; }
+      }
+
+      @keyframes eyes-struggle {
+        0%, 65%   { transform: scaleY(0.1); }
+        72%, 80%  { transform: scaleY(0.5); }
+        88%, 100% { transform: scaleY(0.1); }
+      }
+
+      @keyframes battery-pulse {
+        0%, 100% { opacity: 1; }
+        50%      { opacity: 0.25; }
+      }
+    </style>
+  </defs>
+
+  <rect class="doze-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.55"/>
+
+  <g id="legs" fill="#DE886D">
+    <rect x="3" y="12" width="1" height="3"/>
+    <rect x="5" y="12" width="1" height="3"/>
+    <rect x="9" y="12" width="1" height="3"/>
+    <rect x="11" y="12" width="1" height="3"/>
+  </g>
+
+  <g id="battery" transform="translate(8 2.2) rotate(90) scale(0.025) translate(-139.5 -275)">
+    <polygon points="97.5 72 181.5 72 197.5 108 81.5 108" fill="#FF4444"/>
+    <rect x="55"  y="116" width="169" height="22"  fill="#FF4444"/>
+    <rect x="55"  y="456" width="169" height="22"  fill="#FF4444"/>
+    <rect x="55"  y="138" width="22"  height="318" fill="#FF4444"/>
+    <rect x="202" y="138" width="22"  height="318" fill="#FF4444"/>
+    <rect class="battery-low" x="88" y="394" width="102" height="51" fill="#FF4444"/>
+  </g>
+
+  <g class="doze-body">
+    <rect x="2" y="6" width="11" height="7" fill="#DE886D"/>
+    <g class="arm-l-doze">
+      <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <g class="arm-r-doze">
+      <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+    <g class="eyes-struggle" fill="#000000">
+      <rect x="4" y="8" width="1" height="2"/>
+      <rect x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+</svg>
+</div><div class="meta">clawd-idle-low-battery.svg</div></div>
+<div class="card"><h3>clawd-mini-clawd</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 15 15" width="500" height="500">
+  <defs>
+    <style>
+      .hover-bob {
+        animation: bob 2s infinite ease-in-out;
+      }
+      .arm-l {
+        transform-origin: 4px 6.5px;
+        animation: wave-l 1s infinite alternate ease-in-out;
+      }
+      .arm-r {
+        transform-origin: 11px 6.5px;
+        animation: wave-r 1s infinite alternate ease-in-out;
+      }
+      .leg-ol {
+        transform-origin: 5.5px 9px;
+        animation: kick-ol 0.8s infinite alternate ease-in-out;
+      }
+      .leg-il {
+        transform-origin: 6.5px 9px;
+        animation: kick-il 1s infinite alternate ease-in-out;
+      }
+      .leg-ir {
+        transform-origin: 8.5px 9px;
+        animation: kick-ir 0.8s infinite alternate ease-in-out;
+      }
+      .leg-or {
+        transform-origin: 9.5px 9px;
+        animation: kick-or 1s infinite alternate ease-in-out;
+      }
+      .eyes {
+        animation: look 4s infinite;
+      }
+
+      @keyframes bob {
+        0% { transform: translateY(0); }
+        50% { transform: translateY(-1px); }
+        100% { transform: translateY(0); }
+      }
+      @keyframes wave-l {
+        0% { transform: rotate(-10deg); }
+        100% { transform: rotate(20deg); }
+      }
+      @keyframes wave-r {
+        0% { transform: rotate(10deg); }
+        100% { transform: rotate(-20deg); }
+      }
+      @keyframes kick-ol {
+        0% { transform: rotate(10deg); }
+        100% { transform: rotate(-15deg); }
+      }
+      @keyframes kick-il {
+        0% { transform: rotate(-10deg); }
+        100% { transform: rotate(15deg); }
+      }
+      @keyframes kick-ir {
+        0% { transform: rotate(15deg); }
+        100% { transform: rotate(-10deg); }
+      }
+      @keyframes kick-or {
+        0% { transform: rotate(-15deg); }
+        100% { transform: rotate(10deg); }
+      }
+      @keyframes look {
+        0% { transform: translate(0, 0); }
+        15% { transform: translate(0, 0); }
+        16% { transform: translate(-1px, 0); }
+        35% { transform: translate(-1px, 0); }
+        36% { transform: translate(1px, 0); }
+        55% { transform: translate(1px, 0); }
+        56% { transform: translate(0, -1px); }
+        75% { transform: translate(0, -1px); }
+        76% { transform: translate(0, 0); }
+        100% { transform: translate(0, 0); }
+      }
+    </style>
+  </defs>
+
+  <g id="master-group" class="hover-bob">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="torso" x="4" y="4" width="7" height="5"/>
+      <g class="arm-l"><rect id="left-arm" x="3" y="6" width="1" height="1"/></g>
+      <g class="arm-r"><rect id="right-arm" x="11" y="6" width="1" height="1"/></g>
+      
+      <g class="leg-ol"><rect id="outer-left-leg" x="5" y="9" width="1" height="1"/></g>
+      <g class="leg-il"><rect id="inner-left-leg" x="6" y="9" width="1" height="1"/></g>
+      <g class="leg-ir"><rect id="inner-right-leg" x="8" y="9" width="1" height="1"/></g>
+      <g class="leg-or"><rect id="outer-right-leg" x="9" y="9" width="1" height="1"/></g>
+    </g>
+    
+    <g id="eyes-color-group" fill="#000000">
+      <g class="eyes">
+        <rect id="left-eye" x="5" y="5" width="2" height="2"/>
+        <rect id="right-eye" x="8" y="5" width="2" height="2"/>
+      </g>
+    </g>
+  </g>
+</svg>
+</div><div class="meta">clawd-mini-clawd.svg</div></div>
+<div class="card"><h3>clawd-notification</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      /* Main body jump and squash/stretch sequence */
+      .body-anim {
+        transform-origin: 7.5px 15px; /* Pivot at the base of the feet */
+        animation: attention-jump 4s infinite ease-in-out;
+      }
+
+      /* Shadow pulsing with jumps */
+      .shadow-anim {
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-pulse 4s infinite ease-in-out;
+      }
+
+      /* Eye movement (looking right, then front, blinking) */
+      .eyes-look {
+        transform-origin: 7.5px 9px;
+        animation: eye-track 4s infinite ease-in-out;
+      }
+
+      /* Arm flapping/waving */
+      .arm-l {
+        transform-origin: 1px 10px; /* Left shoulder */
+        animation: arm-wave-l 4s infinite ease-in-out;
+      }
+      .arm-r {
+        transform-origin: 14px 10px; /* Right shoulder */
+        animation: arm-wave-r 4s infinite ease-in-out;
+      }
+
+      /* Notification startle pop */
+      .alert-pop {
+        transform-origin: 15px 0px;
+        animation: alert-flash 4s infinite ease-in-out;
+        opacity: 0;
+      }
+
+      /* --- Keyframes --- */
+
+      /* 4 Second Loop Sequence */
+      @keyframes attention-jump {
+        0%, 12% { transform: translate(0px, 0px) scale(1, 1); }
+        /* Startle (Look right, recoil slightly) */
+        14%, 22% { transform: translate(-1.5px, 0px) scale(1, 1); }
+        /* Turn front, squash down to prepare jump */
+        26% { transform: translate(0px, 2px) scale(1.1, 0.9); }
+        /* Rapid Jumps to get attention */
+        30% { transform: translate(0px, -10px) scale(0.95, 1.05); } /* Jump 1 */
+        34% { transform: translate(0px, 2px) scale(1.1, 0.9); }     /* Land 1 */
+        38% { transform: translate(0px, -10px) scale(0.95, 1.05); } /* Jump 2 */
+        42% { transform: translate(0px, 2px) scale(1.1, 0.9); }     /* Land 2 */
+        46% { transform: translate(0px, -10px) scale(0.95, 1.05); } /* Jump 3 */
+        50% { transform: translate(0px, 2px) scale(1.1, 0.9); }     /* Land 3 */
+        54% { transform: translate(0px, -10px) scale(0.95, 1.05); } /* Jump 4 */
+        58% { transform: translate(0px, 2px) scale(1.1, 0.9); }     /* Land 4 */
+        62% { transform: translate(0px, -10px) scale(0.95, 1.05); } /* Jump 5 */
+        66% { transform: translate(0px, 2px) scale(1.1, 0.9); }     /* Land 5 */
+        70% { transform: translate(0px, -10px) scale(0.95, 1.05); } /* Jump 6 */
+        74% { transform: translate(0px, 2px) scale(1.1, 0.9); }     /* Land 6 */
+        /* Recover */
+        80%, 100% { transform: translate(0px, 0px) scale(1, 1); }
+      }
+
+      @keyframes shadow-pulse {
+        0%, 12%, 80%, 100% { transform: scale(1); opacity: 0.5; }
+        14%, 22% { transform: translate(-1.5px, 0px) scale(1); opacity: 0.5; }
+        26%, 34%, 42%, 50%, 58%, 66%, 74% { transform: scale(1.15); opacity: 0.6; } /* Landing wide */
+        30%, 38%, 46%, 54%, 62%, 70% { transform: scale(0.6); opacity: 0.15; } /* Jumping high */
+      }
+
+      @keyframes eye-track {
+        0%, 12% { transform: translate(0px, 0px); }
+        14%, 22% { transform: translate(4px, 0px); } /* Sharp look right */
+        26%, 100% { transform: translate(0px, 0px); } /* Look at camera */
+      }
+
+      @keyframes arm-wave-l {
+        0%, 12% { transform: rotate(0deg); }
+        14%, 22% { transform: rotate(-15deg); } /* Slight recoil tuck */
+        26% { transform: rotate(30deg); } /* Wind up */
+        30%, 38%, 46%, 54%, 62%, 70% { transform: rotate(155deg); } /* Arms up and out! */
+        34%, 42%, 50%, 58%, 66%, 74% { transform: rotate(115deg); } /* Flap inwards */
+        80%, 100% { transform: rotate(0deg); }
+      }
+
+      @keyframes arm-wave-r {
+        0%, 12% { transform: rotate(0deg); }
+        14%, 22% { transform: rotate(-25deg); } /* Slight recoil tuck */
+        26% { transform: rotate(-30deg); } /* Wind up */
+        30%, 38%, 46%, 54%, 62%, 70% { transform: rotate(-155deg); } /* Arms up and out! */
+        34%, 42%, 50%, 58%, 66%, 74% { transform: rotate(-115deg); } /* Flap inwards */
+        80%, 100% { transform: rotate(0deg); }
+      }
+
+      @keyframes alert-flash {
+        0%, 12% { opacity: 0; transform: translate(15px, 0px) scale(0.5); }
+        14% { opacity: 1; transform: translate(15px, -4px) scale(1.2); }
+        22% { opacity: 1; transform: translate(15px, -4px) scale(1); }
+        26%, 100% { opacity: 0; transform: translate(15px, -8px) scale(0.8); }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-anim" x="3" y="15" width="9" height="1" fill="#000000"/>
+
+  <!-- Startled Exclamation Mark (Notification arriving off-screen right) -->
+  <g class="alert-pop" fill="#FF3D00">
+    <rect x="0" y="0" width="2" height="4" />
+    <rect x="0" y="5" width="2" height="2" />
+  </g>
+
+  <!-- Animated Character -->
+  <g class="body-anim">
+    
+    <!-- Body Base Color Group -->
+    <g id="body-color-group" fill="#DE886D">
+      <!-- Legs -->
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+
+      <!-- Main Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      
+      <!-- Waving Arms -->
+      <g class="arm-l">
+        <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      </g>
+      <g class="arm-r">
+        <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+      </g>
+    </g>
+    
+    <!-- Eyes Color Group -->
+    <g class="eyes-look" fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+    </g>
+    
+  </g>
+</svg></div><div class="meta">clawd-notification.svg</div></div>
+<div class="card"><h3>clawd-sleeping</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -20 40 40" width="500" height="500">
+  <defs>
+    <style>
+      /* Slow, rhythmic deep breathing animation */
+      .breathe {
+        transform-origin: 7.5px 15px; /* Pivot at the floor to expand upwards */
+        animation: breathe-squash 4.5s infinite ease-in-out;
+      }
+
+      /* Shadow expands slightly as the body inflates */
+      .shadow-breathe {
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-pulse 4.5s infinite ease-in-out;
+      }
+
+      /* Zzz Particle Base Styles */
+      .z-particle {
+        opacity: 0;
+      }
+      .z1 { animation: float-1 6s infinite ease-in-out; animation-delay: 0s; }
+      .z2 { animation: float-2 6s infinite ease-in-out; animation-delay: 2s; }
+      .z3 { animation: float-3 6s infinite ease-in-out; animation-delay: 4s; }
+
+      /* Breathing Keyframes (Slow inhale, hold, exhale, pause) */
+      @keyframes breathe-squash {
+        0%, 80%, 100% { transform: scale(1, 1); }
+        30%, 40% { transform: scale(1.02, 1.25); } /* Chest expands/inflates */
+      }
+
+      @keyframes shadow-pulse {
+        0%, 80%, 100% { transform: scaleX(1); opacity: 0.4; }
+        30%, 40% { transform: scaleX(1.05); opacity: 0.5; }
+      }
+
+      /* Swaying and fading floating Z keyframes (Adjusted for lowered head) */
+      @keyframes float-1 {
+        0%   { transform: translate(5px, 8px) scale(0.4); opacity: 0; }
+        10%  { opacity: 1; }
+        30%  { transform: translate(9px, 4px) scale(0.6); }
+        50%  { transform: translate(4px, 0px) scale(0.8); }
+        70%  { transform: translate(8px, -4px) scale(1.0); }
+        90%  { opacity: 0.8; }
+        100% { transform: translate(6px, -8px) scale(1.1); opacity: 0; }
+      }
+
+      @keyframes float-2 {
+        0%   { transform: translate(8px, 9px) scale(0.3); opacity: 0; }
+        10%  { opacity: 1; }
+        30%  { transform: translate(5px, 5px) scale(0.5); }
+        50%  { transform: translate(9px, 1px) scale(0.7); }
+        70%  { transform: translate(6px, -3px) scale(0.9); }
+        90%  { opacity: 0.8; }
+        100% { transform: translate(8px, -7px) scale(1.0); opacity: 0; }
+      }
+
+      @keyframes float-3 {
+        0%   { transform: translate(6px, 7px) scale(0.5); opacity: 0; }
+        10%  { opacity: 1; }
+        30%  { transform: translate(9px, 3px) scale(0.7); }
+        50%  { transform: translate(4px, -1px) scale(0.9); }
+        70%  { transform: translate(8px, -5px) scale(1.1); }
+        90%  { opacity: 0.8; }
+        100% { transform: translate(5px, -9px) scale(1.2); opacity: 0; }
+      }
+    </style>
+
+    <!-- Pixel Art "Z" Definitions -->
+    <g id="pixel-z">
+      <rect x="0" y="0" width="4" height="1" />
+      <rect x="2" y="1" width="1" height="1" />
+      <rect x="1" y="2" width="1" height="1" />
+      <rect x="0" y="3" width="4" height="1" />
+    </g>
+    
+    <g id="pixel-z-small">
+      <rect x="0" y="0" width="3" height="1" />
+      <rect x="1" y="1" width="1" height="1" />
+      <rect x="0" y="2" width="3" height="1" />
+    </g>
+  </defs>
+
+  <!-- Ground Shadow (Widened for the splooted posture) -->
+  <rect id="ground-shadow" class="shadow-breathe" x="-1" y="15" width="17" height="1" fill="#000000" />
+
+  <!-- Floating Zzz Bubbles -->
+  <g class="zzz-particles">
+    <use href="#pixel-z" class="z-particle z1" fill="#90A4AE" />
+    <use href="#pixel-z-small" class="z-particle z2" fill="#B0BEC5" />
+    <use href="#pixel-z" class="z-particle z3" fill="#CFD8DC" />
+  </g>
+
+  <!-- Splooted / Melted Sleeping Pose -->
+  <g class="breathe">
+    <!-- Legs pointing up from behind (Relaxed Sploot) -->
+    <g fill="#DE886D">
+      <rect id="outer-left-leg-up" x="3" y="9" width="1" height="1"/>
+      <rect id="inner-left-leg-up" x="5" y="9" width="1" height="1"/>
+      <rect id="inner-right-leg-up" x="9" y="9" width="1" height="1"/>
+      <rect id="outer-right-leg-up" x="11" y="9" width="1" height="1"/>
+    </g>
+
+    <!-- Squashed Body Resting on the Floor -->
+    <g fill="#DE886D">
+      <!-- Main flattened torso -->
+      <rect id="torso-sploot" x="1" y="10" width="13" height="5"/>
+      
+      <!-- Arms spread flat on the ground -->
+      <rect id="left-arm-sploot" x="-1" y="13" width="2" height="2"/>
+      <rect id="right-arm-sploot" x="14" y="13" width="2" height="2"/>
+    </g>
+    
+    <!-- Ultra-Thin Shut Eyes (Dashes) -->
+    <g fill="#000000">
+      <rect id="left-eye-shut" x="3.5" y="12.5" width="2" height="0.4"/>
+      <rect id="right-eye-shut" x="9.5" y="12.5" width="2" height="0.4"/>
+    </g>
+  </g>
+</svg></div><div class="meta">clawd-sleeping.svg</div></div>
+<div class="card"><h3>clawd-static-base</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 15 16" width="300" height="320">
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+  
+  <g id="master-group">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+      
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+    
+    <g id="eyes-color-group" fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+</svg></div><div class="meta">clawd-static-base.svg</div></div>
+<div class="card"><h3>clawd-wake</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      .once {
+        animation-duration: 1.5s;
+        animation-fill-mode: forwards;
+        animation-iteration-count: 1;
+      }
+
+      .scale-top-left {
+        transform-box: fill-box;
+        transform-origin: top left;
+      }
+
+      .shadow {
+        transform-origin: 7.5px 15.5px;
+        animation-name: shadow-wake;
+        animation-timing-function: linear;
+      }
+
+      .body-motion {
+        transform-origin: 7.5px 15px;
+        animation-name: body-motion;
+        animation-timing-function: cubic-bezier(0.24, 0.8, 0.24, 1);
+      }
+
+      .torso-shift {
+        animation: torso-shift 1.5s linear forwards;
+      }
+
+      .torso-shape {
+        animation: torso-shape 1.5s linear forwards;
+      }
+
+      .arm-left {
+        animation: arm-left 1.5s linear forwards;
+      }
+
+      .arm-right {
+        animation: arm-right 1.5s linear forwards;
+      }
+
+      .leg-shift {
+        animation: leg-shift 1.5s linear forwards;
+      }
+
+      .leg-grow {
+        animation: leg-grow 1.5s linear forwards;
+      }
+
+      .eye-shift {
+        animation: eye-shift 1.5s linear forwards;
+      }
+
+      .eye-shape {
+        animation: eye-shape 1.5s linear forwards;
+      }
+
+      @keyframes shadow-wake {
+        0% {
+          opacity: 0.4;
+          transform: scaleX(1);
+        }
+        20% {
+          opacity: 0.47;
+          transform: scaleX(0.56);
+        }
+        33.333% {
+          opacity: 0.54;
+          transform: scaleX(0.42);
+        }
+        46.667% {
+          opacity: 0.48;
+          transform: scaleX(0.48);
+        }
+        56% {
+          opacity: 0.52;
+          transform: scaleX(0.56);
+        }
+        66.667%, 100% {
+          opacity: 0.5;
+          transform: scaleX(0.5294);
+        }
+      }
+
+      @keyframes body-motion {
+        0% {
+          transform: translate(0, 0) scale(1, 1) rotate(0deg);
+        }
+        6.667% {
+          transform: translate(0, 0.35px) scale(1.03, 0.96) rotate(0deg);
+        }
+        20% {
+          transform: translate(0, -2.6px) scale(0.98, 1.04) rotate(-6deg);
+        }
+        33.333% {
+          transform: translate(0, -4.1px) scale(0.9, 1.22) rotate(2deg);
+        }
+        46.667% {
+          transform: translate(0, -2px) scale(0.95, 1.11) rotate(0deg);
+        }
+        54% {
+          transform: translate(0, -0.55px) scale(1.02, 0.98) rotate(-4deg);
+        }
+        60% {
+          transform: translate(0, -0.2px) scale(0.99, 1.02) rotate(2.5deg);
+        }
+        66.667%, 100% {
+          transform: translate(0, 0) scale(1, 1) rotate(0deg);
+        }
+      }
+
+      @keyframes torso-shift {
+        0% {
+          transform: translate(-1px, 4px);
+        }
+        8% {
+          transform: translate(-0.82px, 3.4px);
+        }
+        20%, 100% {
+          transform: translate(0, 0);
+        }
+      }
+
+      @keyframes torso-shape {
+        0% {
+          transform: scale(1.1818, 0.7143);
+        }
+        8% {
+          transform: scale(1.14, 0.76);
+        }
+        20%, 100% {
+          transform: scale(1, 1);
+        }
+      }
+
+      @keyframes arm-left {
+        0% {
+          transform: translate(-1px, 4px);
+        }
+        8% {
+          transform: translate(-0.8px, 3.4px);
+        }
+        20%, 100% {
+          transform: translate(0, 0);
+        }
+      }
+
+      @keyframes arm-right {
+        0% {
+          transform: translate(1px, 4px);
+        }
+        8% {
+          transform: translate(0.8px, 3.4px);
+        }
+        20%, 100% {
+          transform: translate(0, 0);
+        }
+      }
+
+      @keyframes leg-shift {
+        0% {
+          transform: translate(0, -2px);
+        }
+        8% {
+          transform: translate(0, -1.5px);
+        }
+        20%, 100% {
+          transform: translate(0, 0);
+        }
+      }
+
+      @keyframes leg-grow {
+        0% {
+          transform: scale(1, 0.25);
+        }
+        8% {
+          transform: scale(1, 0.45);
+        }
+        20%, 100% {
+          transform: scale(1, 1);
+        }
+      }
+
+      @keyframes eye-shift {
+        0% {
+          transform: translate(-0.5px, 4.5px);
+        }
+        6.667% {
+          transform: translate(-0.5px, 4.15px);
+        }
+        10% {
+          transform: translate(-0.2px, 1px);
+        }
+        14% {
+          transform: translate(-0.06px, 0.2px);
+        }
+        20%, 54% {
+          transform: translate(0, 0);
+        }
+        58% {
+          transform: translate(0, 0.5px);
+        }
+        62%, 100% {
+          transform: translate(0, 0);
+        }
+      }
+
+      @keyframes eye-shape {
+        0% {
+          transform: scale(2, 0.2);
+        }
+        6.667% {
+          transform: scale(2.12, 0.12);
+        }
+        10% {
+          transform: scale(1.45, 1.8);
+        }
+        14% {
+          transform: scale(0.92, 1.08);
+        }
+        20%, 54% {
+          transform: scale(1, 1);
+        }
+        58% {
+          transform: scale(1, 0.08);
+        }
+        62% {
+          transform: scale(1, 1.08);
+        }
+        66.667%, 100% {
+          transform: scale(1, 1);
+        }
+      }
+    </style>
+  </defs>
+
+  <rect class="once shadow" x="-1" y="15" width="17" height="1" fill="#000000" opacity="0.4"/>
+
+  <g class="once body-motion">
+    <g fill="#DE886D">
+      <g class="once leg-shift">
+        <rect class="once scale-top-left leg-grow" x="3" y="11" width="1" height="4"/>
+      </g>
+      <g class="once leg-shift">
+        <rect class="once scale-top-left leg-grow" x="5" y="11" width="1" height="4"/>
+      </g>
+      <g class="once leg-shift">
+        <rect class="once scale-top-left leg-grow" x="9" y="11" width="1" height="4"/>
+      </g>
+      <g class="once leg-shift">
+        <rect class="once scale-top-left leg-grow" x="11" y="11" width="1" height="4"/>
+      </g>
+    </g>
+
+    <g class="once torso-shift">
+      <rect class="once scale-top-left torso-shape" x="2" y="6" width="11" height="7" fill="#DE886D"/>
+    </g>
+
+    <g class="once arm-left">
+      <rect x="0" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+
+    <g class="once arm-right">
+      <rect x="13" y="9" width="2" height="2" fill="#DE886D"/>
+    </g>
+
+    <g fill="#000000">
+      <g class="once eye-shift">
+        <rect class="once scale-top-left eye-shape" x="4" y="8" width="1" height="2"/>
+      </g>
+      <g class="once eye-shift">
+        <rect class="once scale-top-left eye-shape" x="10" y="8" width="1" height="2"/>
+      </g>
+    </g>
+  </g>
+</svg>
+</div><div class="meta">clawd-wake.svg</div></div>
+<div class="card"><h3>clawd-working-beacon</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      /* Gentle body bob */
+      .body-beacon {
+        transform-origin: 7.5px 15px;
+        animation: beacon-bob 1.5s infinite ease-in-out;
+      }
+
+      /* Signal waves expanding outward from antenna */
+      .wave {
+        fill: none;
+        stroke-width: 0.6;
+        opacity: 0;
+      }
+      .wave1 { stroke: #0082FC; animation: wave-expand 2s 0s infinite; }
+      .wave2 { stroke: #FFC107; animation: wave-expand 2s 0.5s infinite; }
+      .wave3 { stroke: #FF5252; animation: wave-expand 2s 1s infinite; }
+
+      /* Antenna tip blink */
+      .antenna-blink {
+        animation: ant-blink 0.8s infinite alternate;
+      }
+
+      /* Keyframes */
+      @keyframes beacon-bob {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(0.5px); }
+      }
+
+      @keyframes wave-expand {
+        0% { r: 3; opacity: 0; stroke-width: 1; }
+        10% { opacity: 0.7; }
+        100% { r: 18; opacity: 0; stroke-width: 0.2; }
+      }
+
+      @keyframes ant-blink {
+        0% { fill: #FF5252; opacity: 0.5; }
+        100% { fill: #FF5252; opacity: 1; }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Signal waves (each = a subagent being directed) -->
+  <circle class="wave wave1" cx="7.5" cy="5" r="3"/>
+  <circle class="wave wave2" cx="7.5" cy="5" r="3"/>
+  <circle class="wave wave3" cx="7.5" cy="5" r="3"/>
+
+  <!-- Animated Character Body -->
+  <g class="body-beacon">
+    <!-- Antenna -->
+    <rect x="7" y="2" width="1" height="4" fill="#78909C"/>
+    <circle class="antenna-blink" cx="7.5" cy="1.5" r="1"/>
+
+    <!-- Body Base Color Group -->
+    <g id="body-color-group" fill="#DE886D">
+      <!-- Static Legs -->
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+
+      <!-- Main Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+
+      <!-- Arms (slightly raised, alert pose) -->
+      <rect id="left-arm" x="0" y="9" width="2" height="2" transform="rotate(15 1 10)"/>
+      <rect id="right-arm" x="13" y="9" width="2" height="2" transform="rotate(-15 14 10)"/>
+    </g>
+
+    <!-- Eyes Color Group (Wide, alert) -->
+    <g fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1.5" height="1.5"/>
+      <rect id="right-eye" x="9.5" y="8" width="1.5" height="1.5"/>
+    </g>
+  </g>
+</svg>
+</div><div class="meta">clawd-working-beacon.svg</div></div>
+<div class="card"><h3>clawd-working-builder</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      .walk-bob {
+        animation: walk-bob 1.2s infinite ease-in-out;
+      }
+      @keyframes walk-bob {
+        0%, 30%, 50%, 80%, 100% { transform: translateY(0); }
+        15% { transform: translateY(-0.3px); }
+        65% { transform: translateY(-0.3px); }
+      }
+
+      .breathe {
+        transform-origin: 7.5px 13px;
+        animation: breathe 3.2s infinite ease-in-out;
+      }
+      @keyframes breathe {
+        0%, 100% { transform: scale(1, 1) translate(0, 0); }
+        50% { transform: scale(1.02, 0.98) translate(0, 0.5px); }
+      }
+
+      .eyes-look {
+        animation: eyes-look 5s infinite ease-in-out;
+      }
+      @keyframes eyes-look {
+        0%, 100% { transform: translate(0.3px, -1px); }      25%      { transform: translate(-0.3px, -1px); }     50%      { transform: translate(0.3px, -1px); }      68%      { transform: translate(0, -1px); }          73%      { transform: translate(0, 0.3px); }         80%      { transform: translate(0, 0.3px); }         85%      { transform: translate(0, -1px); }          }
+
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: blink 4s infinite;
+      }
+      @keyframes blink {
+        0%, 8%, 100% { transform: scaleY(1); }
+        4% { transform: scaleY(0.1); }
+      }
+
+      .shadow {
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-pulse 3.2s infinite ease-in-out;
+      }
+      @keyframes shadow-pulse {
+        0%, 100% { transform: scaleX(1); opacity: 0.5; }
+        50% { transform: scaleX(1.05); opacity: 0.45; }
+      }
+
+      .legs-a {
+        animation: step-a 1.2s infinite;
+      }
+      .legs-b {
+        animation: step-b 1.2s infinite;
+      }
+      @keyframes step-a {
+        0%, 30%, 100% { transform: translateY(0); }
+        15% { transform: translateY(-1px); }
+      }
+      @keyframes step-b {
+        0%, 50%, 80%, 100% { transform: translateY(0); }
+        65% { transform: translateY(-1px); }
+      }
+
+      .sway-base {
+        transform-origin: 7.5px 6px;
+        animation: sway-base 3s infinite ease-in-out;
+      }
+      .sway-mid {
+        transform-origin: 7px 3px;
+        animation: sway-mid 2.5s infinite ease-in-out;
+      }
+      .sway-top {
+        transform-origin: 7.5px 0px;
+        animation: sway-top 2s infinite ease-in-out;
+      }
+
+      @keyframes sway-base {
+        0%, 50%, 100% { transform: translate(0, 0) rotate(0deg); }
+        25% { transform: translate(0.8px, 0) rotate(1.5deg); }
+        75% { transform: translate(-0.8px, 0) rotate(-1.5deg); }
+      }
+      @keyframes sway-mid {
+        0%, 50%, 100% { transform: translate(0, 0) rotate(0deg); }
+        25% { transform: translate(0.6px, 0) rotate(2deg); }
+        75% { transform: translate(-0.6px, 0) rotate(-2deg); }
+      }
+      @keyframes sway-top {
+        0%, 50%, 100% { transform: translate(0, 0) rotate(0deg); }
+        25% { transform: translate(1px, 0.2px) rotate(3deg); }
+        75% { transform: translate(-1px, 0.2px) rotate(-3deg); }
+      }
+
+      .arm-l {
+        transform-origin: 2px 10px;
+        animation: arm-l-bal 3s infinite ease-in-out;
+      }
+      .arm-r {
+        transform-origin: 13px 10px;
+        animation: arm-r-bal 3s infinite ease-in-out;
+      }
+      @keyframes arm-l-bal {
+        0%, 50%, 100% { transform: rotate(30deg); }
+        25% { transform: rotate(40deg); }
+        75% { transform: rotate(20deg); }
+      }
+      @keyframes arm-r-bal {
+        0%, 50%, 100% { transform: rotate(-30deg); }
+        25% { transform: rotate(-20deg); }
+        75% { transform: rotate(-40deg); }
+      }
+
+      .sweat {
+        opacity: 0;
+        animation: sweat-fly 6s infinite;
+      }
+      @keyframes sweat-fly {
+        0%, 55% { opacity: 0; transform: translate(0, 0) scale(0); }
+        60% { opacity: 1; transform: translate(0, 0) scale(1); }
+        80% { opacity: 0; transform: translate(-4px, -5px) scale(0.5); }
+        100% { opacity: 0; }
+      }
+    </style>
+  </defs>
+
+  <rect class="shadow" x="3" y="15" width="9" height="1" fill="#000"/>
+
+  <g class="walk-bob">
+  <g class="breathe">
+
+    <g fill="#DE886D">
+      <g class="legs-a">
+        <rect x="3" y="13" width="1" height="2"/>
+        <rect x="11" y="13" width="1" height="2"/>
+      </g>
+      <g class="legs-b">
+        <rect x="5" y="13" width="1" height="2"/>
+        <rect x="9" y="13" width="1" height="2"/>
+      </g>
+    </g>
+
+    <rect x="2" y="6" width="11" height="7" fill="#DE886D"/>
+
+    <g class="eyes-look">
+      <g class="eyes-blink" fill="#000">
+        <rect x="4" y="8" width="1" height="2"/>
+        <rect x="10" y="8" width="1" height="2"/>
+      </g>
+    </g>
+
+    <g class="sway-base">
+      <rect x="4" y="3" width="7" height="3" fill="#5C9CE6"/>
+      <rect x="4" y="5" width="7" height="1" fill="#4A80C4"/>
+      <rect x="7" y="3.5" width="1" height="2" fill="#7AB8F5" opacity="0.5"/>
+
+      <g class="sway-mid">
+        <rect x="3" y="0" width="7" height="3" fill="#7BC67E"/>
+        <rect x="3" y="2" width="7" height="1" fill="#5EA661"/>
+        <rect x="6" y="0.5" width="1" height="2" fill="#9AD89C" opacity="0.5"/>
+
+        <g class="sway-top">
+          <rect x="5" y="-3" width="7" height="3" fill="#F0A050"/>
+          <rect x="5" y="-1" width="7" height="1" fill="#D08030"/>
+          <rect x="8" y="-2.5" width="1" height="2" fill="#F8C888" opacity="0.5"/>
+        </g>
+      </g>
+    </g>
+
+    <g class="arm-l" fill="#DE886D">
+      <rect x="0" y="9" width="2" height="2"/>
+    </g>
+    <g class="arm-r" fill="#DE886D">
+      <rect x="13" y="9" width="2" height="2"/>
+    </g>
+
+    <g transform="translate(0, 6)">
+      <g class="sweat" fill="#64D2FF">
+        <rect x="0" y="1" width="1" height="1"/>
+        <rect x="0.25" y="0" width="0.5" height="1"/>
+      </g>
+    </g>
+
+  </g>
+  </g>
+</svg>
+</div><div class="meta">clawd-working-builder.svg</div></div>
+<div class="card"><h3>clawd-working-building</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      /* Heavy bouncing animation for the body */
+      .body-bounce {
+        transform-origin: 7.5px 15px;
+        animation: hammer-bounce 1s infinite;
+      }
+
+      /* Ground shadow pulsing on impact */
+      .shadow-pulse {
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-impact 1s infinite;
+      }
+
+      /* Left arm resting with slight movement */
+      .arm-l-rest {
+        transform-origin: 2px 10px;
+        animation: arm-rest 1s infinite;
+      }
+
+      /* Right arm swinging the hammer */
+      .arm-hammer {
+        transform-origin: 14px 10px; /* Shoulder joint */
+        animation: hammer-swing 1s infinite;
+      }
+
+      /* Eyes squinting on impact */
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: hammer-eyes 1s infinite;
+      }
+
+      /* Spark particles */
+      .spark {
+        opacity: 0;
+      }
+      .s1 { animation: spark-1 1s infinite; }
+      .s2 { animation: spark-2 1s infinite; }
+      .s3 { animation: spark-3 1s infinite; }
+      
+      /* Sweat drop flying off */
+      .sweat {
+        opacity: 0;
+        animation: sweat-fly 1s infinite cubic-bezier(.25,.1,.25,1);
+      }
+      
+      /* Glowing hot metal cooling and heating up */
+      .hot-metal {
+        animation: metal-glow 1s infinite;
+      }
+
+      /* Keyframes */
+      @keyframes hammer-bounce {
+        0%, 100% { transform: scale(1, 1) translateY(0); } /* Base */
+        30% { transform: scale(0.95, 1.05) translateY(-2px); } /* Peak raise (anticipation) */
+        45% { transform: scale(1, 1) translateY(0); } /* Falling */
+        50% { transform: scale(1.15, 0.85) translateY(2px); } /* Hard impact squash */
+        70% { transform: scale(1, 1) translateY(0); } /* Recover */
+      }
+
+      @keyframes shadow-impact {
+        0%, 45%, 70%, 100% { transform: scale(1); opacity: 0.5; }
+        30% { transform: scale(0.8); opacity: 0.3; } /* Lighter when raised */
+        50% { transform: scale(1.3); opacity: 0.8; } /* Heavy and wide on impact */
+      }
+
+      @keyframes arm-rest {
+        0%, 100% { transform: rotate(0deg); }
+        30% { transform: rotate(15deg); }
+        50% { transform: rotate(-5deg); }
+      }
+
+      @keyframes hammer-swing {
+        0%, 100% { transform: rotate(15deg); }
+        30% { transform: rotate(-45deg); } /* Arm raised back */
+        45% { transform: rotate(40deg); } /* Swinging down fast */
+        50% { transform: rotate(125deg); } /* Striking the anvil */
+        70% { transform: rotate(15deg); }
+      }
+
+      @keyframes hammer-eyes {
+        0%, 40% { transform: scaleY(1); } /* Open */
+        48%, 60% { transform: scaleY(0.1); } /* Squeezed shut on impact */
+        65%, 100% { transform: scaleY(1); } /* Open again */
+      }
+      
+      @keyframes metal-glow {
+        0%, 49% { fill: #FF5252; }
+        50%, 60% { fill: #FFF59D; } /* Flashes white/yellow hot on hit */
+        100% { fill: #FF5252; }
+      }
+
+      /* Sweat drop flies back and fades */
+      @keyframes sweat-fly {
+        0% { transform: translate(0, 0) scale(0); opacity: 0; }
+        30% { transform: translate(0, 0) scale(1); opacity: 1; }
+        80% { transform: translate(-6px, -6px) scale(0.8); opacity: 0; }
+        100% { opacity: 0; }
+      }
+
+      /* Sparks flying outwards from the impact zone */
+      @keyframes spark-1 {
+        0%, 49% { transform: translate(0, 0) scale(0); opacity: 0; }
+        50% { transform: translate(0, 0) scale(1); opacity: 1; }
+        70% { transform: translate(4px, -6px) scale(0); opacity: 0; }
+        100% { opacity: 0; }
+      }
+      @keyframes spark-2 {
+        0%, 49% { transform: translate(0, 0) scale(0); opacity: 0; }
+        50% { transform: translate(0, 0) scale(1); opacity: 1; }
+        70% { transform: translate(7px, -1px) scale(0); opacity: 0; }
+        100% { opacity: 0; }
+      }
+      @keyframes spark-3 {
+        0%, 49% { transform: translate(0, 0) scale(0); opacity: 0; }
+        50% { transform: translate(0, 0) scale(1); opacity: 1; }
+        70% { transform: translate(3px, 3px) scale(0); opacity: 0; }
+        100% { opacity: 0; }
+      }
+    </style>
+
+    <!-- Pixel Spark -->
+    <g id="pixel-spark">
+      <rect x="0" y="0" width="1" height="1" />
+    </g>
+  </defs>
+
+  <!-- Ground Shadows -->
+  <rect id="ground-shadow" class="shadow-pulse" x="3" y="15" width="9" height="1" fill="#000000"/>
+  <rect id="work-shadow" x="16" y="15" width="7" height="1" fill="#000000" opacity="0.4"/>
+
+  <!-- Metal Block / Anvil being hit -->
+  <g id="work-piece" transform="translate(17, 13)">
+    <!-- Base -->
+    <rect x="0" y="2" width="5" height="1" fill="#546E7A" />
+    <!-- Main block -->
+    <rect x="1" y="0" width="3" height="2" fill="#78909C" />
+    <!-- Glowing hot piece on top -->
+    <rect x="1.5" y="-0.5" width="2" height="1" class="hot-metal" />
+  </g>
+
+  <!-- Impact Sparks (Positioned near the hammer's strike point) -->
+  <g fill="#FFC107" transform="translate(19, 12.5)">
+    <use href="#pixel-spark" class="spark s1" />
+    <use href="#pixel-spark" class="spark s2" />
+    <use href="#pixel-spark" class="spark s3" />
+  </g>
+
+  <!-- Animated Character Body -->
+  <g class="body-bounce">
+    
+    <!-- Sweat Drop (Positioned near the side of the head) -->
+    <g transform="translate(1, 8)">
+      <g class="sweat" fill="#40C4FF">
+        <rect x="0" y="1" width="1.5" height="1.5"/>
+        <rect x="0.25" y="0" width="1" height="1"/>
+      </g>
+    </g>
+
+    <!-- Hard Hat -->
+    <g id="hard-hat">
+      <!-- Ridges top (y=1) -->
+      <rect x="4" y="1" width="2" height="1" fill="#FBC02D"/>
+      <rect x="9" y="1" width="2" height="1" fill="#FBC02D"/>
+
+      <!-- Upper Dome (y=2) -->
+      <rect x="3" y="2" width="1" height="1" fill="#F9A825"/>
+      <rect x="4" y="2" width="2" height="1" fill="#FBC02D"/>
+      <rect x="6" y="2" width="1" height="1" fill="#F9A825"/>
+      <rect x="7" y="2" width="1" height="1" fill="#FBC02D"/>
+      <rect x="8" y="2" width="1" height="1" fill="#F9A825"/>
+      <rect x="9" y="2" width="2" height="1" fill="#FBC02D"/>
+      <rect x="11" y="2" width="1" height="1" fill="#F9A825"/>
+      
+      <!-- Mid Dome (y=3) -->
+      <rect x="2" y="3" width="1" height="1" fill="#F9A825"/>
+      <rect x="3" y="3" width="3" height="1" fill="#FBC02D"/>
+      <rect x="6" y="3" width="1" height="1" fill="#F9A825"/>
+      <rect x="7" y="3" width="1" height="1" fill="#FBC02D"/>
+      <rect x="8" y="3" width="1" height="1" fill="#F9A825"/>
+      <rect x="9" y="3" width="3" height="1" fill="#FBC02D"/>
+      <rect x="12" y="3" width="1" height="1" fill="#F9A825"/>
+
+      <!-- Lower Dome / Brim top (y=4) -->
+      <rect x="1" y="4" width="2" height="1" fill="#F9A825"/>
+      <rect x="3" y="4" width="9" height="1" fill="#FBC02D"/>
+      <rect x="12" y="4" width="2" height="1" fill="#F9A825"/>
+
+      <!-- Bottom Band (y=5) -->
+      <rect x="0" y="5" width="15" height="1" fill="#F9A825"/>
+    </g>
+
+    <!-- Body Base Color Group -->
+    <g id="body-color-group" fill="#DE886D">
+      <!-- Static Legs -->
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+
+      <!-- Main Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      
+      <!-- Resting Left Arm -->
+      <g class="arm-l-rest">
+        <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      </g>
+
+      <!-- Hammer-Swinging Right Arm -->
+      <g class="arm-hammer">
+        <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+        
+        <!-- Tiny Pixel Hammer -->
+        <g id="hammer">
+          <!-- Handle -->
+          <rect x="13.5" y="4" width="1" height="6" fill="#795548" />
+          <!-- Head -->
+          <rect x="12.5" y="3" width="3" height="2" fill="#9E9E9E" />
+        </g>
+      </g>
+    </g>
+    
+    <!-- Eyes Color Group (Determined / Straining) -->
+    <g class="eyes-blink" fill="#000000">
+      <rect id="left-eye" x="4" y="8.5" width="1.5" height="1.5"/>
+      <rect id="right-eye" x="9.5" y="8.5" width="1.5" height="1.5"/>
+    </g>
+    
+  </g>
+</svg>
+</div><div class="meta">clawd-working-building.svg</div></div>
+<div class="card"><h3>clawd-working-carrying</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      /* Straining body trembling and squashing under weight */
+      .body-carry {
+        transform-origin: 7.5px 15px; /* Pivot at the base of the feet */
+        animation: carry-strain 0.15s infinite alternate ease-in-out;
+      }
+
+      /* Heavy Data Block shaking */
+      .data-block {
+        animation: block-shake 0.15s infinite alternate ease-in-out;
+      }
+
+      /* Trembling legs */
+      .leg {
+        transform-box: fill-box;
+        transform-origin: top center;
+      }
+      .leg-1 { animation: tremble-1 0.1s infinite linear; }
+      .leg-2 { animation: tremble-2 0.1s infinite linear; }
+
+      /* Sweat drop flying off */
+      .sweat {
+        opacity: 0;
+        animation: sweat-fly 2s infinite cubic-bezier(.25,.1,.25,1);
+      }
+
+      /* Ground shadow shifting */
+      .shadow-carry {
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-strain 0.15s infinite alternate ease-in-out;
+      }
+
+      /* Keyframes */
+      @keyframes carry-strain {
+        0% { transform: translateY(1px) scale(1.05, 0.95); }
+        100% { transform: translateY(2px) scale(1.08, 0.92); } /* Heavy squash */
+      }
+
+      @keyframes shadow-strain {
+        0% { transform: scale(1.1); opacity: 0.6; }
+        100% { transform: scale(1.15); opacity: 0.7; }
+      }
+
+      @keyframes block-shake {
+        0% { transform: translate(0, 0) rotate(-0.5deg); }
+        100% { transform: translate(0, 1px) rotate(0.5deg); }
+      }
+
+      /* Trembling legs under weight */
+      @keyframes tremble-1 {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(-0.5px); }
+      }
+      @keyframes tremble-2 {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(0.5px); }
+      }
+
+      /* Sweat drop flies back and fades */
+      @keyframes sweat-fly {
+        0% { transform: translate(0, 0) scale(0); opacity: 0; }
+        10% { transform: translate(0, 0) scale(1); opacity: 1; }
+        40% { transform: translate(-8px, -4px) scale(0.8); opacity: 0; }
+        100% { opacity: 0; }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-carry" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Leaning Body -->
+  <g class="body-carry">
+    
+    <!-- Heavy Data Block (carried overhead) -->
+    <!-- The bottom of this block sits exactly at y=4 to rest on the arms -->
+    <g class="data-block" transform="translate(1, -5)">
+      <!-- Main Block -->
+      <rect x="0" y="0" width="13" height="9" fill="#90A4AE"/>
+      <rect x="1" y="1" width="11" height="7" fill="#CFD8DC"/>
+      
+      <!-- Data "Lights" on the block -->
+      <rect x="2" y="2" width="2" height="2" fill="#0082FC"/>
+      <rect x="9" y="2" width="2" height="2" fill="#FFC107"/>
+      <rect x="3" y="5" width="7" height="2" fill="#B0BEC5"/>
+    </g>
+
+    <!-- Sweat Drop (Positioned near the side of the head) -->
+    <g transform="translate(-1, 5)">
+      <g class="sweat" fill="#40C4FF">
+        <rect x="0" y="1" width="1.5" height="1.5"/>
+        <rect x="0.25" y="0" width="1" height="1"/>
+      </g>
+    </g>
+
+    <!-- Body Base Color Group -->
+    <g id="body-color-group" fill="#DE886D">
+      <!-- Trembling Legs -->
+      <rect id="outer-left-leg" class="leg leg-1" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" class="leg leg-2" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" class="leg leg-1" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" class="leg leg-2" x="11" y="13" width="1" height="2"/>
+
+      <!-- Main Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      
+      <!-- Left Arm (Reaching up to support block) -->
+      <rect id="left-arm" x="0" y="4" width="2" height="4" />
+
+      <!-- Right Arm (Reaching up to support block) -->
+      <rect id="right-arm" x="13" y="4" width="2" height="4" />
+    </g>
+    
+    <!-- Eyes Color Group (Straining, looking up) -->
+    <g fill="#000000">
+      <!-- Left eye is squinting hard, looking up -->
+      <rect id="left-eye" x="4" y="6.5" width="1" height="1"/>
+      <!-- Right eye is wide with strain, looking up -->
+      <rect id="right-eye" x="10" y="6" width="1" height="2"/>
+    </g>
+    
+  </g>
+</svg>
+</div><div class="meta">clawd-working-carrying.svg</div></div>
+<div class="card"><h3>clawd-working-conducting</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      /* Smooth, graceful body bobbing */
+      .body-bob {
+        transform-origin: 7.5px 15px; /* Pivot at the base of the feet */
+        animation: bob 2s infinite ease-in-out;
+      }
+
+      /* Ground shadow pulsing softly */
+      .shadow-bob {
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-soft 2s infinite ease-in-out;
+      }
+
+      /* Conductor arms waving smoothly */
+      .arm-l-conduct {
+        transform-origin: 1px 10px; /* Shoulder joint */
+        animation: conduct-l 2s infinite ease-in-out;
+      }
+      .arm-r-conduct {
+        transform-origin: 14px 10px; /* Shoulder joint */
+        animation: conduct-r 2s infinite ease-in-out;
+      }
+
+      /* Flowing data stream */
+      .pixel-stream {
+        opacity: 0;
+        animation: stream-flow 2s infinite linear;
+      }
+      .p1 { animation-delay: 0s; color: #0082FC; }
+      .p2 { animation-delay: 0.4s; color: #FFC107; }
+      .p3 { animation-delay: 0.8s; color: #FF5252; }
+      .p4 { animation-delay: 1.2s; color: #4CAF50; }
+      .p5 { animation-delay: 1.6s; color: #9C27B0; }
+
+      /* Keyframes */
+      @keyframes bob {
+        0%, 100% { transform: translateY(0) scale(1, 1); }
+        50% { transform: translateY(1.5px) scale(1.02, 0.98); } /* Gentle squash */
+      }
+
+      @keyframes shadow-soft {
+        0%, 100% { transform: scale(1); opacity: 0.4; }
+        50% { transform: scale(1.05); opacity: 0.5; }
+      }
+
+      /* Left arm swoops up, then down */
+      @keyframes conduct-l {
+        0%, 100% { transform: rotate(15deg); }
+        50% { transform: rotate(85deg); }
+      }
+
+      /* Right arm swoops down, then up (out of phase) */
+      @keyframes conduct-r {
+        0%, 100% { transform: rotate(-85deg); }
+        50% { transform: rotate(-15deg); }
+      }
+
+      /* Data pixels flow in an arc over the head */
+      @keyframes stream-flow {
+        0% { transform: translate(-2px, 6px) scale(0); opacity: 0; }
+        15% { transform: translate(0px, 1px) scale(1); opacity: 1; }
+        50% { transform: translate(7.5px, -3px) scale(1.5); opacity: 1; } /* Peak of arc */
+        85% { transform: translate(15px, 1px) scale(1); opacity: 1; }
+        100% { transform: translate(17px, 6px) scale(0); opacity: 0; }
+      }
+    </style>
+
+    <!-- Data Pixel -->
+    <g id="data-pixel">
+      <rect x="0" y="0" width="1.5" height="1.5" fill="currentColor"/>
+    </g>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-bob" x="3" y="15" width="9" height="1" fill="#000000"/>
+
+  <!-- Data Stream Arc -->
+  <g>
+    <use href="#data-pixel" class="pixel-stream p1" />
+    <use href="#data-pixel" class="pixel-stream p2" />
+    <use href="#data-pixel" class="pixel-stream p3" />
+    <use href="#data-pixel" class="pixel-stream p4" />
+    <use href="#data-pixel" class="pixel-stream p5" />
+  </g>
+
+  <!-- Animated Character Body -->
+  <g class="body-bob">
+    
+    <!-- Body Base Color Group -->
+    <g id="body-color-group" fill="#DE886D">
+      <!-- Static Legs -->
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+
+      <!-- Main Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      
+      <!-- Waving Arms -->
+      <g class="arm-l-conduct">
+        <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      </g>
+      <g class="arm-r-conduct">
+        <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+      </g>
+    </g>
+    
+    <!-- Eyes Color Group (Happily closed / smiling) -->
+    <g fill="#000000">
+      <rect id="left-eye-happy" x="3.5" y="8.5" width="2" height="0.5"/>
+      <rect id="right-eye-happy" x="9.5" y="8.5" width="2" height="0.5"/>
+    </g>
+    
+  </g>
+</svg>
+</div><div class="meta">clawd-working-conducting.svg</div></div>
+<div class="card"><h3>clawd-working-confused</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      .body-anim {
+        transform-origin: 7.5px 15px;
+        animation: body-look 6s infinite ease-in-out;
+      }
+      .eyes-anim {
+        animation: eyes-look 6s infinite ease-in-out;
+      }
+      .eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: blink 6s infinite linear;
+      }
+      .question-mark-l {
+        transform-origin: center;
+        animation: question-pop-l 6s infinite ease-in-out;
+        opacity: 0;
+      }
+      .question-mark-r {
+        transform-origin: center;
+        animation: question-pop-r 6s infinite ease-in-out;
+        opacity: 0;
+      }
+
+      /* Character Upper Body Movement (Simulates Side-to-Side Head/Torso Tilt) */
+      @keyframes body-look {
+        0%, 10% { transform: translate(0px, 0px); }
+        15%, 35% { transform: translate(-2px, 0px) rotate(-2deg); } /* Looks left */
+        40%, 45% { transform: translate(0px, 0px); }
+        50%, 70% { transform: translate(2px, 0px) rotate(2deg); }  /* Looks right */
+        75%, 100% { transform: translate(0px, 0px); }
+      }
+
+      /* Eye Movement for Parallax Directional Looking */
+      @keyframes eyes-look {
+        0%, 10% { transform: translate(0px, 0px); }
+        15%, 35% { transform: translate(-3px, 0px); }
+        40%, 45% { transform: translate(0px, 0px); }
+        50%, 70% { transform: translate(3px, 0px); }
+        75%, 100% { transform: translate(0px, 0px); }
+      }
+
+      /* Occasional Blinking */
+      @keyframes blink {
+        0%, 13%, 17%, 48%, 52%, 80%, 84%, 100% { transform: scaleY(1); }
+        15%, 50%, 82% { transform: scaleY(0.1); }
+      }
+
+      /* Confused Question Mark Animation Left */
+      @keyframes question-pop-l {
+        0%, 15% { opacity: 0; transform: translate(-6px, 6px) scale(0.5); }
+        20%, 30% { opacity: 1; transform: translate(-8px, -2px) scale(1); }
+        35%, 100% { opacity: 0; transform: translate(-8px, -8px) scale(1.2); }
+      }
+
+      /* Confused Question Mark Animation Right */
+      @keyframes question-pop-r {
+        0%, 50% { opacity: 0; transform: translate(6px, 6px) scale(0.5); }
+        55%, 65% { opacity: 1; transform: translate(8px, -2px) scale(1); }
+        70%, 100% { opacity: 0; transform: translate(8px, -8px) scale(1.2); }
+      }
+    </style>
+    
+    <g id="pixel-question">
+      <rect x="1" y="0" width="2" height="1"/>
+      <rect x="0" y="1" width="1" height="1"/>
+      <rect x="3" y="1" width="1" height="2"/>
+      <rect x="2" y="3" width="1" height="1"/>
+      <rect x="1" y="4" width="1" height="1"/>
+      <rect x="1" y="6" width="1" height="1"/>
+    </g>
+  </defs>
+
+  <!-- Character Ground Shadow -->
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Static Character Legs -->
+  <g id="legs" fill="#DE886D">
+    <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+    <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+    <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+    <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+  </g>
+
+  <!-- Animated Upper Body (Torso, Arms, and Eyes) -->
+  <g class="body-anim">
+    <!-- Body Color Group -->
+    <g fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <!-- Scratching head arm (left arm raised slightly) -->
+      <rect id="left-arm" x="-1" y="7" width="2" height="2" transform="rotate(15 0 8)"/>
+      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+    </g>
+    
+    <!-- Eyes Color Group -->
+    <g class="eyes-anim">
+      <g class="eyes-blink" fill="#000000">
+        <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+        <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- Confused Question Marks -->
+  <g class="question-mark-l" fill="#40C4FF" transform="translate(0, 0)">
+    <use href="#pixel-question" />
+  </g>
+  <g class="question-mark-r" fill="#FFC107" transform="translate(10, 0)">
+    <use href="#pixel-question" />
+  </g>
+
+</svg>
+</div><div class="meta">clawd-working-confused.svg</div></div>
+<div class="card"><h3>clawd-working-debugger</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      .body-hunch {
+        transform-origin: 7.5px 15px;
+        animation: hunch-walk 2s infinite alternate ease-in-out;
+      }
+      .magnifying-glass {
+        transform-origin: 14px 10px; /* Pivot at the right shoulder */
+        animation: search-glass 3s infinite ease-in-out;
+      }
+      .leg-1 { animation: sneak-1 0.5s infinite linear; transform-origin: top center; transform-box: fill-box; }
+      .leg-2 { animation: sneak-2 0.5s infinite linear; transform-origin: top center; transform-box: fill-box; }
+      .shadow-sneak {
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-shift 2s infinite alternate ease-in-out;
+      }
+      
+      /* Sneaking forward and backward */
+      @keyframes hunch-walk {
+        0% { transform: translate(-2px, 1px) rotate(2deg); }
+        100% { transform: translate(3px, 1px) rotate(2deg); }
+      }
+      @keyframes shadow-shift {
+        0% { transform: translateX(-2px) scale(0.9); opacity: 0.4; }
+        100% { transform: translateX(3px) scale(0.9); opacity: 0.4; }
+      }
+      
+      /* Hovering the magnifying glass over the eye */
+      @keyframes search-glass {
+        0%, 100% { transform: rotate(0deg) scale(1); }
+        50% { transform: rotate(-3deg) scale(1.05); }
+      }
+      
+      /* Fast tiptoe / sneak leg movement */
+      @keyframes sneak-1 {
+        0%, 100% { transform: rotate(0deg) scaleY(1); }
+        50% { transform: rotate(-25deg) scaleY(0.7); }
+      }
+      @keyframes sneak-2 {
+        0%, 100% { transform: rotate(-25deg) scaleY(0.7); }
+        50% { transform: rotate(0deg) scaleY(1); }
+      }
+    </style>
+  </defs>
+
+  <rect id="ground-shadow" class="shadow-sneak" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+  
+  <g class="body-hunch">
+    <g id="legs" fill="#DE886D">
+      <rect id="outer-left-leg" class="leg-1" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" class="leg-2" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" class="leg-1" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" class="leg-2" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <!-- Left arm tucked back slightly -->
+      <rect id="left-arm" x="0" y="9" width="2" height="2" transform="translate(1, -1) rotate(15 1 10)"/>
+    </g>
+    
+    <!-- Left Eye (squinting) -->
+    <g fill="#000000">
+      <rect id="left-eye" x="4" y="8.5" width="1" height="1"/>
+    </g>
+    
+    <!-- Right Arm & Magnifying Glass -->
+    <g class="magnifying-glass">
+      <rect id="right-arm" x="13" y="9" width="2" height="2" fill="#DE886D"/>
+      
+      <!-- The Magnifying Glass -->
+      <g id="glass" transform="translate(13.5, 9.5)">
+        <!-- Angled Handle from hand to rim -->
+        <polygon points="0.5,1.5 1.5,0.5 -1,-2 -2,-1" fill="#795548"/>
+        
+        <!-- Large circular-ish Rim -->
+        <rect x="-6" y="-5" width="6" height="6" fill="#546E7A" rx="2"/>
+        
+        <!-- Magnified Right Eye (Huge!) - Drawn behind the lens -->
+        <rect x="-4" y="-3.5" width="2" height="3" fill="#000000"/>
+        
+        <!-- Glass Lens (semi-transparent so eye shows through) -->
+        <rect x="-5.5" y="-4.5" width="5" height="5" fill="#E0F7FA" rx="1.5" opacity="0.6"/>
+        
+        <!-- Glare / Reflection on the glass -->
+        <rect x="-4.5" y="-3.5" width="1.5" height="1.5" fill="#FFFFFF" opacity="0.8"/>
+      </g>
+    </g>
+  </g>
+</svg>
+</div><div class="meta">clawd-working-debugger.svg</div></div>
+<div class="card"><h3>clawd-working-juggling</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      .body-rock {
+        transform-origin: 7.5px 15px;
+        animation: rock 0.6s infinite alternate ease-in-out;
+      }
+      .arm-juggle-l {
+        transform-origin: 1px 10px;
+        animation: arm-jl 0.6s infinite alternate ease-in-out;
+      }
+      .arm-juggle-r {
+        transform-origin: 14px 10px;
+        animation: arm-jr 0.6s infinite alternate ease-in-out;
+      }
+      .eyes-dart {
+        animation: dart 1.2s infinite;
+      }
+      .packet {
+        animation: juggle 1.2s infinite linear;
+      }
+      .p1 { animation-delay: 0s; fill: #FF5252; }
+      .p2 { animation-delay: -0.4s; fill: #FFC107; }
+      .p3 { animation-delay: -0.8s; fill: #4CAF50; }
+      
+      @keyframes rock {
+        0% { transform: rotate(-5deg); }
+        100% { transform: rotate(5deg); }
+      }
+      @keyframes arm-jl {
+        0% { transform: rotate(60deg); }
+        100% { transform: rotate(10deg); }
+      }
+      @keyframes arm-jr {
+        0% { transform: rotate(-10deg); }
+        100% { transform: rotate(-60deg); }
+      }
+      @keyframes dart {
+        0%, 100% { transform: translate(-2px, -2px); }
+        25% { transform: translate(0, -3px); }
+        50% { transform: translate(2px, -2px); }
+        75% { transform: translate(0, 0); }
+      }
+      @keyframes juggle {
+        0% { transform: translate(0px, 9px) rotate(0deg); }
+        25% { transform: translate(8px, 0px) rotate(90deg); }
+        50% { transform: translate(15px, 9px) rotate(180deg); }
+        75% { transform: translate(8px, 4px) rotate(270deg); }
+        100% { transform: translate(0px, 9px) rotate(360deg); }
+      }
+    </style>
+  </defs>
+
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Juggling Packets -->
+  <g class="packets">
+    <rect class="packet p1" x="-1" y="-1" width="2" height="2" />
+    <rect class="packet p2" x="-1" y="-1" width="2" height="2" />
+    <rect class="packet p3" x="-1" y="-1" width="2" height="2" />
+  </g>
+
+  <g class="body-rock">
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="13" width="1" height="2"/>
+      <rect x="5" y="13" width="1" height="2"/>
+      <rect x="9" y="13" width="1" height="2"/>
+      <rect x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="body-color-group" fill="#DE886D">
+      <rect x="2" y="6" width="11" height="7"/>
+      <g class="arm-juggle-l"><rect x="0" y="9" width="2" height="2"/></g>
+      <g class="arm-juggle-r"><rect x="13" y="9" width="2" height="2"/></g>
+    </g>
+    
+    <g class="eyes-dart" fill="#000000">
+      <rect x="4" y="8" width="1" height="2"/>
+      <rect x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+</svg></div><div class="meta">clawd-working-juggling.svg</div></div>
+<div class="card"><h3>clawd-working-overheated</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      .body-exhausted {
+        transform-origin: 7.5px 15px;
+        animation: heavy-breathe 2.5s infinite ease-in-out;
+      }
+      .arm-fan {
+        transform-origin: 14px 10px;
+        animation: fan-self 0.4s infinite alternate ease-in-out;
+      }
+      .smoke {
+        opacity: 0;
+        animation: puff-smoke 3s infinite ease-out;
+      }
+      .sm1 { animation-delay: 0s; }
+      .sm2 { animation-delay: 1s; }
+      .sm3 { animation-delay: 2s; }
+
+      @keyframes heavy-breathe {
+        0%, 100% { transform: scale(1, 1) translateY(0); }
+        50% { transform: scale(1.05, 0.9) translateY(1.5px); }
+      }
+      @keyframes fan-self {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(-60deg); }
+      }
+      @keyframes puff-smoke {
+        0% { transform: translate(7.5px, 6px) scale(0.5); opacity: 0; }
+        20% { opacity: 0.6; }
+        100% { transform: translate(7.5px, -15px) scale(2); opacity: 0; }
+      }
+    </style>
+    <g id="smoke-puff">
+      <rect x="-1" y="-1" width="2" height="2" fill="#B0BEC5" rx="0.5"/>
+      <rect x="0" y="-2" width="2" height="2" fill="#CFD8DC" rx="0.5"/>
+    </g>
+  </defs>
+
+  <rect id="ground-shadow" x="-1" y="15" width="17" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Smoke -->
+  <g>
+    <use href="#smoke-puff" class="smoke sm1"/>
+    <use href="#smoke-puff" class="smoke sm2" transform="translate(-2, 0)"/>
+    <use href="#smoke-puff" class="smoke sm3" transform="translate(2, 0)"/>
+  </g>
+
+  <g class="body-exhausted">
+    <!-- Sploot Legs -->
+    <g fill="#DE886D">
+      <rect x="3" y="9" width="1" height="1"/>
+      <rect x="5" y="9" width="1" height="1"/>
+      <rect x="9" y="9" width="1" height="1"/>
+      <rect x="11" y="9" width="1" height="1"/>
+    </g>
+
+    <!-- Torso Sploot -->
+    <g fill="#DE886D">
+      <rect x="1" y="10" width="13" height="5"/>
+      <rect x="-1" y="13" width="2" height="2"/> <!-- left arm down -->
+    </g>
+    
+    <!-- Fanning Arm -->
+    <g class="arm-fan">
+      <rect x="14" y="11" width="2" height="2" fill="#DE886D"/>
+    </g>
+    
+    <!-- Tired Eyes -->
+    <g fill="#000000">
+      <rect x="3.5" y="12.5" width="2" height="0.4"/>
+      <rect x="9.5" y="12.5" width="2" height="0.4"/>
+    </g>
+  </g>
+</svg></div><div class="meta">clawd-working-overheated.svg</div></div>
+<div class="card"><h3>clawd-working-pushing</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      /* Straining body lean */
+      .body-push {
+        transform-origin: 7.5px 15px; /* Pivot at the base of the feet */
+        animation: push-strain 0.6s infinite alternate ease-in-out;
+      }
+
+      /* Heavy Data Block shaking */
+      .data-block {
+        animation: block-shake 0.1s infinite alternate;
+      }
+
+      /* Scrambling legs (alternating) */
+      .leg {
+        transform-box: fill-box;
+        transform-origin: top center;
+      }
+      .leg-1 { animation: run-1 0.3s infinite linear; }
+      .leg-2 { animation: run-2 0.3s infinite linear; }
+
+      /* Sweat drop flying off */
+      .sweat {
+        opacity: 0;
+        animation: sweat-fly 2s infinite cubic-bezier(.25,.1,.25,1);
+      }
+
+      /* Ground shadow shifting */
+      .shadow-push {
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-strain 0.6s infinite alternate ease-in-out;
+      }
+
+      /* Keyframes */
+      @keyframes push-strain {
+        0% { transform: rotate(12deg) scale(1, 0.95); }
+        100% { transform: rotate(18deg) scale(1.05, 0.9); } /* Deeper lean and squash */
+      }
+
+      @keyframes shadow-strain {
+        0% { transform: translateX(1px) scaleX(1); opacity: 0.5; }
+        100% { transform: translateX(3px) scaleX(1.1); opacity: 0.6; }
+      }
+
+      @keyframes block-shake {
+        0% { transform: translate(0, 0); }
+        100% { transform: translate(0.5px, -0.5px); }
+      }
+
+      /* Scrambling legs swinging backwards to push */
+      @keyframes run-1 {
+        0%, 100% { transform: rotate(0deg) scaleY(1); }
+        50% { transform: rotate(-25deg) scaleY(0.7); }
+      }
+      @keyframes run-2 {
+        0%, 100% { transform: rotate(-25deg) scaleY(0.7); }
+        50% { transform: rotate(0deg) scaleY(1); }
+      }
+
+      /* Sweat drop flies back and fades */
+      @keyframes sweat-fly {
+        0% { transform: translate(0, 0) scale(0); opacity: 0; }
+        10% { transform: translate(0, 0) scale(1); opacity: 1; }
+        40% { transform: translate(-8px, -4px) scale(0.8); opacity: 0; }
+        100% { opacity: 0; }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadows -->
+  <rect id="ground-shadow" class="shadow-push" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+  <rect id="block-shadow" x="14" y="15" width="10" height="1" fill="#000000" opacity="0.4"/>
+
+  <!-- Heavy Data Block -->
+  <g class="data-block" transform="translate(14, 5)">
+    <!-- Main Block -->
+    <rect x="0" y="0" width="10" height="10" fill="#90A4AE"/>
+    <rect x="1" y="1" width="8" height="8" fill="#CFD8DC"/>
+    
+    <!-- Data "Lights" on the block -->
+    <rect x="2" y="2" width="2" height="2" fill="#0082FC"/>
+    <rect x="6" y="2" width="2" height="2" fill="#FFC107"/>
+    <rect x="2" y="6" width="6" height="2" fill="#B0BEC5"/>
+  </g>
+
+  <!-- Leaning Body -->
+  <g class="body-push">
+    
+    <!-- Sweat Drop (Positioned near the side of the head) -->
+    <g transform="translate(1, 4)">
+      <g class="sweat" fill="#40C4FF">
+        <rect x="0" y="1" width="1.5" height="1.5"/>
+        <rect x="0.25" y="0" width="1" height="1"/>
+      </g>
+    </g>
+
+    <!-- Body Base Color Group -->
+    <g id="body-color-group" fill="#DE886D">
+      <!-- Scrambling Legs -->
+      <rect id="outer-left-leg" class="leg leg-1" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" class="leg leg-2" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" class="leg leg-1" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" class="leg leg-2" x="11" y="13" width="1" height="2"/>
+
+      <!-- Main Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      
+      <!-- Left Arm (Pushed forward, reaching across body) -->
+      <rect id="left-arm" x="0" y="9" width="2" height="2" transform="translate(11, 0) rotate(-15 1 10)"/>
+
+      <!-- Right Arm (Pushed forward, fully extended) -->
+      <rect id="right-arm" x="13" y="9" width="2" height="2" transform="translate(0, -1) rotate(-15 14 10)"/>
+    </g>
+    
+    <!-- Eyes Color Group (Straining, looking at the block) -->
+    <g fill="#000000">
+      <!-- Left eye is squinting hard -->
+      <rect id="left-eye" x="8" y="8.5" width="1" height="1"/>
+      <!-- Right eye is wide with strain -->
+      <rect id="right-eye" x="12" y="7" width="1" height="2.5"/>
+    </g>
+    
+  </g>
+</svg>
+</div><div class="meta">clawd-working-pushing.svg</div></div>
+<div class="card"><h3>clawd-working-sweeping</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      .body-sweep {
+        transform-origin: 7.5px 15px;
+        animation: sweep-lean 1.5s infinite ease-in-out;
+      }
+      .arm-sweep {
+        transform-origin: 14px 10px;
+        animation: sweep-arm 1.5s infinite ease-in-out;
+      }
+      .broom {
+        transform-origin: 13.5px 14px;
+        animation: sweep-broom 1.5s infinite ease-in-out;
+      }
+      .dust {
+        opacity: 0;
+        animation: sweep-dust 1.5s infinite ease-out;
+      }
+      .d1 { animation-delay: 0.2s; }
+      .d2 { animation-delay: 0.4s; }
+      
+      @keyframes sweep-lean {
+        0%, 100% { transform: rotate(5deg) translate(1px, 0); }
+        50% { transform: rotate(15deg) translate(3px, 1px); }
+      }
+      @keyframes sweep-arm {
+        0%, 100% { transform: rotate(0deg); }
+        50% { transform: rotate(-20deg); }
+      }
+      @keyframes sweep-broom {
+        0%, 100% { transform: rotate(10deg); }
+        50% { transform: rotate(30deg) translate(2px, -1px); }
+      }
+      @keyframes sweep-dust {
+        0%, 40% { transform: translate(17px, 14px) scale(0); opacity: 0; }
+        50% { transform: translate(19px, 14px) scale(1); opacity: 1; }
+        100% { transform: translate(25px, 14px) scale(0.5); opacity: 0; }
+      }
+    </style>
+  </defs>
+
+  <rect id="ground-shadow" x="3" y="15" width="13" height="1" fill="#000000" opacity="0.5"/>
+
+  <g class="body-sweep">
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="13" width="1" height="2"/>
+      <rect x="5" y="13" width="1" height="2"/>
+      <rect x="9" y="13" width="1" height="2"/>
+      <rect x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="body-color-group" fill="#DE886D">
+      <rect x="2" y="6" width="11" height="7"/>
+      <rect x="0" y="9" width="2" height="2" transform="translate(6, 1) rotate(-15 1 10)"/>
+      <g class="arm-sweep"><rect x="13" y="9" width="2" height="2"/></g>
+    </g>
+    
+    <g fill="#000000">
+      <rect x="5" y="8.5" width="1" height="1"/>
+      <rect x="11" y="8" width="1" height="2"/>
+    </g>
+  </g>
+  
+  <g class="broom">
+    <rect x="13.5" y="4" width="1" height="10" fill="#795548"/>
+    <rect x="12" y="14" width="4" height="2" fill="#FFC107"/>
+  </g>
+
+  <g class="dust" fill="#9E9E9E">
+    <rect x="0" y="0" width="1.5" height="1.5"/>
+  </g>
+  <g class="dust d1" fill="#B0BEC5">
+    <rect x="0" y="0" width="1" height="1"/>
+  </g>
+</svg></div><div class="meta">clawd-working-sweeping.svg</div></div>
+<div class="card"><h3>clawd-working-thinking</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      /* Slow, contemplative swaying */
+      .body-sway {
+        transform-origin: 7.5px 15px; /* Pivot at the base of the feet */
+        animation: sway 4s infinite ease-in-out;
+      }
+
+      /* Ground shadow shifting with the sway */
+      .shadow-sway {
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-shift 4s infinite ease-in-out;
+      }
+
+      /* Right arm raised and tapping the "chin" */
+      .arm-tap {
+        transform-origin: 14px 10px; /* Shoulder joint */
+        animation: tap-chin 0.8s infinite alternate ease-in-out;
+      }
+
+      /* Slow, thoughtful blinking */
+      .eyes-think {
+        transform-origin: 7.5px 7px;
+        animation: blink-think 4s infinite;
+      }
+
+      /* Loading dots appearing sequentially */
+      .dot { opacity: 0; }
+      .d1 { animation: load-dot-1 2s infinite; }
+      .d2 { animation: load-dot-2 2s infinite; }
+      .d3 { animation: load-dot-3 2s infinite; }
+
+      /* Keyframes */
+      @keyframes sway {
+        0%, 100% { transform: rotate(0deg) translate(0, 0); }
+        25% { transform: rotate(-3deg) translate(-1px, 0); }
+        75% { transform: rotate(3deg) translate(1px, 0); }
+      }
+
+      @keyframes shadow-shift {
+        0%, 100% { transform: translate(0, 0); }
+        25% { transform: translate(-1px, 0); }
+        75% { transform: translate(1px, 0); }
+      }
+
+      @keyframes tap-chin {
+        0% { transform: rotate(-125deg); }
+        100% { transform: rotate(-145deg); }
+      }
+
+      @keyframes blink-think {
+        0%, 46%, 54%, 100% { transform: scaleY(1); }
+        50% { transform: scaleY(0.1); } /* Single slow blink */
+      }
+
+      /* Sequential dot loading (0-20% empty, then dots appear one by one) */
+      @keyframes load-dot-1 {
+        0%, 20% { opacity: 0; }
+        21%, 100% { opacity: 1; }
+      }
+      @keyframes load-dot-2 {
+        0%, 40% { opacity: 0; }
+        41%, 100% { opacity: 1; }
+      }
+      @keyframes load-dot-3 {
+        0%, 60% { opacity: 0; }
+        61%, 100% { opacity: 1; }
+      }
+    </style>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" class="shadow-sway" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Pixel-Art Thinking Bubble (Hovering top right) -->
+  <g transform="translate(6, -7)">
+    <g class="think-bubble">
+      <!-- Bubble Cloud Base (White with slight opacity) -->
+      <g fill="#FFFFFF" opacity="0.9">
+        <rect x="2" y="1" width="8" height="7"/>
+        <rect x="1" y="2" width="10" height="5"/>
+        <rect x="3" y="0" width="6" height="9"/>
+        
+        <!-- Tail pointing down to Clawd -->
+        <rect x="2" y="7" width="2" height="2"/>
+        <rect x="1" y="9" width="1" height="1"/>
+      </g>
+
+      <!-- Animated Loading Dots -->
+      <g fill="#0082FC">
+        <rect class="dot d1" x="2.5" y="4" width="1" height="1"/>
+        <rect class="dot d2" x="5.5" y="4" width="1" height="1"/>
+        <rect class="dot d3" x="8.5" y="4" width="1" height="1"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- Animated Character Body -->
+  <g class="body-sway">
+    
+    <!-- Body Base Color Group -->
+    <g id="body-color-group" fill="#DE886D">
+      <!-- Static Legs -->
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+
+      <!-- Main Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      
+      <!-- Left Arm (Resting angled down) -->
+      <rect id="left-arm" x="0" y="9" width="2" height="2" transform="rotate(25 1 10)"/>
+
+      <!-- Right Arm (Raised, tapping chin) -->
+      <g class="arm-tap">
+        <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+      </g>
+    </g>
+    
+    <!-- Eyes Color Group (Looking up and to the right, towards the bubble) -->
+    <g class="eyes-think" fill="#000000">
+      <rect id="left-eye" x="5" y="7" width="1" height="2"/>
+      <rect id="right-eye" x="11" y="7" width="1" height="2"/>
+    </g>
+    
+  </g>
+</svg>
+</div><div class="meta">clawd-working-thinking.svg</div></div>
+<div class="card"><h3>clawd-working-typing</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      /* High-speed body jitter */
+      .body-jitter {
+        transform-origin: 7.5px 15px;
+        animation: jitter 0.08s infinite alternate ease-in-out;
+      }
+
+      /* Furious typing arms (rotating out and tapping) */
+      .arm-l-type {
+        transform-origin: 2px 10px; /* Shoulder joint */
+        animation: type-l 0.15s infinite ease-in-out;
+      }
+      .arm-r-type {
+        transform-origin: 13px 10px; /* Shoulder joint */
+        animation: type-r 0.12s infinite ease-in-out;
+      }
+
+      /* Eye tracking (reading lines of code quickly) */
+      .eyes-read {
+        animation: read-code 1.2s infinite;
+      }
+
+      /* Floating data packets */
+      .data-bit {
+        opacity: 0;
+        animation: float-data 1s infinite linear;
+      }
+      .d1 { animation-delay: 0.0s; transform-origin: -2px 10px; }
+      .d2 { animation-delay: 0.3s; transform-origin: 5px 12px; }
+      .d3 { animation-delay: 0.6s; transform-origin: 12px 11px; }
+      .d4 { animation-delay: 0.8s; transform-origin: 17px 9px; }
+      .d5 { animation-delay: 0.1s; transform-origin: 8px 10px; }
+      .d6 { animation-delay: 0.4s; transform-origin: 0px 11px; }
+      .d7 { animation-delay: 0.7s; transform-origin: 15px 12px; }
+
+      /* Laptop Logo Glow */
+      .logo-glow {
+        animation: logo-pulse 1.5s infinite alternate ease-in-out;
+      }
+
+      /* Keyframes */
+      @keyframes jitter {
+        0% { transform: translateY(0); }
+        100% { transform: translateY(0.5px); }
+      }
+
+      /* Arms point forward and tap rapidly */
+      @keyframes type-l {
+        0% { transform: rotate(70deg); }
+        25% { transform: rotate(110deg); }
+        50% { transform: rotate(80deg); }
+        75% { transform: rotate(100deg); }
+        100% { transform: rotate(70deg); }
+      }
+
+      @keyframes type-r {
+        0% { transform: rotate(-80deg); }
+        25% { transform: rotate(-100deg); }
+        50% { transform: rotate(-70deg); }
+        75% { transform: rotate(-110deg); }
+        100% { transform: rotate(-80deg); }
+      }
+
+      /* Discrete steps to look like reading text */
+      @keyframes read-code {
+        0%, 14% { transform: translate(-2px, 0); }
+        15%, 29% { transform: translate(-1px, 0); }
+        30%, 44% { transform: translate(0px, 0); }
+        45%, 59% { transform: translate(1px, 0); }
+        60%, 84% { transform: translate(2px, 0); }
+        85%, 100% { transform: translate(-2px, 0); } /* Carriage return snap back */
+      }
+
+      /* Packets float up and fade */
+      @keyframes float-data {
+        0% { transform: translateY(0) scale(0.5); opacity: 0; }
+        20% { opacity: 0.8; }
+        100% { transform: translateY(-15px) scale(1.2); opacity: 0; }
+      }
+
+      @keyframes logo-pulse {
+        0% { opacity: 0.4; }
+        100% { opacity: 1; }
+      }
+    </style>
+    
+    <!-- A small square to represent data/code -->
+    <g id="pixel-packet">
+      <rect x="0" y="0" width="1.5" height="1.5" />
+    </g>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Data Particles floating up from behind the laptop -->
+  <g class="data-particles" fill="#40C4FF">
+    <use href="#pixel-packet" class="data-bit d1" x="-2" y="12" />
+    <use href="#pixel-packet" class="data-bit d2" x="5" y="11" />
+    <use href="#pixel-packet" class="data-bit d3" x="12" y="13" />
+    <use href="#pixel-packet" class="data-bit d4" x="17" y="11" />
+    <use href="#pixel-packet" class="data-bit d5" x="8" y="10" />
+    <use href="#pixel-packet" class="data-bit d6" x="1" y="11" />
+    <use href="#pixel-packet" class="data-bit d7" x="15" y="12" />
+  </g>
+
+  <!-- Animated Character Body -->
+  <g class="body-jitter">
+    
+    <!-- Body Base Color Group -->
+    <g id="body-color-group" fill="#DE886D">
+      <!-- Static Legs -->
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+
+      <!-- Main Torso -->
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      
+      <!-- Typing Arms -->
+      <g class="arm-l-type">
+        <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      </g>
+      <g class="arm-r-type">
+        <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+      </g>
+    </g>
+    
+    <!-- Eyes Color Group (Squinting) -->
+    <g fill="#000000">
+      <g class="eyes-read">
+        <rect id="left-eye-squint" x="4" y="8.5" width="1" height="1"/>
+        <rect id="right-eye-squint" x="10" y="8.5" width="1" height="1"/>
+      </g>
+    </g>
+    
+  </g>
+
+  <!-- Pixel Laptop (facing Clawd, so we see the back of the screen) -->
+  <g id="laptop" transform="translate(3, 9.5)">
+    <!-- Laptop Base -->
+    <rect x="-0.5" y="5" width="10" height="1" fill="#546E7A" rx="0.5"/>
+    <!-- Screen Back -->
+    <rect x="0" y="0" width="9" height="5.5" fill="#78909C" rx="0.5"/>
+    <!-- Glowing Logo (Pixel) -->
+    <circle cx="4.5" cy="2.5" r="1.5" fill="#40C4FF" opacity="0.2" class="logo-glow"/>
+    <rect x="4" y="2" width="1" height="1" fill="#FFFFFF" class="logo-glow"/>
+  </g>
+
+</svg>
+</div><div class="meta">clawd-working-typing.svg</div></div>
+<div class="card"><h3>clawd-working-wizard</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -25 45 45" width="500" height="500">
+  <defs>
+    <style>
+      .body-magic {
+        transform-origin: 7.5px 15px;
+        animation: float-body 3s infinite ease-in-out;
+      }
+      .arm-wand {
+        transform-origin: 14px 10px;
+        animation: wave-wand 3s infinite ease-in-out;
+      }
+      .arm-l-magic {
+        transform-origin: 1px 10px;
+        animation: wave-magic 3s infinite ease-in-out;
+      }
+      .eyes-magic {
+        animation: blink-magic 3s infinite;
+      }
+      .magic-star {
+        opacity: 0;
+        animation: sparkle-magic 2s infinite ease-out;
+      }
+      .s1 { animation-delay: 0s; fill: #FFD700; }
+      .s2 { animation-delay: 0.5s; fill: #40C4FF; }
+      .s3 { animation-delay: 1s; fill: #B388FF; }
+      .s4 { animation-delay: 1.5s; fill: #FF8A80; }
+
+      @keyframes float-body {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-2px); }
+      }
+      @keyframes wave-wand {
+        0%, 100% { transform: rotate(-20deg); }
+        50% { transform: rotate(-120deg); }
+      }
+      @keyframes wave-magic {
+        0%, 100% { transform: rotate(20deg); }
+        50% { transform: rotate(120deg); }
+      }
+      @keyframes blink-magic {
+        0%, 40% { transform: scaleY(0.1); }
+        45%, 95% { transform: scaleY(1); }
+        100% { transform: scaleY(0.1); }
+      }
+      @keyframes sparkle-magic {
+        0% { transform: translate(14px, 4px) scale(0) rotate(0deg); opacity: 0; }
+        20% { opacity: 1; }
+        100% { transform: translate(14px, -15px) scale(1.5) rotate(180deg); opacity: 0; }
+      }
+    </style>
+    <g id="star">
+      <polygon points="0,-2 0.5,-0.5 2,0 0.5,0.5 0,2 -0.5,0.5 -2,0 -0.5,-0.5"/>
+    </g>
+  </defs>
+
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.4"/>
+
+  <!-- Magic Stars -->
+  <g>
+    <use href="#star" class="magic-star s1"/>
+    <use href="#star" class="magic-star s2" transform="translate(-10, 0)"/>
+    <use href="#star" class="magic-star s3" transform="translate(5, -5)"/>
+    <use href="#star" class="magic-star s4" transform="translate(-5, -10)"/>
+  </g>
+
+  <g class="body-magic">
+    <g id="legs" fill="#DE886D">
+      <rect x="3" y="13" width="1" height="2"/>
+      <rect x="5" y="13" width="1" height="2"/>
+      <rect x="9" y="13" width="1" height="2"/>
+      <rect x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="body-color-group" fill="#DE886D">
+      <rect x="2" y="6" width="11" height="7"/>
+      <g class="arm-l-magic"><rect x="0" y="9" width="2" height="2"/></g>
+      <g class="arm-wand">
+        <rect x="13" y="9" width="2" height="2"/>
+        <rect x="13.5" y="4" width="1" height="6" fill="#8D6E63"/> <!-- Wand -->
+        <rect x="13.5" y="4" width="1" height="1" fill="#FFD700"/> <!-- Wand Tip -->
+      </g>
+    </g>
+    
+    <g fill="#000000" class="eyes-magic" transform-origin="7.5px 9px">
+      <rect x="4" y="8" width="1" height="2"/>
+      <rect x="10" y="8" width="1" height="2"/>
+    </g>
+
+    <!-- Wizard Hat -->
+    <g transform="translate(7.5, 6)">
+      <polygon points="-4,0 4,0 0,-6" fill="#673AB7"/>
+      <rect x="-5" y="0" width="10" height="1" fill="#512DA8"/>
+      <!-- Star on hat -->
+      <polygon points="0,-3 0.5,-2.5 1.5,-2.5 0.75,-1.75 1,-0.5 0,-1.25 -1,-0.5 -0.75,-1.75 -1.5,-2.5 -0.5,-2.5" fill="#FFC107"/>
+    </g>
+  </g>
+</svg></div><div class="meta">clawd-working-wizard.svg</div></div>
+<div class="card"><h3>clawd-happy-dance</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 15 16" width="300" height="320">
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+  
+  <g id="master-group">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7" />
+      
+      <rect id="left-arm" x="0" y="9" width="2" height="2">
+        <animate attributeName="y" values="8;9;10;9;8" dur="0.8s" repeatCount="indefinite" calcMode="discrete" />
+      </rect>
+      <rect id="right-arm" x="13" y="9" width="2" height="2">
+        <animate attributeName="y" values="10;9;8;9;10" dur="0.8s" repeatCount="indefinite" calcMode="discrete" />
+      </rect>
+      
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2">
+        <animate attributeName="height" values="2;1;2" dur="0.3s" repeatCount="indefinite" calcMode="discrete" />
+      </rect>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="1">
+        <animate attributeName="height" values="1;2;1" dur="0.3s" repeatCount="indefinite" calcMode="discrete" />
+      </rect>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="1">
+        <animate attributeName="height" values="1;2;1" dur="0.3s" repeatCount="indefinite" calcMode="discrete" />
+      </rect>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2">
+        <animate attributeName="height" values="2;1;2" dur="0.3s" repeatCount="indefinite" calcMode="discrete" />
+      </rect>
+    </g>
+    
+    <g id="eyes-color-group" fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1" height="2">
+        <animate attributeName="height" values="2;1;2;1;2" dur="0.5s" repeatCount="indefinite" calcMode="discrete" />
+      </rect>
+      <rect id="right-eye" x="10" y="8" width="1" height="2">
+        <animate attributeName="height" values="2;1;2;1;2" dur="0.5s" repeatCount="indefinite" calcMode="discrete" />
+      </rect>
+    </g>
+  </g>
+</svg></div><div class="meta">dont-use\clawd-happy-dance.svg</div></div>
+<div class="card"><h3>clawd-jumping</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 15 16" width="300" height="320">
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000">
+    <animate id="shadow-opacity-animation" attributeName="opacity" values="0.5; 0.5; 0.4; 0.2; 0.1; 0.3; 0.5; 0.5" dur="0.8s" repeatCount="indefinite" calcMode="discrete"/>
+    <animate id="shadow-width-animation" attributeName="width" values="9; 11; 9; 7; 5; 7; 9; 9" dur="0.8s" repeatCount="indefinite" calcMode="discrete"/>
+    <animate id="shadow-x-animation" attributeName="x" values="3; 2; 3; 4; 5; 4; 3; 3" dur="0.8s" repeatCount="indefinite" calcMode="discrete"/>
+  </rect>
+
+  <g id="master-jumping-group">
+    <animateTransform attributeName="transform" type="translate" values="0,0; 0,1; 0,-1; 0,-3; 0,-4; 0,-2; 0,0; 0,0" dur="0.8s" repeatCount="indefinite" calcMode="discrete"/>
+    
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      
+      <rect id="left-arm" x="0" y="9" width="2" height="2">
+        <animate attributeName="y" values="9; 10; 9; 7; 6; 7; 9; 9" dur="0.8s" repeatCount="indefinite" calcMode="discrete"/>
+      </rect>
+      
+      <rect id="right-arm" x="13" y="9" width="2" height="2">
+        <animate attributeName="y" values="9; 10; 9; 7; 6; 7; 9; 9" dur="0.8s" repeatCount="indefinite" calcMode="discrete"/>
+      </rect>
+      
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2">
+        <animate attributeName="height" values="2; 1; 2; 1; 1; 2; 2; 2" dur="0.8s" repeatCount="indefinite" calcMode="discrete"/>
+      </rect>
+      
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="1">
+        <animate attributeName="height" values="2; 0; 1; 1; 1; 2; 2; 2" dur="0.8s" repeatCount="indefinite" calcMode="discrete"/>
+      </rect>
+      
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="1">
+        <animate attributeName="height" values="2; 0; 1; 1; 1; 2; 2; 2" dur="0.8s" repeatCount="indefinite" calcMode="discrete"/>
+      </rect>
+      
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2">
+        <animate attributeName="height" values="2; 1; 2; 1; 1; 2; 2; 2" dur="0.8s" repeatCount="indefinite" calcMode="discrete"/>
+      </rect>
+    </g>
+    
+    <g id="eyes-color-group" fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1" height="2">
+        <animate attributeName="height" values="2; 1; 2; 2; 2; 2; 2; 2" dur="0.8s" repeatCount="indefinite" calcMode="discrete"/>
+      </rect>
+      
+      <rect id="right-eye" x="10" y="8" width="1" height="2">
+        <animate attributeName="height" values="2; 1; 2; 2; 2; 2; 2; 2" dur="0.8s" repeatCount="indefinite" calcMode="discrete"/>
+      </rect>
+    </g>
+  </g>
+</svg></div><div class="meta">dont-use\clawd-jumping.svg</div></div>
+<div class="card"><h3>clawd-moving-legs</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 15 16" width="300" height="320">
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+  
+  <g id="master-group">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+      
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2">
+        <animate attributeName="height" values="2; 1; 2" dur="0.6s" repeatCount="indefinite" calcMode="discrete"/>
+      </rect>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="1">
+        <animate attributeName="height" values="1; 2; 1" dur="0.6s" repeatCount="indefinite" calcMode="discrete"/>
+      </rect>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="1">
+        <animate attributeName="height" values="1; 2; 1" dur="0.6s" repeatCount="indefinite" calcMode="discrete"/>
+      </rect>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2">
+        <animate attributeName="height" values="2; 1; 2" dur="0.6s" repeatCount="indefinite" calcMode="discrete"/>
+      </rect>
+    </g>
+    
+    <g id="eyes-color-group" fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+</svg></div><div class="meta">dont-use\clawd-moving-legs.svg</div></div>
+<div class="card"><h3>mini-crab-typing</h3><div class="preview"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 12 12" width="200" height="200">
+  <defs>
+    <style>
+      .mcb { animation: mc-bounce .35s infinite alternate ease-in-out; }
+      .mc-al { transform-origin: .3px 4.5px; animation: mc-tl .2s infinite ease-in-out; }
+      .mc-ar { transform-origin: 6.2px 4.5px; animation: mc-tr .18s infinite ease-in-out; }
+      .mc-data { opacity: 0; animation: mc-float 1.2s infinite linear; }
+      @keyframes mc-bounce { 0% { transform: translateY(0); } 100% { transform: translateY(-.6px); } }
+      @keyframes mc-tl { 0%,100% { transform: rotate(0); } 50% { transform: rotate(35deg); } }
+      @keyframes mc-tr { 0%,100% { transform: rotate(0); } 50% { transform: rotate(-35deg); } }
+      @keyframes mc-float { 0% { transform: translateY(0) scale(.4); opacity: 0; } 20% { opacity: .7; } 100% { transform: translateY(-5px) scale(.7); opacity: 0; } }
+    </style>
+  </defs>
+
+  <!-- Shadow -->
+  <rect x="1.5" y="8.5" width="4" height=".5" fill="#000" opacity=".25"/>
+
+  <!-- Animated body -->
+  <g class="mcb">
+    <!-- Legs -->
+    <g fill="#DE886D">
+      <rect x="1.5" y="7" width=".8" height="1.5"/>
+      <rect x="2.7" y="7" width=".8" height="1.5"/>
+      <rect x="3.8" y="7" width=".8" height="1.5"/>
+      <rect x="5.0" y="7" width=".8" height="1.5"/>
+    </g>
+
+    <!-- Body -->
+    <rect x="1" y="3.5" width="5.3" height="3.5" fill="#DE886D"/>
+
+    <!-- Arms (typing) -->
+    <g class="mc-al"><rect x="-.5" y="4" width="1.3" height="1.2" fill="#DE886D"/></g>
+    <g class="mc-ar"><rect x="6.5" y="4" width="1.3" height="1.2" fill="#DE886D"/></g>
+
+    <!-- Eyes -->
+    <rect x="2.2" y="4.2" width=".8" height="1" fill="#000"/>
+    <rect x="4.3" y="4.2" width=".8" height="1" fill="#000"/>
+  </g>
+
+  <!-- Floating data particle -->
+  <rect class="mc-data" x="3" y="1.5" width="1.2" height="1.2" fill="#0082FC"/>
+</svg>
+</div><div class="meta">mini-crab-typing.svg</div></div>
+</div>
