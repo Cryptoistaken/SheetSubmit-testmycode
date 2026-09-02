@@ -179,6 +179,35 @@ function cmdHincrby(k: string, field: string, inc: number): number {
 function cmdHget(k: string, field: string): string | null { const h = store[k] as Record<string,string>; return h && typeof h==="object" && !(h instanceof Set) && !Array.isArray(h) ? (h[field]??null) : null; }
 function cmdHset(k: string, field: string, val: string): number { const h = (store[k] && typeof store[k]==="object" && !(store[k] instanceof Set) && !Array.isArray(store[k])) ? store[k] as Record<string,string> : {} as Record<string,string>; const isNew = !(field in h); h[field]=val; store[k]=h; bump(k); return isNew?1:0; }
 
+function cmdHgetall(k: string): Record<string, string> {
+  const h = store[k] && typeof store[k] === "object" && !(store[k] instanceof Set) && !Array.isArray(store[k]) ? (store[k] as Record<string, string>) : {};
+  return { ...h };
+}
+function cmdHlen(k: string): number {
+  return Object.keys(cmdHgetall(k)).length;
+}
+function cmdHmset(k: string, obj: Record<string, string>): "OK" {
+  const h = store[k] && typeof store[k] === "object" && !(store[k] instanceof Set) && !Array.isArray(store[k]) ? (store[k] as Record<string, string>) : {};
+  for (const [f, v] of Object.entries(obj)) h[f] = String(v);
+  store[k] = h;
+  bump(k);
+  return "OK";
+}
+function cmdZadd(k: string, score: string, member: string): number {
+  const z = store[k] instanceof Map ? (store[k] as Map<string, number>) : new Map<string, number>();
+  const added = z.has(member) ? 0 : 1;
+  z.set(member, Number(score));
+  store[k] = z;
+  bump(k);
+  return added;
+}
+function cmdZrevrange(k: string, start: number, stop: number): string[] {
+  const z = store[k] instanceof Map ? (store[k] as Map<string, number>) : new Map<string, number>();
+  const members = [...z.entries()].sort((a, b) => b[1] - a[1]).map((m) => m[0]);
+  const [s, e] = norm(start, stop, members.length);
+  return e < s ? [] : members.slice(s, e + 1);
+}
+
 function cmdScan(cursor: string, ...args: unknown[]): [string, string[]] {
   let pattern = "*";
   for (let i = 0; i + 1 < args.length; i += 2) {
@@ -227,6 +256,16 @@ function applyCmd(cmd: string, args: unknown[]): unknown {
       return cmdHget(String(args[0]), String(args[1]));
     case "hset":
       return cmdHset(String(args[0]), String(args[1]), String(args[2]));
+    case "hgetall":
+      return cmdHgetall(String(args[0]));
+    case "hlen":
+      return cmdHlen(String(args[0]));
+    case "hmset":
+      return cmdHmset(String(args[0]), args[1] as Record<string, string>);
+    case "zadd":
+      return cmdZadd(String(args[0]), String(args[1]), String(args[2]));
+    case "zrevrange":
+      return cmdZrevrange(String(args[0]), Number(args[1]), Number(args[2]));
     case "scan":
       return cmdScan(String(args[0]), ...args);
     default:
@@ -253,6 +292,11 @@ const CHAINABLE_CMDS = [
   "hincrby",
   "hget",
   "hset",
+  "hgetall",
+  "hlen",
+  "hmset",
+  "zadd",
+  "zrevrange",
   "scan",
 ];
 
@@ -308,6 +352,11 @@ export const redis = {
   hincrby: async (k: string, f: string, v: number) => cmdHincrby(k, f, v),
   hget: async (k: string, f: string) => cmdHget(k, f),
   hset: async (k: string, f: string, v: string) => cmdHset(k, f, v),
+  hgetall: async (k: string) => cmdHgetall(k),
+  hlen: async (k: string) => cmdHlen(k),
+  hmset: async (k: string, obj: Record<string, string>) => cmdHmset(k, obj),
+  zadd: async (k: string, score: string, member: string) => cmdZadd(k, score, member),
+  zrevrange: async (k: string, s: number, e: number) => cmdZrevrange(k, s, e),
   scan: async (cursor: string, ...args: unknown[]) => cmdScan(cursor, ...args),
   watch: async (...keys: string[]) => {
     for (const k of keys) {
@@ -371,4 +420,71 @@ const fakeExports = { redis, key, getJSON, setJSON, setJSONex, delKey };
 export function installRedisMock(): void {
   mock.module(path.join(import.meta.dir, "..", "src", "services", "redis"), () => fakeExports);
   mock.module("../src/services/redis", () => fakeExports);
+}
+
+// Shared middleware/auth mock for route-level tests (append.test.ts, pools
+// routes). bun keeps one mock per module path per process, so every test file
+// must register an identical factory or the last registration wins and earlier
+// files break with missing exports (e.g. isAdmin/requireAdmin).
+export function installAuthMock(): void {
+  const authMock = {
+    isAdmin: (userId: string | number) => String(userId) === "admin1",
+    requireAuth: async (req: import("express").Request, _res: import("express").Response, next: () => void) => {
+      req.userId = String(req.headers["x-user-id"] || "user1");
+      next();
+    },
+    requireAdmin: async (req: import("express").Request, res: import("express").Response, next: () => void) => {
+      if (String(req.userId) !== "admin1") {
+        res.status(403).json({ error: "admin access required" });
+        return;
+      }
+      next();
+    },
+    requireFileAccess: async (req: import("express").Request, res: import("express").Response, next: () => void) => {
+      const raw = store[key("files:" + req.userId)];
+      let files: import("../src/lib/shared").StoredFile[] = [];
+      if (typeof raw === "string") {
+        try {
+          files = JSON.parse(raw) as import("../src/lib/shared").StoredFile[];
+        } catch {
+          files = [];
+        }
+      }
+      const file = files.find((f) => f.id === req.params.id);
+      if (!file) {
+        res.status(404).json({ error: "file not found" });
+        return;
+      }
+      (req as import("express").Request & { file: import("../src/lib/shared").StoredFile }).file = file;
+      next();
+    },
+    migrateListKey: migrateListKeyHelper,
+    migrateLogKey: migrateListKeyHelper,
+  };
+  mock.module(path.join(import.meta.dir, "..", "src", "middleware", "auth"), () => authMock);
+  mock.module("../src/middleware/auth", () => authMock);
+}
+
+// Real migration for the auth mock (mirrors backend/src/middleware/auth.ts):
+// converts a legacy string-typed key (e.g. undo/redo JSON blob) to a list.
+async function migrateListKeyHelper(listKey: string): Promise<void> {
+  const type = await redis.type(listKey);
+  if (type === "string") {
+    const old = await redis.get(listKey);
+    if (old) {
+      try {
+        const parsed = JSON.parse(old);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const p = redis.pipeline();
+          p.del(listKey);
+          parsed.forEach((l) => p.rpush(listKey, JSON.stringify(l)));
+          await p.exec();
+        } else {
+          await redis.del(listKey);
+        }
+      } catch {
+        await redis.del(listKey);
+      }
+    }
+  }
 }
