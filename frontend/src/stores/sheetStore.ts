@@ -2252,9 +2252,9 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     const idx = get().bubbleGetActiveRow();
     if (s.rows[idx].cookies) {
       // Row already has a cookie — this paste was NOT saved (it's a cookie,
-      // not a 2FA key). Say so explicitly instead of reusing the "please
-      // paste a 2FA key" prompt, which reads as if the paste succeeded.
-      toast("Already has a cookie — paste a 2FA key instead");
+      // not a 2FA key). Keep it short: the bubble popup has no room for a
+      // long toast.
+      toast("Has cookie — need 2FA");
       return;
     }
     const rows = s.rows.slice();
@@ -2297,9 +2297,9 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
     const idx = get().bubbleGetActiveRow();
     if (s.rows[idx].twofakey) {
       // Row already has a 2FA key — this paste was NOT saved (it's a key,
-      // not a cookie). Say so explicitly instead of reusing the "please
-      // paste a cookie" prompt, which reads as if the paste succeeded.
-      toast("Already has a 2FA key — paste a cookie instead");
+      // not a cookie). Keep it short: the bubble popup has no room for a
+      // long toast.
+      toast("Has 2FA — need cookie");
       return;
     }
     const rows = s.rows.slice();
