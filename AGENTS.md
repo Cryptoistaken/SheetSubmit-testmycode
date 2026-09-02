@@ -111,4 +111,5 @@ public/sw.js, logo-*.svg, favicon-*.svg
 
 | Date | Commit | Notes |
 |------|--------|-------|
+| 2026-09-03 | `fb8df28` | fix snapshot hash — `17a586d` was pre-push, now `fb8df28` is HEAD (same content) |
 | 2026-09-03 | `17a586d` | Pools implemented — auto-pooling + claim/ledger/revert, `PLAN.md` removed, AGENTS map refreshed (pre-push snapshot) |
