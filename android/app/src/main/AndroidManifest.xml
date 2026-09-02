@@ -52,7 +52,7 @@
 
         <provider
             android:name=".ApkProvider"
-            android:authorities="com.sheetsubmit.app.apk"
+            android:authorities="org.brilliant.android.apk"
             android:exported="false"
             android:grantUriPermissions="true" />
 
