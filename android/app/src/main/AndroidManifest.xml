@@ -25,7 +25,8 @@
 
     <application
         android:label="@string/app_name"
-        android:icon="@drawable/logo_app_icon"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:theme="@style/Theme.SheetSubmit"
         android:usesCleartextTraffic="false"
         android:supportsRtl="true">
