@@ -9,7 +9,7 @@ android {
     defaultConfig {
         applicationId "com.sheetsubmit.app"
         minSdk 26
-        targetSdk 31
+        targetSdk 29
         def buildNumber = System.getenv("VERSION_CODE") ? Integer.parseInt(System.getenv("VERSION_CODE")) : 1
         versionCode buildNumber
         // Version name follows the CI run number so each build is identifiable
