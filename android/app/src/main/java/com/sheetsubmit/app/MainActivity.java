@@ -281,7 +281,7 @@ public class MainActivity extends Activity {
                 SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                 JSONObject o = new JSONObject();
                 try {
-                    o.put("icon", p.getString("bubble_icon", "claude"));
+                    o.put("icon", p.getString("bubble_icon", "claudeCodePlayful"));
                     o.put("color", p.getString("bubble_color", "#ef4444"));
                     o.put("size", p.getInt("bubble_size", 60));
                     if (p.contains("bubble_x")) o.put("x", p.getInt("bubble_x", 0)); else o.put("x", JSONObject.NULL);
@@ -295,7 +295,7 @@ public class MainActivity extends Activity {
                 try {
                     JSONObject o = new JSONObject(json == null ? "{}" : json);
                     SharedPreferences.Editor ed = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
-                    if (o.has("icon")) ed.putString("bubble_icon", o.optString("icon", "claude"));
+                    if (o.has("icon")) ed.putString("bubble_icon", o.optString("icon", "claudeCodePlayful"));
                     if (o.has("color")) ed.putString("bubble_color", o.optString("color", "#ef4444"));
                     if (o.has("size")) ed.putInt("bubble_size", o.optInt("size", 60));
                     if (o.has("x") && !o.isNull("x")) ed.putInt("bubble_x", o.optInt("x", 0));

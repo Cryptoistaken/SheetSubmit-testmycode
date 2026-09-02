@@ -174,7 +174,7 @@ private String claudeCodeHtml(String color) {
     private void refreshBubbleConfig() {
         try {
             SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-            String icon = p.getString("bubble_icon", "logo");
+            String icon = p.getString("bubble_icon", "claudeCodePlayful");
             String color = p.getString("bubble_color", "#ef4444");
             int sz = p.getInt("bubble_size", 60);
             int col = Color.parseColor(color);
@@ -299,7 +299,7 @@ private String claudeCodeHtml(String color) {
 
     private void addBubbleToWindow() {
         SharedPreferences cfg = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String cfgIcon = cfg.getString("bubble_icon", "claude");
+        String cfgIcon = cfg.getString("bubble_icon", "claudeCodePlayful");
         String cfgColor = cfg.getString("bubble_color", "#ef4444");
         int cfgSize = cfg.getInt("bubble_size", 60);
         int size = dp(cfgSize);

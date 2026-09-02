@@ -5,7 +5,7 @@ import { useToast } from "@/lib/toast";
 type IconId = "claude" | "claudeCode" | "claudeCodePlayful" | "pacman" | "logo";
 interface BubbleCfg { icon: IconId; color: string; size: number; x: number | null; y: number | null; }
 
-const DEFAULT: BubbleCfg = { icon: "logo", color: "#ef4444", size: 60, x: null, y: null };
+const DEFAULT: BubbleCfg = { icon: "claudeCodePlayful", color: "#ef4444", size: 60, x: null, y: null };
 const COLORS = [
   "#ef4444", // red-500 — DEFAULT
   "#f97316", // orange-500

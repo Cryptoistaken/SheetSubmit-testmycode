@@ -798,7 +798,7 @@ const REG={idle:REG_IDLE,tap:REG_TAP,long:REG_LONG,drag:REG_DRAG};
 const PLAY={idle:PLAY_IDLE,tap:PLAY_TAP,long:PLAY_LONG,drag:PLAY_DRAG};
 function render(){
   const q=new URLSearchParams(location.search);
-  const icon=(q.get('icon')||'logo');
+  const icon=(q.get('icon')||'claudeCodePlayful');
   const color=(q.get('color')||'#ef4444');
   const a=document.getElementById('a');
   a.style.color=color;
