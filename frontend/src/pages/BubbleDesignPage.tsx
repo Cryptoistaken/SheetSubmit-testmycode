@@ -304,7 +304,7 @@ export default function BubbleDesignPage(){
                   width:64,height:64,borderRadius:"var(--r)",border: m.id===state.icon ? "1.5px solid var(--text)" : "1px solid var(--border)",
                   background: m.id===state.icon ? "var(--bg2)" : "var(--bg)", display:"grid",placeItems:"center", cursor:"pointer", transition:"border-color 0.12s, background 0.12s"
                 }}>
-                <div style={{width:(m.id==="claudeCode"||m.id==="claudeCodePlayful")?40:28,height:(m.id==="claudeCode"||m.id==="claudeCodePlayful")?40:28,color:state.color,display:"grid",placeItems:"center",transform:(m.id==="claudeCode"||m.id==="claudeCodePlayful")?"scale(1.35)":"none",transformOrigin:"center"}} dangerouslySetInnerHTML={{__html: m.id==="claudeCodePlayful" ? CLAUDE_PLAYFUL_SVG : m.id==="claudeCode" ? CLAUDE_REG_SVG : (ICONS[m.id] ?? ICON_CLAUDE)}} />
+                <div style={{width:(m.id==="claudeCode"||m.id==="claudeCodePlayful")?42:28,height:(m.id==="claudeCode"||m.id==="claudeCodePlayful")?42:28,color:state.color,display:"grid",placeItems:"center",transform:(m.id==="claudeCode"||m.id==="claudeCodePlayful")?"scale(1.85)":"none",transformOrigin:"center"}} dangerouslySetInnerHTML={{__html: m.id==="claudeCodePlayful" ? CLAUDE_PLAYFUL_SVG : m.id==="claudeCode" ? CLAUDE_REG_SVG : (ICONS[m.id] ?? ICON_CLAUDE)}} />
               </button>
             ))}
           </div>
