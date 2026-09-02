@@ -813,18 +813,6 @@ function render(){
     const M=icon==='claudeCodePlayful'?PLAY:REG;
     a.innerHTML='<div id="idle">'+M.idle+'</div><div id="tap" style="display:none">'+M.tap+'</div><div id="long" style="display:none">'+M.long+'</div><div id="drag" style="display:none">'+M.drag+'</div>';
     a.querySelectorAll('[fill="#DE886D"]').forEach(e=>e.setAttribute('fill','currentColor'));
-    // Normalize all states to same visual size as idle — viewBoxes differ (e.g. 20x18 vs 24x30), so same CSS scale makes some look smaller
-    try{
-      const base = a.querySelector('#idle svg');
-      if(base){
-        const vb=base.getAttribute('viewBox');const p=vb? vb.split(/[\s,]+/).map(Number):null;const baseMax=p&&p.length>=4?Math.max(p[2],p[3]):20;
-        ['idle','tap','long','drag'].forEach(id=>{
-          const svg=a.querySelector('#'+id+' svg'); if(!svg) return;
-          const v=svg.getAttribute('viewBox'); const q=v? v.split(/[\s,]+/).map(Number):null; const max=q&&q.length>=4?Math.max(q[2],q[3]):baseMax;
-          const scale=1.25*max/baseMax; svg.style.transform='scale('+scale.toFixed(3)+')';
-        });
-      }
-    }catch(e){}
   } else {
     const html=MAP[icon]||MAP.logo;
     a.innerHTML=html;
