@@ -2254,7 +2254,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       // Row already has a cookie — this paste was NOT saved (it's a cookie,
       // not a 2FA key). Keep it short: the bubble popup has no room for a
       // long toast.
-      toast("Has cookie — need 2FA");
+      toast("Need 2FA");
       return;
     }
     const rows = s.rows.slice();
@@ -2299,7 +2299,7 @@ export const useSheetStore = create<SheetState>()((set, get) => ({
       // Row already has a 2FA key — this paste was NOT saved (it's a key,
       // not a cookie). Keep it short: the bubble popup has no room for a
       // long toast.
-      toast("Has 2FA — need cookie");
+      toast("Need cookie");
       return;
     }
     const rows = s.rows.slice();
