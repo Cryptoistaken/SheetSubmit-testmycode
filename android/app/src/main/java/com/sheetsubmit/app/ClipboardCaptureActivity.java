@@ -51,6 +51,10 @@ public class ClipboardCaptureActivity extends Activity {
             // without focus — acceptable
         } finally {
             finish();
+            // Suppress the close transition too — paired with
+            // FLAG_ACTIVITY_NO_ANIMATION on the launch intent this makes the whole
+            // in-and-out invisible instead of flashing like the app reopened.
+            overridePendingTransition(0, 0);
         }
     }
 }

@@ -1,7 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<style>html,body{margin:0;background:transparent;overflow:hidden;width:100%;height:100%}#a{width:100%;height:100%;display:grid;place-items:center}#a svg{width:100%;height:100%;display:block}#idle svg{transform:scale(1.25);transform-origin:center}#tap svg{transform:scale(1.45);transform-origin:center}#long svg{transform:scale(1.35);transform-origin:center}#drag svg{transform:scale(1.4);transform-origin:center}</style>
+<style>html,body{margin:0;background:transparent;overflow:hidden;width:100%;height:100%}#a{width:var(--box,100%);height:var(--box,100%);display:grid;place-items:center}#a svg{width:100%;height:100%;display:block}#idle svg{transform:scale(1.25);transform-origin:center}#tap svg{transform:scale(1.45);transform-origin:center}#long svg{transform:scale(1.35);transform-origin:center}#drag svg{transform:scale(1.4);transform-origin:center}</style>
 <div id="a"></div>
 <script>
 const ICON_CLAUDE=`<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><rect width="1024" height="1024" rx="230" fill="currentColor"/><g fill="#111111"><rect x="250" y="350" width="120" height="240" rx="20"/><rect x="650" y="350" width="120" height="240" rx="20"/></g><g fill="#FFFFFF"><rect x="270" y="380" width="40" height="60" rx="10"/><rect x="670" y="380" width="40" height="60" rx="10"/></g><path d="M -50 600 L 150 600 L 150 800 L -50 800 Z" fill="#C46044"/><path d="M 874 600 L 1074 600 L 1074 800 L 874 800 Z" fill="#C46044"/></svg>`;
@@ -801,8 +801,14 @@ function render(){
   const q=new URLSearchParams(location.search);
   const icon=(q.get('icon')||'claudeCodePlayful');
   const color=(q.get('color')||'#ef4444');
+  const box=q.get('box');
   const a=document.getElementById('a');
   a.style.color=color;
+  // Native passes box=<icon size as % of this now-larger WebView> so the
+  // animated frames (which intentionally scale/translate past the icon's
+  // rest size) have real headroom instead of being clipped at the WebView's
+  // own edge — see FloatingBubbleService's windowSize-sized WebView.
+  if(box) document.documentElement.style.setProperty('--box', box+'%');
   if(icon==='claudeCode'||icon==='claudeCodePlayful'){
     const M=icon==='claudeCodePlayful'?PLAY:REG;
     a.innerHTML='<div id="idle">'+M.idle+'</div><div id="tap" style="display:none">'+M.tap+'</div><div id="long" style="display:none">'+M.long+'</div><div id="drag" style="display:none">'+M.drag+'</div>';
