@@ -5,7 +5,8 @@ import { useToast } from "@/lib/toast";
 type IconId = "claude" | "claudeCode" | "claudeCodePlayful" | "pacman" | "logo" | "appIcon";
 interface BubbleCfg { icon: IconId; color: string; size: number; x: number | null; y: number | null; }
 
-const DEFAULT: BubbleCfg = { icon: "claudeCodePlayful", color: "#ef4444", size: 60, x: null, y: null };
+const ICON_TRUE: Record<IconId,string> = { logo:"#111111", appIcon:"#111111", claude:"#DE886D", pacman:"#eab308", claudeCode:"#DE886D", claudeCodePlayful:"#DE886D" };
+const DEFAULT: BubbleCfg = { icon: "claudeCodePlayful", color: "#DE886D", size: 60, x: null, y: null };
 const COLORS = [
   "#ef4444", // red-500 — DEFAULT
   "#f97316", // orange-500
@@ -319,6 +320,10 @@ export default function BubbleDesignPage(){
             <button aria-label="Custom" title="Custom" onClick={()=>{ setCustomOpen(o=>!o); setCpText(state.color); }}
               style={{height:38,display:"grid",placeItems:"center",background:"var(--bg)",border:"1px solid var(--border)",cursor:"pointer"}}>
               <span style={{width:14,height:14,background:"conic-gradient(from 0deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#8b5cf6,#ef4444)",border:"1px solid rgba(0,0,0,.12)",display:"block"}}/>
+            </button>
+            <button aria-label="Actual" title={`Actual ${ICON_TRUE[state.icon]}`} onClick={()=>update({color: ICON_TRUE[state.icon]})}
+              style={{height:38,display:"grid",placeItems:"center",background:ICON_TRUE[state.icon],border: ICON_TRUE[state.icon].toLowerCase()===state.color.toLowerCase() ? "1.5px solid var(--text)" : "1px solid rgba(0,0,0,0.06)",cursor:"pointer",outline: ICON_TRUE[state.icon].toLowerCase()===state.color.toLowerCase() ? "1px solid var(--text)" : "none",outlineOffset:-2}}>
+              <span style={{fontSize:10,fontWeight:800,color:"#fff",textShadow:"0 1px 2px rgba(0,0,0,.6)",lineHeight:1}}>A</span>
             </button>
             {COLORS.map(c=>(
               <button key={c} aria-label={c} title={c} onClick={()=>update({color:c.toLowerCase()})}
