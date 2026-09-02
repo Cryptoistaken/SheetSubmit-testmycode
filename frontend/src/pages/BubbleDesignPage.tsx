@@ -299,7 +299,7 @@ export default function BubbleDesignPage(){
           <div style={{fontSize:12,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",color:"var(--text3)",marginBottom:12}}>Icon</div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             {([
-              {id:"logo" as IconId,label:"Logo"},{id:"appIcon" as IconId,label:"App Icon"},{id:"claude" as IconId,label:"Claude"},{id:"claudeCode" as IconId,label:"Claude Code · Regular"},{id:"claudeCodePlayful" as IconId,label:"Claude Code · Playful"},{id:"pacman" as IconId,label:"Pac-Man"},
+              {id:"logo" as IconId,label:"Logo"},{id:"appIcon" as IconId,label:"App Icon"},{id:"pacman" as IconId,label:"Pac-Man"},{id:"claude" as IconId,label:"Claude"},{id:"claudeCode" as IconId,label:"Claude Code · Regular"},{id:"claudeCodePlayful" as IconId,label:"Claude Code · Playful"},
             ]).map(m=>(
               <button key={m.id} onClick={()=>update({icon:m.id})} title={m.label} aria-label={m.label}
                 style={{
