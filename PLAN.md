@@ -180,7 +180,7 @@ Topbar tabs: add `Pools` between Archive and Admin. `Pools` tab is admin-only (h
 - `redeploy.bat` (both images), verify prod isolation (test bot token only), docs.
 
 ## 5. Handoff
-- **Current state (2026-09-01):** Pools spec drafted (PLAN.md §4.1 + `pools-spec.html`). No code changed yet. No git init. `backend/.env` has test bot token (do not use prod token).
+- **Current state (2026-09-02):** Pools implemented (services/pools.ts + routes/pools.ts). Backend test suite covers it: `test/pools-service.test.ts` (classifyRow, handleFileSave auto-pooling, promotion, taken-blocklist, per-password isolation) and `test/pools-routes.test.ts` (claim/revert over HTTP). `bun test` green. `backend/.env` has test bot token (do not use prod token).
 - **Next step:** Review `pools-spec.html` in browser, confirm pool names/tiers and quantity UX, then Phase 1 demo.
 - **Gotchas:**
   - `npx shadcn add` writes to `frontend/@/` — move to `src/` and delete `@/`.
@@ -189,6 +189,7 @@ Topbar tabs: add `Pools` between Archive and Admin. `Pools` tab is admin-only (h
   - Android CI only — never build locally.
   - Existing file type is single `fb_cookie` — pools will need either new FileTypes or treat pools as orthogonal to FileType (row-level pool tag). Spec proposes orthogonal tagging (simpler, no FileType explosion).
   - `getDedupKey` currently only for `fb_cookie` by `uid`/`c_user` — reuse for pool dedup.
+  - Backend tests: bun keeps one `mock.module` registry per process — two test files mocking the same module path must register an IDENTICAL factory (see `installAuthMock()`/`redis-mock.ts`), or the last registration wins and earlier files crash with missing exports.
 
 ## 6. Decisions log
 | Date | Decision | Why |

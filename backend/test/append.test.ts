@@ -5,66 +5,11 @@
 // HTTP server so handler wiring (status codes, response shape) is verified.
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import express from "express";
-import type { NextFunction, Request, Response } from "express";
-import path from "node:path";
 import type { StoredFile } from "../src/lib/shared";
-import { fakeSet, installRedisMock, key, redis, resetStore, store } from "./redis-mock";
+import { fakeSet, installAuthMock, installRedisMock, key, redis, resetStore, store } from "./redis-mock";
 
 installRedisMock();
-
-// Real migration for the auth mock (mirrors backend/src/middleware/auth.ts):
-// converts a legacy string-typed key (e.g. undo/redo JSON blob) to a list.
-async function migrateListKey(listKey: string): Promise<void> {
-  const type = await redis.type(listKey);
-  if (type === "string") {
-    const old = await redis.get(listKey);
-    if (old) {
-      try {
-        const parsed = JSON.parse(old);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const p = redis.pipeline();
-          p.del(listKey);
-          parsed.forEach((l) => p.rpush(listKey, JSON.stringify(l)));
-          await p.exec();
-        } else {
-          await redis.del(listKey);
-        }
-      } catch {
-        await redis.del(listKey);
-      }
-    }
-  }
-}
-
-const authMock = {
-  requireAuth: async (req: Request, _res: Response, next: NextFunction) => {
-    req.userId = String(req.headers["x-user-id"] || "user1");
-    next();
-  },
-  requireFileAccess: async (req: Request, res: Response, next: NextFunction) => {
-    const raw = store[key("files:" + req.userId)];
-    let files: StoredFile[] = [];
-    if (typeof raw === "string") {
-      try {
-        files = JSON.parse(raw) as StoredFile[];
-      } catch {
-        files = [];
-      }
-    }
-    const file = files.find((f) => f.id === req.params.id);
-    if (!file) {
-      res.status(404).json({ error: "file not found" });
-      return;
-    }
-    req.file = file;
-    next();
-  },
-  migrateListKey,
-  migrateLogKey: migrateListKey,
-};
-
-mock.module(path.join(import.meta.dir, "..", "src", "middleware", "auth"), () => authMock);
-mock.module("../src/middleware/auth", () => authMock);
+installAuthMock();
 
 const { filesRouter } = await import("../src/routes/files");
 
