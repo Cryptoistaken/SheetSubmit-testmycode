@@ -111,4 +111,4 @@ public/sw.js, logo-*.svg, favicon-*.svg
 
 | Date | Commit | Notes |
 |------|--------|-------|
-| 2026-09-03 | `ea0805a` | Pools implemented — auto-pooling + claim/ledger/revert, `PLAN.md` removed, AGENTS map refreshed (pre-push snapshot) |
+| 2026-09-03 | `17a586d` | Pools implemented — auto-pooling + claim/ledger/revert, `PLAN.md` removed, AGENTS map refreshed (pre-push snapshot) |
