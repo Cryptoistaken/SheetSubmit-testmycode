@@ -464,6 +464,13 @@ private String claudeCodeHtml(String color) {
     private int clamp(int v, int min, int max) {
         return Math.max(min, Math.min(v, max));
     }
+    // hygiene: inset-aware bounds so panel never under status/nav bar — keep 220x280 size, same anim
+    private android.graphics.Rect contentBounds() {
+        int w = displayWidth(); int h = displayHeight();
+        int sb = 0; try { int id = getResources().getIdentifier("status_bar_height","dimen","android"); if(id>0) sb = getResources().getDimensionPixelSize(id); } catch(Exception ignored) {}
+        int nb = 0; try { int id = getResources().getIdentifier("navigation_bar_height","dimen","android"); if(id>0) nb = getResources().getDimensionPixelSize(id); } catch(Exception ignored) {}
+        return new android.graphics.Rect(0, sb, w, h - nb);
+    }
 
     // ── Mini panel ──
 
@@ -481,8 +488,8 @@ private String claudeCodeHtml(String color) {
         panelShowing = true;
         playClaudeCode("tap");
         try {
-            int scrW = displayWidth();
-            int scrH = displayHeight();
+            android.graphics.Rect cb = contentBounds();
+            int scrW = cb.width(); int scrH = cb.height();
             int panelW = Math.min(dp(220), Math.max(200, scrW - dp(20)));
             panelW = Math.min(panelW, scrW - dp(8));
             int panelH = Math.min(dp(280), Math.max(240, scrH - dp(40)));
@@ -503,17 +510,18 @@ private String claudeCodeHtml(String color) {
             int by = bubbleParams.y + bubbleParams.height / 2;
             int gap = dp(8);
             int left, top;
-            if (scrW - bx >= panelW + gap) {
+            // use cb inset so panel never under status/nav bar — same 220x280, same anim
+            if (cb.right - bx >= panelW + gap) {
                 left = bx + gap;
-                top = clamp(by - panelH / 2, dp(8), Math.max(dp(8), scrH - panelH - dp(8)));
-            } else if (bx >= panelW + gap) {
+                top = clamp(by - panelH / 2, cb.top + dp(8), Math.max(cb.top + dp(8), cb.bottom - panelH - dp(8)));
+            } else if (bx - cb.left >= panelW + gap) {
                 left = bx - panelW - gap;
-                top = clamp(by - panelH / 2, dp(8), Math.max(dp(8), scrH - panelH - dp(8)));
-            } else if (scrH - by >= panelH + gap) {
-                left = clamp(bx - panelW / 2, dp(8), Math.max(dp(8), scrW - panelW - dp(8)));
+                top = clamp(by - panelH / 2, cb.top + dp(8), Math.max(cb.top + dp(8), cb.bottom - panelH - dp(8)));
+            } else if (cb.bottom - by >= panelH + gap) {
+                left = clamp(bx - panelW / 2, cb.left + dp(8), Math.max(cb.left + dp(8), cb.right - panelW - dp(8)));
                 top = by + gap;
             } else {
-                left = clamp(bx - panelW / 2, dp(8), Math.max(dp(8), scrW - panelW - dp(8)));
+                left = clamp(bx - panelW / 2, cb.left + dp(8), Math.max(cb.left + dp(8), cb.right - panelW - dp(8)));
                 top = by - panelH - gap;
             }
             cardParams.leftMargin = left;
