@@ -49,6 +49,8 @@ export default function SheetToolbar() {
   const columns = useSheetStore((s) => s.columns);
   const visibleCols = useSheetStore((s) => s.visibleCols);
   const checkRunning = useSheetStore((s) => s.checkRunning);
+  const isDirty = useSheetStore((s) => s.isDirty);
+  const offlineDirty = useSheetStore((s) => s.offlineDirty);
   const { user } = useAuth();
 
   const [open, setOpen] = useState(false);
@@ -206,6 +208,22 @@ export default function SheetToolbar() {
 
   return (
     <>
+      <span
+        className={
+          "save-status" +
+          (offlineDirty ? " save-offline" : isDirty ? " save-pending" : " save-ok")
+        }
+        title={
+          offlineDirty
+            ? "Changes saved on this device — will sync when back online"
+            : isDirty
+              ? "Saving…"
+              : "All changes saved"
+        }
+      >
+        <span className="save-dot" />
+        {offlineDirty ? "Saved offline" : isDirty ? "Saving…" : "Saved"}
+      </span>
       <button
         className="undo-redo-btn"
         title="Undo"

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { api } from "@/lib/api";
 import type { PoolDetail, PoolSummary } from "@/lib/api";
+import { useConfirm } from "@/lib/confirm";
 import { useToast } from "@/lib/toast";
 
 const PASSWORDS = ["dgddigital", "L0VE@12345"] as const;
@@ -50,6 +51,7 @@ export default function PoolsView() {
   const params = useParams<{ password: string; poolId: string }>();
   const navigate = useNavigate();
   const showToast = useToast();
+  const confirm = useConfirm();
 
   const curPwd = PASSWORDS.includes(params.password as never) ? params.password! : "dgddigital";
   const cur = (POOL_TABS.find((t) => t.id === params.poolId)?.id as PoolId) || "cookies_only";
@@ -162,7 +164,8 @@ export default function PoolsView() {
     } catch (e) { showToast(String(e instanceof Error ? e.message : e)); } finally { setReDownloading(null); }
   };
   const doRevert = async (id: string) => {
-    if (!confirm("Give back this download? Items will return to pool and Taken will be cleared.")) return;
+    const ok = await confirm("Give back this download? Items will return to pool and Taken will be cleared.", "Give back");
+    if (!ok) return;
     setReverting(id);
     try {
       const res = await api.revertDownload(id) as unknown as { reverted?: number };

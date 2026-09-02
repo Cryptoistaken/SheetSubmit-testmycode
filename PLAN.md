@@ -182,6 +182,7 @@ Topbar tabs: add `Pools` between Archive and Admin. `Pools` tab is admin-only (h
 ## 5. Handoff
 - **Current state (2026-09-02):** Pools implemented (services/pools.ts + routes/pools.ts). Backend test suite covers it: `test/pools-service.test.ts` (classifyRow, handleFileSave auto-pooling, promotion, taken-blocklist, per-password isolation) and `test/pools-routes.test.ts` (claim/revert over HTTP). `bun test` green. `backend/.env` has test bot token (do not use prod token).
 - **Next step:** Review `pools-spec.html` in browser, confirm pool names/tiers and quantity UX, then Phase 1 demo.
+- **UX sweep (2026-09-02):** papercut fixes shipped in a PR — sheet tab title shows the file name, autosave status ("Saving… / Saved / Saved offline") in the sheet toolbar, Escape while editing no longer yanks cell selection, multi-file selection resets when switching home tabs, "Give back" in Pools and "Delete dead" in the quick-edit bar now use the app's confirm dialog instead of acting instantly. Frontend verified: typecheck, lint, 43 tests, build, browser QA (stub API at localhost:3000 + vite dev). Local preview run script recorded in `.hoplite/settings.json` (port 5173).
 - **Gotchas:**
   - `npx shadcn add` writes to `frontend/@/` — move to `src/` and delete `@/`.
   - Long-press on `.file-card` was selecting name text — ensure `user-select: none` + `touch-action: manipulation` + prevent selection, for My Files / Archive / any file grid (Pools user list uses `⋯` menu so not affected, but same rule if file cards appear there).
