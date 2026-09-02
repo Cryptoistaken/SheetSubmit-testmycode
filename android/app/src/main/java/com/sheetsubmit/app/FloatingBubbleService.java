@@ -384,7 +384,7 @@ private String claudeCodeHtml(String color) {
             longPressFired = true;
             bubbleView.performClick();
             hapticFeedback();
-            playClaudeCode("long",2000);
+            playClaudeCode("long",0);
             panelSuppressPaste = true; // panel opens read-only-ish, no paste
             if (miniWebView != null) {
                 miniWebView.evaluateJavascript(
@@ -439,7 +439,7 @@ private String claudeCodeHtml(String color) {
                             .putInt(KEY_BUBBLE_Y, bubbleParams.y)
                             .apply();
                     if (!dragging && !longPressFired) {
-                        playClaudeCode("tap",1600);
+                        playClaudeCode("tap");
                         // Short tap only — a long-press already ran its skip while
                         // held and consumed this gesture, so release does NOT open
                         // the panel or paste anything.
@@ -471,7 +471,7 @@ private String claudeCodeHtml(String color) {
         if (panelRoot != null || panelShowing) {
             hidePanel();
         } else {
-            playClaudeCode("tap",1600);
+            playClaudeCode("tap");
             showPanel();
         }
     }
@@ -479,7 +479,7 @@ private String claudeCodeHtml(String color) {
     private void showPanel() {
         if (panelShowing) return;
         panelShowing = true;
-        playClaudeCode("tap",1600);
+        playClaudeCode("tap");
         try {
             int scrW = displayWidth();
             int scrH = displayHeight();
@@ -704,6 +704,8 @@ private String claudeCodeHtml(String color) {
         // Clear the long-press "no paste" flag — the next TAP opens a normal
         // panel that captures the clipboard and auto-pastes again.
         panelSuppressPaste = false;
+        // event-specific: long animation holds while popup open, revert to idle when closed
+        playClaudeCode("idle",0);
     }
 
     // ── Foreground notification ──
