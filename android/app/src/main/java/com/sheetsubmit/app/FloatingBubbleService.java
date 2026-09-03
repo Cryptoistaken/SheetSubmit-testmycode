@@ -178,7 +178,7 @@ private String claudeCodeHtml(String color) {
             String color = p.getString("bubble_color", "#ef4444");
             int sz = p.getInt("bubble_size", 60);
             int col = Color.parseColor(color);
-            int margin = dp(24);
+            int margin = dp(32);
             int winSize = dp(sz) + margin * 2;
             int iconPx = dp(sz * 0.95f);
             if (bubbleView instanceof FrameLayout) {
@@ -304,7 +304,7 @@ private String claudeCodeHtml(String color) {
         String cfgColor = cfg.getString("bubble_color", "#ef4444");
         int cfgSize = cfg.getInt("bubble_size", 60);
         int size = dp(cfgSize);
-        int margin = dp(24);
+        int margin = dp(32);
         int windowSize = size + margin * 2;
 
         FrameLayout root = new FrameLayout(this);
