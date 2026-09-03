@@ -1,7 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<style>html,body{margin:0;background:transparent;overflow:visible;width:100%;height:100%}#a{width:var(--box,100%);height:var(--box,100%);display:grid;place-items:center;overflow:visible}#a svg{width:100%;height:100%;display:block;overflow:visible;transform-origin:center}#idle svg,#tap svg,#long svg,#drag svg{transform:scale(1.25);transform-origin:center}</style>
+<style>html,body{margin:0;background:transparent;overflow:visible;width:100%;height:100%}#a{position:relative;width:var(--box,48%);height:var(--box,48%);display:grid;place-items:center;overflow:visible}#a .state{position:absolute;inset:0;display:block}#a svg{width:100%;height:100%;display:block;overflow:visible;transform-origin:center}#idle svg,#tap svg,#long svg,#drag svg{transform:scale(1.25);transform-origin:center}</style>
 <div id="a"></div>
 <script>
 const ICON_CLAUDE=`<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><rect width="1024" height="1024" rx="230" fill="currentColor"/><g fill="#111111"><rect x="250" y="350" width="120" height="240" rx="20"/><rect x="650" y="350" width="120" height="240" rx="20"/></g><g fill="#FFFFFF"><rect x="270" y="380" width="40" height="60" rx="10"/><rect x="670" y="380" width="40" height="60" rx="10"/></g><path d="M -50 600 L 150 600 L 150 800 L -50 800 Z" fill="#C46044"/><path d="M 874 600 L 1074 600 L 1074 800 L 874 800 Z" fill="#C46044"/></svg>`;
@@ -811,23 +811,25 @@ function render(){
   if(box) document.documentElement.style.setProperty('--box', box+'%');
   if(icon==='claudeCode'||icon==='claudeCodePlayful'){
     const M=icon==='claudeCodePlayful'?PLAY:REG;
-    a.innerHTML='<div id="idle">'+M.idle+'</div><div id="tap" style="display:none">'+M.tap+'</div><div id="long" style="display:none">'+M.long+'</div><div id="drag" style="display:none">'+M.drag+'</div>';
+    a.innerHTML='<div class="state" id="idle">'+M.idle+'</div><div class="state" id="tap" style="visibility:hidden">'+M.tap+'</div><div class="state" id="long" style="visibility:hidden">'+M.long+'</div><div class="state" id="drag" style="visibility:hidden">'+M.drag+'</div>';
     a.querySelectorAll('[fill="#DE886D"]').forEach(e=>e.setAttribute('fill','currentColor'));
-    // Make all states visually same as idle and ensure no clip: measure actual bbox, scale to idle bbox
+    // Normalize geometry, including states hidden until an event occurs.
     try{
       const ids=['idle','tap','long','drag'];
-      const boxes={}; let baseMax=0;
+      const boxes={}; let baseFill=0;
       ids.forEach(id=>{
         const s=a.querySelector('#'+id+' svg'); if(!s) return;
         let w=0,h=0;
         try{ const b=s.getBBox(); w=b.width; h=b.height; }catch(e){}
-        if(!w||!h){ const vb=s.getAttribute('viewBox'); const p=vb? vb.split(/[\s,]+/).map(Number):null; w=p&&p[2]||20; h=p&&p[3]||18; }
-        const m=Math.max(w,h); boxes[id]=m; if(id==='idle') baseMax=m;
+        const vb=s.getAttribute('viewBox'); const p=vb? vb.split(/[\s,]+/).map(Number):null;
+        const vw=p&&p[2]||20; const vh=p&&p[3]||18;
+        if(!w||!h){ w=vw; h=vh; }
+        boxes[id]=Math.max(w/vw,h/vh); if(id==='idle') baseFill=boxes[id];
       });
-      if(baseMax){
+      if(baseFill){
         ids.forEach(id=>{
           const s=a.querySelector('#'+id+' svg'); if(!s||!boxes[id]) return;
-          const scale=1.25*baseMax/boxes[id];
+          const scale=1.25*baseFill/boxes[id];
           s.style.transform='scale('+scale.toFixed(3)+')';
           s.style.transformOrigin='center';
         });
@@ -838,7 +840,7 @@ function render(){
     a.innerHTML=html;
   }
   window.update=(o)=>{ if(o.icon!==undefined||o.color!==undefined){ const qq=new URLSearchParams(location.search); if(o.icon) qq.set('icon',o.icon); if(o.color) qq.set('color',o.color); history.replaceState(null,'','?'+qq.toString()); render(); } };
-  window.playClaude=(n,ms)=>{ if(!isClaudeCode()) return; const v=variant(); const d=v==='playful'?{tap:1600,long:2000,drag:600,open:1600}:{tap:6000,long:2000,drag:600,open:1600}; if(ms==null) ms=d[n]||1600; ['idle','tap','long','drag'].forEach(id=>{const e=document.getElementById(id); if(e) e.style.display='none';}); const t=document.getElementById(n)||document.getElementById('idle'); if(t) t.style.display='block'; clearTimeout(window._pcT); if(n!=='idle'&&ms>0) window._pcT=setTimeout(()=>window.playClaude('idle',0),ms); };
+  window.playClaude=(n,ms)=>{ if(!isClaudeCode()) return; const v=variant(); const d=v==='playful'?{tap:1600,long:2000,drag:600,open:1600}:{tap:6000,long:2000,drag:600,open:1600}; if(ms==null) ms=d[n]||1600; ['idle','tap','long','drag'].forEach(id=>{const e=document.getElementById(id); if(e) e.style.visibility='hidden';}); const t=document.getElementById(n)||document.getElementById('idle'); if(t) t.style.visibility='visible'; clearTimeout(window._pcT); if(n!=='idle'&&ms>0) window._pcT=setTimeout(()=>window.playClaude('idle',0),ms); };
 }
 render();
 </script>

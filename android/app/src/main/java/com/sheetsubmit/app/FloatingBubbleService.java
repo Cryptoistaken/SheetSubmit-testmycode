@@ -5,6 +5,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.app.ActivityOptions;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -549,31 +550,6 @@ private String claudeCodeHtml(String color) {
                 panelRoot.requestFocus();
                 if (miniWebView != null) miniWebView.requestFocus();
                 if (!panelSuppressPaste) {
-                    // Tap-opened panel: capture the clipboard and auto-paste.
-                    try {
-                        Intent cap = new Intent(this, ClipboardCaptureActivity.class);
-                        // NO_ANIMATION — without it, launching this activity plays the
-                        // default open/close window transition, which looks like the
-                        // app briefly reopening and closing behind the bubble on a tap.
-                        cap.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION);
-                        startActivity(cap);
-                    } catch (Exception e) {
-                        Log.w(TAG, "ClipboardCaptureActivity failed, using fallback", e);
-                        try {
-                            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                            if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip() != null && cm.getPrimaryClip().getItemCount() > 0) {
-                                CharSequence cs = cm.getPrimaryClip().getItemAt(0).getText();
-                                String text = cs != null ? cs.toString() : "";
-                                getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                                    .edit()
-                                    .putString(KEY_CLIP, text)
-                                    .putLong(KEY_CLIP_AT, System.currentTimeMillis())
-                                    .apply();
-                            }
-                        } catch (Exception ignored) {}
-                    }
-                }
-                if (!panelSuppressPaste) {
                     final int[] pollCount = {0};
                     final Runnable pollRunnable = new Runnable() {
                         @Override
@@ -621,6 +597,28 @@ private String claudeCodeHtml(String color) {
             lp.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
             windowManager.addView(panelRoot, lp);
             panelShownAt = SystemClock.elapsedRealtime();
+            if (!panelSuppressPaste) {
+                // Attach the overlay before transferring focus so the activity cannot
+                // expose the app task for a frame during a tap.
+                try {
+                    Intent cap = new Intent(this, ClipboardCaptureActivity.class);
+                    cap.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                    startActivity(cap, ActivityOptions.makeCustomAnimation(this, 0, 0).toBundle());
+                } catch (Exception e) {
+                    Log.w(TAG, "ClipboardCaptureActivity failed, using fallback", e);
+                    try {
+                        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip() != null && cm.getPrimaryClip().getItemCount() > 0) {
+                            CharSequence cs = cm.getPrimaryClip().getItemAt(0).getText();
+                            String text = cs != null ? cs.toString() : "";
+                            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                                    .putString(KEY_CLIP, text)
+                                    .putLong(KEY_CLIP_AT, System.currentTimeMillis())
+                                    .apply();
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
             Log.i(TAG, "panel shown " + panelW + "x" + panelH);
         } catch (Exception e) {
             Log.e(TAG, "showPanel failed", e);
