@@ -166,9 +166,6 @@ private String claudeCodeHtml(String color) {
         eye.setClickable(false); hl.setClickable(false);
         return wrap;
     }
-    private void playClaudeCode(String name) {
-        try { if (claudeCodeView != null) claudeCodeView.evaluateJavascript("window.playClaude('" + name + "')", null); } catch (Exception ignored) {}
-    }
     private void playClaudeCode(String name, int revertMs) {
         try { if (claudeCodeView != null) claudeCodeView.evaluateJavascript("window.playClaude('" + name + "'," + revertMs + ")", null); } catch (Exception ignored) {}
     }
@@ -395,7 +392,6 @@ private String claudeCodeHtml(String color) {
             longPressFired = true;
             bubbleView.performClick();
             hapticFeedback();
-            playClaudeCode("long",0);
             panelSuppressPaste = true; // panel opens read-only-ish, no paste
             if (miniWebView != null) {
                 miniWebView.evaluateJavascript(
@@ -432,9 +428,7 @@ private String claudeCodeHtml(String color) {
                         // A drag is not a long-press — disarm it.
                         cancelLongPress();
                         hidePanel();
-                        boolean wasDragging = dragging;
                         dragging = true;
-                        if (!wasDragging) playClaudeCode("drag",0);
                         int nx = Math.round(initialBubbleX + (ev.getRawX() - initialRawX));
                         int ny = Math.round(initialBubbleY + (ev.getRawY() - initialRawY));
                         bubbleParams.x = clamp(nx, 0, Math.max(0, displayWidth() - bubbleParams.width));
@@ -450,14 +444,11 @@ private String claudeCodeHtml(String color) {
                             .putInt(KEY_BUBBLE_Y, bubbleParams.y)
                             .apply();
                     if (!dragging && !longPressFired) {
-                        playClaudeCode("tap");
                         // Short tap only — a long-press already ran its skip while
                         // held and consumed this gesture, so release does NOT open
                         // the panel or paste anything.
                         v.performClick();
                         togglePanel();
-                    } else if (dragging) {
-                        playClaudeCode("drag",600);
                     }
                     dragging=false;
                     return true;
@@ -489,7 +480,6 @@ private String claudeCodeHtml(String color) {
         if (panelRoot != null || panelShowing) {
             hidePanel();
         } else {
-            playClaudeCode("tap");
             showPanel();
         }
     }
@@ -497,7 +487,6 @@ private String claudeCodeHtml(String color) {
     private void showPanel() {
         if (panelShowing) return;
         panelShowing = true;
-        playClaudeCode("tap");
         try {
             android.graphics.Rect cb = contentBounds();
             int scrW = cb.width(); int scrH = cb.height();
